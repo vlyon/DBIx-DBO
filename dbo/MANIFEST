@@ -6,5 +6,7 @@ lib/DBIx/DBO.pm
 lib/DBIx/DBO/Common.pm
 t/00-load.t
 t/01-dbm.t
+t/02-sqlite.t
+t/03-mysql.t
 t/pod-coverage.t
 t/pod.t
