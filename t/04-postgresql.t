@@ -2,13 +2,14 @@
 
 use strict;
 use warnings;
-use Test::DBO mysql => 11;
+use Test::DBO Pg => 11;
 
 # Create the DBO
-my $dbo = Test::DBO::connect_dbo;
+my $dbo = Test::DBO::connect_dbo('dbname=postgres', $user, $pswd);
 ok $dbo->do('SET NAMES utf8'), 'SET NAMES utf8' or diag sql_err($dbo);
 
-my $test_db = $ENV{DBO_TEST_MYSQL_DB} || $Test::DBO::prefix.'_db';
+exit;
+my $test_db = $ENV{DBO_TEST_PG_DB} || $Test::DBO::prefix.'_db';
 my $test_tbl = $Test::DBO::prefix.'_tbl';
 my $quoted_db = $dbo->_qi($test_db);
 my $quoted_tbl = $dbo->_qi($test_tbl);
