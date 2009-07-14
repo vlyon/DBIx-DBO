@@ -2,8 +2,10 @@ use Test::More;
 
 package Test::DBO;
 
+use 5.010_000;
 use strict;
 use warnings;
+
 use Test::More;
 use DBIx::DBO;
 
@@ -14,15 +16,28 @@ sub import {
     my $class = shift;
     $dbd = shift;
     my $tests = shift;
+    my %opt = splice @_;
 
-    if (grep $_ eq $dbd, DBI->available_drivers) {
-        plan tests => $tests;
-    } else {
+    grep $_ eq $dbd, DBI->available_drivers or
         plan skip_all => "No $dbd driver available!";
+
+    {
+        no strict 'refs';
+        *{caller().'::sql_err'} = \&sql_err;
     }
 
-    no strict 'refs';
-    *{caller().'::sql_err'} = \&sql_err;
+    return unless $tests;
+
+    if (exists $opt{connect_ok}) {
+        my $dbo_ref = shift @{$opt{connect_ok}};
+        $$dbo_ref = connect_dbo(@{$opt{connect_ok}}) or plan skip_all => "Can't connect: $DBI::errstr";
+
+        plan tests => $tests;
+        pass "Connect to $dbd";
+        isa_ok $$dbo_ref, "DBIx::DBO::$dbd", '$dbo';
+    } else {
+        plan tests => $tests;
+    }
 }
 
 sub sql_err {
@@ -38,10 +53,18 @@ sub sql_err {
     join "\n", @err;
 }
 
-sub connect_dbo {
-    ok my $dbo = DBIx::DBO->connect("DBI:$dbd:", '', '', {RaiseError => 0}), "Connect to $dbd" or die $DBI::errstr;
+sub connect_ok {
+    ok my $dbo = connect_dbo(@_), "Connect to $dbd" or die $DBI::errstr;
     isa_ok $dbo, "DBIx::DBO::$dbd", '$dbo';
-    $dbo;
+    return $dbo;
+}
+
+sub connect_dbo {
+    my $dsn = shift // $ENV{'DBO_TEST_'.uc($dbd).'_DB'} // '';
+    my $user = shift // $ENV{'DBO_TEST_'.uc($dbd).'_USER'};
+    my $pass = shift // $ENV{'DBO_TEST_'.uc($dbd).'_PASS'};
+
+    DBIx::DBO->connect("DBI:$dbd:$dsn", $user, $pass, {RaiseError => 0});
 }
 
 sub basic_methods {
@@ -55,7 +78,6 @@ sub basic_methods {
 
         # Insert data
         $dbo->do("INSERT INTO $quoted_tbl VALUES (1, 'John Doe')") or diag sql_err($dbo);
-#        $dbo->do("INSERT INTO $quoted_tbl VALUES (2, 'Jane Smith')") or diag sql_err($dbo);
         $dbo->do("INSERT INTO $quoted_tbl VALUES (?, ?)", undef, 2, 'Jane Smith') or diag sql_err($dbo);
 
         # Check the DBO select* methods

@@ -2,10 +2,11 @@
 
 use strict;
 use warnings;
-use Test::DBO mysql => 11;
 
 # Create the DBO
-my $dbo = Test::DBO::connect_dbo;
+my $dbo;
+use Test::DBO mysql => 11, connect_ok => [\$dbo];
+
 ok $dbo->do('SET NAMES utf8'), 'SET NAMES utf8' or diag sql_err($dbo);
 
 my $test_db = $ENV{DBO_TEST_MYSQL_DB} || $Test::DBO::prefix.'_db';
