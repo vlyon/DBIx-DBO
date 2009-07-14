@@ -10,7 +10,7 @@ chdir 'tmp' or die $!;
 END { rmdir '../tmp' or die $! }
 
 # Create the DBO
-my $dbo = Test::DBO::connect_dbo;
+my $dbo = Test::DBO::connect_ok;
 
 my $test_tbl = $Test::DBO::prefix.'_tbl';
 my $quoted_tbl = $dbo->_qi($test_tbl);

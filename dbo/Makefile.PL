@@ -1,5 +1,6 @@
 use strict;
 use warnings;
+use 5.010_000;
 use ExtUtils::MakeMaker;
 
 WriteMakefile(
@@ -7,10 +8,9 @@ WriteMakefile(
     AUTHOR              => 'Vernon Lyon <vlyon@cpan.org>',
     VERSION_FROM        => 'lib/DBIx/DBO.pm',
     ABSTRACT_FROM       => 'lib/DBIx/DBO.pm',
-    MIN_PERL_VERSION    => '5.010',
     PL_FILES            => {},
     PREREQ_PM => {
-        'DBI' => 0,
+        'DBI' => 1.53,
         'Test::More' => 0,
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
