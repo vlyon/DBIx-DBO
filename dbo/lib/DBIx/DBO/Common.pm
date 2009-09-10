@@ -2,6 +2,7 @@ package DBIx::DBO::Common;
 
 use strict;
 use warnings;
+use Carp;
 use Scalar::Util 'blessed';
 
 =head1 NAME
@@ -31,52 +32,50 @@ use subs qw(ouch oops);
 *ouch = \&Carp::croak;
 
 sub import {
-  my $caller = caller;
-  push @CARP_NOT, $caller;
-  no strict 'refs';
-  for (qw(QuoteIdentifier _Debug_SQL)) {
-    *{$caller.'::'.$_} = \${__PACKAGE__.'::'.$_};
-  }
-  *{$caller.'::CARP_NOT'} = \@{__PACKAGE__.'::CARP_NOT'};
-  for (qw(oops ouch blessed _qi _last_sql _carp_last_sql _sql do)) {
-    *{$caller.'::'.$_} = \&{$_};
-  }
+    my $caller = caller;
+    push @CARP_NOT, $caller;
+    no strict 'refs';
+    for (qw(QuoteIdentifier _Debug_SQL)) {
+        *{$caller.'::'.$_} = \${__PACKAGE__.'::'.$_};
+    }
+    *{$caller.'::CARP_NOT'} = \@{__PACKAGE__.'::CARP_NOT'};
+    for (qw(oops ouch blessed _qi _last_sql _carp_last_sql _sql do)) {
+        *{$caller.'::'.$_} = \&{$_};
+    }
 }
 
 sub _qi {
-  my $me = shift;
-  $QuoteIdentifier ? $me->dbh->quote_identifier(@_) : join '.', @_;
+    my $me = shift;
+    $QuoteIdentifier ? $me->dbh->quote_identifier(@_) : join '.', @_;
 }
 
 sub _last_sql {
-  my $me = shift;
-  my $ref = (Scalar::Util::reftype($me) eq 'REF' ? $$me : $me)->{'LastSQL'} ||= [];
-  @$ref = @_ if @_;
-  $ref;
+    my $me = shift;
+    my $ref = (Scalar::Util::reftype($me) eq 'REF' ? $$me : $me)->{'LastSQL'} ||= [];
+    @$ref = @_ if @_;
+    $ref;
 }
 
 sub _carp_last_sql {
-  my $me = shift;
-  my ($cmd, $sql, @bind) = @{$me->_last_sql};
-  local $Carp::Verbose = 1 if $_Debug_SQL > 1;
-  my @mess = split /\n/, Carp::shortmess("\t$cmd called");
-  while ($#mess > 0 and $mess[1] =~ /^\tDBIx::DBO::/) {
-    shift @mess;
-  }
-  warn join "\n", $sql, '('.join(', ', map $me->rdbh->quote($_), @bind).')', @mess;
+    my $me = shift;
+    my ($cmd, $sql, @bind) = @{$me->_last_sql};
+    local $Carp::Verbose = 1 if $_Debug_SQL > 1;
+    my @mess = split /\n/, Carp::shortmess("\t$cmd called");
+    splice @mess, 0, 3 if $Carp::Verbose;
+    warn join "\n", $sql, '('.join(', ', map $me->rdbh->quote($_), @bind).')', @mess;
 }
 
 sub _sql {
-  my ($me, $sql) = splice @_, 0, 2;
-  my $cmd = (caller(1))[3];
-  $me->_last_sql($cmd, $sql, @_);
-  $me->_carp_last_sql if $_Debug_SQL;
+    my ($me, $sql) = splice @_, 0, 2;
+    my $cmd = (caller(1))[3];
+    $me->_last_sql($cmd, $sql, @_);
+    $me->_carp_last_sql if $_Debug_SQL;
 }
 
 sub do {
-  my ($me, $sql, $attr, @bind) = @_;
-  $me->_sql($sql, @bind);
-  $me->dbh->do($sql, $attr, @bind);
+    my ($me, $sql, $attr, @bind) = @_;
+    $me->_sql($sql, @bind);
+    $me->dbh->do($sql, $attr, @bind);
 }
 
 1;
