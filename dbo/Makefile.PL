@@ -11,7 +11,7 @@ WriteMakefile(
     PL_FILES            => {},
     PREREQ_PM => {
         'DBI' => 1.53,
-        'Test::More' => 0,
+        'Test::More' => 0.82,
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'DBIx-DBO-*' },

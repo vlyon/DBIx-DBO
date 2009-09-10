@@ -9,7 +9,7 @@ BEGIN {
 }
 
 diag "Testing DBIx::DBO $DBIx::DBO::VERSION, Perl $], $^X";
-diag 'Available DBI drivers: '.join(', ', DBI->available_drivers);
+note 'Available DBI drivers: '.join(', ', DBI->available_drivers);
 
 is $DBIx::DBO::QuoteIdentifier, 1, 'QuoteIdentifier setting is ON by default';
 import DBIx::DBO 'NoQuoteIdentifier';

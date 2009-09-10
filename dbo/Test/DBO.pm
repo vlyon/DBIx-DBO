@@ -1,4 +1,4 @@
-use Test::More;
+use Test::More 0.82;
 
 package Test::DBO;
 

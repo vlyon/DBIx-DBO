@@ -9,46 +9,49 @@ my $test_db = $ENV{DBO_TEST_PG_DB} || $Test::DBO::prefix.'_db';
 my $test_tbl = $Test::DBO::prefix.'_tbl';
 my $quoted_db;
 my $quoted_tbl;
+my $drop_db;
 
-# Create the DBO
 # Try to connect to the default DB
-my $user = '';
-my $pass = '';
-my $dbo = Test::DBO::connect_dbo('', $user, $pass) or diag "Can't connect: $DBI::errstr";
+my $dsn = $ENV{DBO_TEST_PG_DB} ? "dbname=\"$ENV{DBO_TEST_PG_DB}\"" : '';
+# Create the DBO
+my $dbo = Test::DBO::connect_dbo($dsn) or note "Can't connect: $DBI::errstr";
 if ($dbo) {
-    plan tests => 11;
     $quoted_db = $dbo->_qi($test_db);
     $quoted_tbl = $dbo->_qi($test_tbl);
 } else {
-    # Try to connect to the postgres DB and create the test DB
-    $dbo = Test::DBO::connect_dbo('dbname=postgres', 'postgres', $pass)
-        or plan skip_all => "Can't connect: $DBI::errstr";
-    plan tests => 11;
+    # Try to connect to the postgres or template1 DB and create the test DB
+    if (defined $ENV{DBO_TEST_PG_USER}) {
+        $dbo = Test::DBO::connect_dbo('dbname=postgres') or note "Can't connect: $DBI::errstr";
+    }
+    $dbo ||= Test::DBO::connect_dbo('dbname=postgres', 'postgres') or note "Can't connect: $DBI::errstr";
+    $dbo ||= Test::DBO::connect_dbo('dbname=template1') or note "Can't connect: $DBI::errstr";
+    plan skip_all => "Can't connect: $DBI::errstr" unless $dbo;
+
+    # Create a test database
     $quoted_db = $dbo->_qi($test_db);
     $quoted_tbl = $dbo->_qi($test_tbl);
-    $dbo->do("CREATE DATABASE $quoted_db") or die sql_err($dbo);
+    unless ($dbo->do("CREATE DATABASE $quoted_db")) {
+        note sql_err($dbo);
+        plan skip_all => "Can't create test database";
+    }
+    note "Created test database: $quoted_db";
+    $drop_db = $dbo;
+    $dbo = Test::DBO::connect_dbo("dbname=$quoted_db") or note "Can't connect: $DBI::errstr";
+    plan skip_all => "Can't connect to newly created test database: $DBI::errstr" unless $dbo;
 }
 
-ok $dbo->do('SET NAMES utf8'), 'SET NAMES utf8' or diag sql_err($dbo);
-die;
+plan tests => 6;
+pass "Connect to Pg";
+isa_ok $dbo, 'DBIx::DBO::Pg', '$dbo';
 
-# Create a test database
-ok $dbo->do("CREATE DATABASE $quoted_db CHARACTER SET utf8"), "Create database $quoted_db" or die sql_err($dbo);
-my $drop_db = 1;
-ok $dbo->do("USE $quoted_db"), "USE $quoted_db" or diag sql_err($dbo);
-
-SKIP: {
-    is $dbo->selectrow_array('SELECT DATABASE()'), $test_db, 'Correct DB selected'
-        or diag sql_err($dbo) && skip 'Incorrect DB selected!', 21;
-
-    # Test methods: do, select* (4 tests)
-    Test::DBO::basic_methods($dbo, $quoted_tbl);
-}
-
-undef $drop_db;
-ok $dbo->do("DROP DATABASE $quoted_db"), "Drop database $quoted_db" or die sql_err($dbo);
+# Test methods: do, select* (4 tests)
+Test::DBO::basic_methods($dbo, $quoted_tbl);
 
 END {
-    $dbo->do("DROP DATABASE $quoted_db") or diag sql_err($dbo) if $drop_db;
+    if ($drop_db) {
+        undef $dbo; # Make sure we're no longer connected
+        $drop_db->do("DROP DATABASE $quoted_db") or diag sql_err($dbo);
+        note "Dropped test database: $quoted_db";
+    }
 }
 
