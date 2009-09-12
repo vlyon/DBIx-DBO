@@ -5,7 +5,10 @@ use warnings;
 use Test::More tests => 4;
 
 BEGIN {
-	use_ok 'DBIx::DBO' or BAIL_OUT 'DBIx::DBO failed!';
+    $Test::More::VERSION >= 0.82
+        or BAIL_OUT "Test::More 0.82 required, this is only $Test::More::VERSION!";
+	use_ok 'DBIx::DBO'
+        or BAIL_OUT 'DBIx::DBO failed!';
 }
 
 diag "Testing DBIx::DBO $DBIx::DBO::VERSION, Perl $], $^X";
