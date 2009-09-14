@@ -6,6 +6,7 @@ use ExtUtils::MakeMaker;
 WriteMakefile(
     NAME                => 'DBIx::DBO',
     AUTHOR              => 'Vernon Lyon <vlyon@cpan.org>',
+    LICENSE             => 'perl',
     VERSION_FROM        => 'lib/DBIx/DBO.pm',
     ABSTRACT_FROM       => 'lib/DBIx/DBO.pm',
     PL_FILES            => {},
