@@ -228,6 +228,67 @@ sub selectall_arrayref {
     $me->rdbh->selectall_arrayref($sql, $attr, @_);
 }
 
+=head2 table_info
+
+  $dbo->table_info($table);
+  $dbo->table_info([$schema, $table]);
+  $dbo->table_info($table_object);
+
+Dunno yet.
+
+=cut
+
+sub _get_table_schema {
+    my $me = shift;
+    my $schema = shift;
+    my $table = shift;
+
+    (my $q_schema = $schema) =~ s/([\\_%])/\\$1/g;
+    (my $q_table = $table) =~ s/([\\_%])/\\$1/g;
+
+    my $info = $me->rdbh->table_info(undef, $q_schema, $q_table)->fetchall_arrayref;
+    ouch 'Invalid table: '.$table unless $info and @$info == 1 and $info->[0][2] eq $table;
+    return $info->[0][1];
+}
+
+sub _get_table_info {
+    my $me = shift;
+    my $schema = shift;
+    my $table = shift;
+
+    my %h;
+    (my $q_schema = $schema) =~ s/([\\_%])/\\$1/g;
+    (my $q_table = $table) =~ s/([\\_%])/\\$1/g;
+
+    my $cols = $me->rdbh->column_info('', $q_schema, $q_table, '%')->fetchall_arrayref({});
+    ouch 'Invalid table: '.$me->_qi($table) unless @$cols;
+    $h{Fields}{$_->{COLUMN_NAME}} = $_->{ORDINAL_POSITION} for @$cols;
+
+    my $keys = $me->rdbh->primary_key_info('', $schema, $table)->fetchall_arrayref({});
+    $h{PrimaryKeys} = [ map $cols->[$_->{KEY_SEQ} - 1]{COLUMN_NAME}, @$keys ];
+    $me->{TableInfo}{$schema}{$table} = \%h;
+}
+
+sub table_info {
+    my $me = shift;
+    my $schema = '';
+    my $table = shift;
+
+    if (blessed $table and $table->isa('DBIx::DBO::Table')) {
+        ($schema, $table) = @$table{qw(Schema Name)};
+        return ($schema, $table, $me->{TableInfo}{$schema}{$table});
+    }
+    if (ref $table eq 'ARRAY') {
+        ($schema, $table) = @$table;
+    }
+    $schema = $me->_get_table_schema($schema, $table) unless defined $schema and length $schema;
+
+    unless (exists $me->{TableInfo}{$schema}{$table}) {
+        $me->_get_table_info($schema, $table);
+    }
+    return ($schema, $table, $me->{TableInfo}{$schema}{$table});
+}
+
 =head2 disconnect
 
 Disconnect both the read-write & read-only connections to the database.
