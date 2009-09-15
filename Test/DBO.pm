@@ -113,7 +113,8 @@ sub basic_methods {
         is_deeply $rv, [[1,'John Doe'],[2,'Jane Smith']], 'Method DBIx::DBO->selectall_arrayref';
 
         # Create a table object
-        $dbo->table($test_tbl) or diag sql_err($dbo);
+        my $t = $dbo->table($test_tbl);
+        isa_ok $t, 'DBIx::DBO::Table', '$t';
 
         # Remove the created table
         $dbo->do("DROP TABLE $quoted_tbl") or diag sql_err($dbo);

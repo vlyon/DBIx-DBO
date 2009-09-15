@@ -2,15 +2,15 @@
 
 use strict;
 use warnings;
-use Test::DBO DBM => 6;
+use File::Temp;
+use Test::DBO DBM => 7;
 
 # Run in a temporary directory
-mkdir 'tmp';
-chdir 'tmp' or die $!;
-END { rmdir '../tmp' or die $! }
+my $dir = File::Temp::tempdir('tmp_XXXX', CLEANUP => 1);
 
 # Create the DBO
-my $dbo = Test::DBO::connect_ok;
+my $dbo = Test::DBO::connect_ok("f_dir=$dir");
+#my $dbo = Test::DBO::connect_ok("f_dir=$dir;mldbm=Storable");
 
 my $test_tbl = $Test::DBO::prefix.'_tbl';
 my $quoted_tbl = $dbo->_qi($test_tbl);

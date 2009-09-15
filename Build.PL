@@ -9,6 +9,7 @@ my $builder = Module::Build->new(
     dist_version_from   => 'lib/DBIx/DBO.pm',
     build_requires => {
         'Test::More' => 0.82,
+        'File::Temp' => 0,
     },
     requires => {
         'perl' => 5.010,
