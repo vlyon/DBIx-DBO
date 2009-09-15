@@ -65,7 +65,7 @@ if (ok $dbo->do("CREATE SCHEMA $quoted_sch"), "Create $quoted_sch test schema") 
 }
 
 # Test methods: do, select* (4 tests)
-Test::DBO::basic_methods($dbo, $quoted_tbl);
+Test::DBO::basic_methods($dbo, $test_tbl, $quoted_tbl);
 
 SKIP: {
     skip 'Create test schema failed', 1 unless $drop_sch;
