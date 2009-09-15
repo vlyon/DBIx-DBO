@@ -1,8 +1,8 @@
 package DBIx::DBO::Table;
+use DBIx::DBO::Common;
 
 use strict;
 use warnings;
-use DBIx::DBO::Common;
 
 sub dbh { $_[0]->{'DBO'}->dbh }
 sub rdbh { $_[0]->{'DBO'}->rdbh }

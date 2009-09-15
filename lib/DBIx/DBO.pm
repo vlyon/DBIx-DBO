@@ -251,15 +251,15 @@ sub _get_table_info {
     my $schema = shift;
     my $table = shift;
 
-    my %h;
     (my $q_schema = $schema) =~ s/([\\_%])/\\$1/g;
     (my $q_table = $table) =~ s/([\\_%])/\\$1/g;
 
-    my $cols = $me->rdbh->column_info('', $q_schema, $q_table, '%')->fetchall_arrayref({});
+    my $cols = $me->rdbh->column_info(undef, $q_schema, $q_table, '%')->fetchall_arrayref({});
     ouch 'Invalid table: '.$me->_qi($table) unless @$cols;
-    $h{Fields}{$_->{COLUMN_NAME}} = $_->{ORDINAL_POSITION} for @$cols;
+    my $keys = $me->rdbh->primary_key_info(undef, $schema, $table)->fetchall_arrayref({});
 
-    my $keys = $me->rdbh->primary_key_info('', $schema, $table)->fetchall_arrayref({});
+    my %h;
+    $h{Fields}{$_->{COLUMN_NAME}} = $_->{ORDINAL_POSITION} for @$cols;
     $h{PrimaryKeys} = [ map $cols->[$_->{KEY_SEQ} - 1]{COLUMN_NAME}, @$keys ];
     $me->{TableInfo}{$schema}{$table} = \%h;
 }
