@@ -1,11 +1,12 @@
+Build.PL
 Changes
-MANIFEST
-Makefile.PL
-README
 lib/DBIx/DBO.pm
 lib/DBIx/DBO/Common.pm
-lib/DBIx/DBO/SQLite.pm
 lib/DBIx/DBO/Pg.pm
+lib/DBIx/DBO/SQLite.pm
+lib/DBIx/DBO/Table.pm
+MANIFEST
+README
 t/00-load.t
 t/01-dbm.t
 t/02-sqlite.t
@@ -13,3 +14,4 @@ t/03-mysql.t
 t/04-postgresql.t
 t/pod-coverage.t
 t/pod.t
+Test/DBO.pm
