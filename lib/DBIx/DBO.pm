@@ -235,11 +235,12 @@ sub selectall_arrayref {
 
 sub _get_table_schema {
     my $me = shift;
-    my $schema = shift;
-    my $table = shift;
+    my $schema = my $q_schema = shift;
+    my $table = my $q_table = shift;
+    ouch 'No table name supplied' unless defined $table and length $table;
 
-    (my $q_schema = $schema) =~ s/([\\_%])/\\$1/g;
-    (my $q_table = $table) =~ s/([\\_%])/\\$1/g;
+    $q_schema =~ s/([\\_%])/\\$1/g if defined $q_schema;
+    $q_table =~ s/([\\_%])/\\$1/g;
 
     my $info = $me->rdbh->table_info(undef, $q_schema, $q_table)->fetchall_arrayref;
     ouch 'Invalid table: '.$table unless $info and @$info == 1 and $info->[0][2] eq $table;
