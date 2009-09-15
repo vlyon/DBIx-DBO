@@ -24,7 +24,7 @@ SKIP: {
         or diag sql_err($dbo) && skip 'Incorrect DB selected!', 21;
 
     # Test methods: do, select* (4 tests)
-    Test::DBO::basic_methods($dbo, $quoted_tbl);
+    Test::DBO::basic_methods($dbo, $test_tbl, $quoted_tbl);
 }
 
 undef $drop_db;

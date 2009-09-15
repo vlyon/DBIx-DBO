@@ -16,5 +16,5 @@ my $test_tbl = $Test::DBO::prefix.'_tbl';
 my $quoted_tbl = $dbo->_qi($test_tbl);
 
 # Test methods: do, select* (4 tests)
-Test::DBO::basic_methods($dbo, $quoted_tbl);
+Test::DBO::basic_methods($dbo, $test_tbl, $quoted_tbl);
 

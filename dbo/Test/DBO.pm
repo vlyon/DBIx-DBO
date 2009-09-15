@@ -89,6 +89,7 @@ sub connect_dbo {
 
 sub basic_methods {
     my $dbo = shift;
+    my $test_tbl = shift;
     my $quoted_tbl = shift;
 
     SKIP: {
@@ -110,6 +111,9 @@ sub basic_methods {
 
         $rv = $dbo->selectall_arrayref("SELECT * FROM $quoted_tbl") or diag sql_err($dbo);
         is_deeply $rv, [[1,'John Doe'],[2,'Jane Smith']], 'Method DBIx::DBO->selectall_arrayref';
+
+        # Create a table object
+        $dbo->table($test_tbl) or diag sql_err($dbo);
 
         # Remove the created table
         $dbo->do("DROP TABLE $quoted_tbl") or diag sql_err($dbo);

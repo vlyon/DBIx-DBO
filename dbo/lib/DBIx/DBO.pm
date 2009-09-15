@@ -5,6 +5,7 @@ use strict;
 use warnings;
 use DBI;
 use DBIx::DBO::Common;
+use DBIx::DBO::Table;
 
 =head1 NAME
 
@@ -122,12 +123,16 @@ sub connect_readonly {
 sub _require_dbo_class {
     my $class = shift;
     return $class if eval "require $class";
+
+    (my $file = $class.'.pm') =~ s'::'/'g;
+    die $@ if $@ !~ / \Q$file\E in \@INC /;
+
+    delete $INC{$file};
+    $INC{$file} = 1;
     {
         no strict 'refs';
         @{$class.'::ISA'} = __PACKAGE__;
     }
-    (my $file = $class.'.pm') =~ s'::'/'g;
-    $INC{$file} = 1;
     return $class;
 }
 
@@ -228,16 +233,6 @@ sub selectall_arrayref {
     $me->rdbh->selectall_arrayref($sql, $attr, @_);
 }
 
-=head2 table_info
-
-  $dbo->table_info($table);
-  $dbo->table_info([$schema, $table]);
-  $dbo->table_info($table_object);
-
-Dunno yet.
-
-=cut
-
 sub _get_table_schema {
     my $me = shift;
     my $schema = shift;
@@ -269,6 +264,16 @@ sub _get_table_info {
     $me->{TableInfo}{$schema}{$table} = \%h;
 }
 
+=head2 table_info
+
+  $dbo->table_info($table);
+  $dbo->table_info([$schema, $table]);
+  $dbo->table_info($table_object);
+
+Dunno yet.
+
+=cut
+
 sub table_info {
     my $me = shift;
     my $schema = '';
@@ -281,12 +286,26 @@ sub table_info {
     if (ref $table eq 'ARRAY') {
         ($schema, $table) = @$table;
     }
-    $schema = $me->_get_table_schema($schema, $table) unless defined $schema and length $schema;
+    $schema = $me->_get_table_schema('', $table) unless defined $schema and length $schema;
 
     unless (exists $me->{TableInfo}{$schema}{$table}) {
         $me->_get_table_info($schema, $table);
     }
     return ($schema, $table, $me->{TableInfo}{$schema}{$table});
+}
+
+=head2 table
+
+  $dbo->table($table);
+  $dbo->table([$schema, $table]);
+  $dbo->table($table_object);
+
+Create a table object.
+
+=cut
+
+sub table {
+  DBIx::DBO::Table->new(@_);
 }
 
 =head2 disconnect
