@@ -249,11 +249,12 @@ sub _get_table_schema {
 
 sub _get_table_info {
     my $me = shift;
-    my $schema = shift;
-    my $table = shift;
+    my $schema = my $q_schema = shift;
+    my $table = my $q_table = shift;
+    ouch 'No table name supplied' unless defined $table and length $table;
 
-    (my $q_schema = $schema) =~ s/([\\_%])/\\$1/g;
-    (my $q_table = $table) =~ s/([\\_%])/\\$1/g;
+    $q_schema =~ s/([\\_%])/\\$1/g if defined $q_schema;
+    $q_table =~ s/([\\_%])/\\$1/g;
 
     my $cols = $me->rdbh->column_info(undef, $q_schema, $q_table, '%')->fetchall_arrayref({});
     ouch 'Invalid table: '.$me->_qi($table) unless @$cols;
@@ -277,8 +278,8 @@ Dunno yet.
 
 sub table_info {
     my $me = shift;
-    my $schema = '';
     my $table = shift;
+    my $schema;
 
     if (blessed $table and $table->isa('DBIx::DBO::Table')) {
         ($schema, $table) = @$table{qw(Schema Name)};
@@ -287,7 +288,7 @@ sub table_info {
     if (ref $table eq 'ARRAY') {
         ($schema, $table) = @$table;
     }
-    $schema = $me->_get_table_schema('', $table) unless defined $schema and length $schema;
+    $schema = $me->_get_table_schema($schema, $table) unless defined $schema and length $schema;
 
     unless (exists $me->{TableInfo}{$schema}{$table}) {
         $me->_get_table_info($schema, $table);
