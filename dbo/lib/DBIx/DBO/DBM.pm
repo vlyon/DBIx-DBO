@@ -1,5 +1,6 @@
 package DBIx::DBO::DBM;
-use base DBIx::DBO;
+our @ISA = ('DBIx::DBO');
+use DBIx::DBO::Common;
 
 use strict;
 use warnings;
@@ -17,7 +18,7 @@ sub _get_table_schema {
     my $me = shift;
     my $schema = shift; # Not used
     my $table = my $q_table = shift;
-    DBIx::DBO::ouch 'No table name supplied' unless defined $table and length $table;
+    ouch 'No table name supplied' unless defined $table and length $table;
 
     return '';
 }
@@ -26,7 +27,7 @@ sub _get_table_info {
     my $me = shift;
     my $schema = shift; # Not used
     my $table = my $q_table = shift;
-    DBIx::DBO::ouch 'No table name supplied' unless defined $table and length $table;
+    ouch 'No table name supplied' unless defined $table and length $table;
 
     unless (exists $me->rdbh->{dbm_tables}{$q_table}
             and exists $me->rdbh->{dbm_tables}{$q_table}{cols}
@@ -35,7 +36,7 @@ sub _get_table_info {
         unless (exists $me->rdbh->{dbm_tables}{$q_table}
                 and exists $me->rdbh->{dbm_tables}{$q_table}{cols}
                 and ref $me->rdbh->{dbm_tables}{$q_table}{cols} eq 'ARRAY') {
-            DBIx::DBO::ouch 'Invalid table: '.$q_table;
+            ouch 'Invalid table: '.$q_table;
         }
     }
 
@@ -44,7 +45,7 @@ sub _get_table_info {
     for my $col (@{$me->rdbh->{dbm_tables}{$q_table}{cols}}) {
         $h{Fields}{$col} = ++$i;
     }
-    $h{PrimaryKeys} = $me->rdbh->{dbm_tables}{$q_table}{cols};
+    $h{PrimaryKeys} = [];
     $me->{TableInfo}{$schema}{$table} = \%h;
 }
 

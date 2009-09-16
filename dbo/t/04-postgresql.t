@@ -12,7 +12,6 @@ my $test_sch = $Test::DBO::prefix.'_sch';
 my $test_tbl = $Test::DBO::prefix.'_tbl';
 my $quoted_db;
 my $quoted_sch;
-my $quoted_tbl;
 
 sub connect_and_create {
     if (my $dbo = Test::DBO::connect_dbo(@_)) {
@@ -58,14 +57,12 @@ isa_ok $dbo, 'DBIx::DBO::Pg', '$dbo';
 my $drop_sch;
 if (ok $dbo->do("CREATE SCHEMA $quoted_sch"), "Create $quoted_sch test schema") {
     $drop_sch = 1;
-    $quoted_tbl = $dbo->_qi($test_sch, $test_tbl);
 } else {
     note sql_err($dbo);
-    $quoted_tbl = $dbo->_qi($test_tbl);
 }
 
 # Test methods: do, select* (4 tests)
-Test::DBO::basic_methods($dbo, $test_tbl, $quoted_tbl);
+Test::DBO::basic_methods($dbo, $test_sch, $test_tbl);
 
 SKIP: {
     skip 'Create test schema failed', 1 unless $drop_sch;
@@ -76,18 +73,19 @@ SKIP: {
 
 END {
     if ($drop_sch) {
-        if ($drop_db->do("DROP SCHEMA $quoted_sch")) {
+        if ($dbo->do("DROP SCHEMA $quoted_sch CASCADE")) {
             note "Dropped $quoted_sch test schema";
         } else {
             diag sql_err($dbo);
         }
     }
     if ($drop_db) {
+        $dbo->disconnect;
         undef $dbo; # Make sure we're no longer connected
         if ($drop_db->do("DROP DATABASE $quoted_db")) {
             note "Dropped $quoted_db test database";
         } else {
-            diag sql_err($dbo);
+            diag sql_err($drop_db);
         }
     }
 }
