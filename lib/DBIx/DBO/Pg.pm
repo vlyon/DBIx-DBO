@@ -1,6 +1,5 @@
 package DBIx::DBO::Pg;
-our @ISA;
-push @ISA, 'DBIx::DBO';
+our @ISA = ('DBIx::DBO');
 use DBIx::DBO::Common;
 
 use strict;
@@ -8,11 +7,12 @@ use warnings;
 
 sub _get_table_schema {
     my $me = shift;
-    my $schema = shift;
-    my $table = shift;
+    my $schema = my $q_schema = shift;
+    my $table = my $q_table = shift;
+    ouch 'No table name supplied' unless defined $table and length $table;
 
-    (my $q_schema = $schema) =~ s/([\\_%])/\\$1/g;
-    (my $q_table = $table) =~ s/([\\_%])/\\$1/g;
+    $q_schema =~ s/([\\_%])/\\$1/g if defined $q_schema;
+    $q_table =~ s/([\\_%])/\\$1/g;
 
     my $info = $me->rdbh->table_info(undef, $q_schema, $q_table)->fetchall_arrayref({});
     ouch 'Invalid table: '.$me->_qi($table) unless $info and @$info == 1 and $info->[0]{pg_table} eq $table;
@@ -21,20 +21,24 @@ sub _get_table_schema {
 
 sub _get_table_info {
     my $me = shift;
-    my $schema = shift;
-    my $table = shift;
+    my $schema = my $q_schema = shift;
+    my $table = my $q_table = shift;
+    ouch 'No table name supplied' unless defined $table and length $table;
 
-    (my $q_schema = $schema) =~ s/([\\_%])/\\$1/g;
-    (my $q_table = $table) =~ s/([\\_%])/\\$1/g;
+    $q_schema =~ s/([\\_%])/\\$1/g if defined $q_schema;
+    $q_table =~ s/([\\_%])/\\$1/g;
 
     my $cols = $me->rdbh->column_info(undef, $q_schema, $q_table, '%')->fetchall_arrayref({});
     ouch 'Invalid table: '.$me->_qi($table) unless @$cols;
-    my $keys = $me->rdbh->primary_key_info(undef, $schema, $table)->fetchall_arrayref({});
 
     my %h;
     $h{Fields}{$_->{pg_column}} = $_->{ORDINAL_POSITION} for @$cols;
-    $h{PrimaryKeys} = [ map $cols->[$_->{KEY_SEQ} - 1]{pg_column}, @$keys ];
-    $me->{TableInfo}{$schema}{$table} = \%h;
+    if (my $keys = $me->rdbh->primary_key_info(undef, $schema, $table)) {
+        $h{PrimaryKeys} = [ map $cols->[$_->{KEY_SEQ} - 1]{pg_column}, @{$keys->fetchall_arrayref({})} ];
+    } else {
+        $h{PrimaryKeys} = [];
+    }
+    $me->{TableInfo}{$schema // ''}{$table} = \%h;
 }
 
 sub table_info {

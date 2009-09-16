@@ -48,6 +48,17 @@ sub import {
 
     return unless $tests;
 
+    if (exists $opt{tempdir}) {
+        require File::Temp;
+        my $dir = File::Temp::tempdir('tmp_XXXX', CLEANUP => 1);
+        if (ref $opt{tempdir}) {
+            ${$opt{tempdir}} = $dir;
+        } else {
+            chdir $dir or die "Can't cd to $dir: $!\n";
+            eval "END { chdir '..' }";
+        }
+    }
+
     if (exists $opt{connect_ok}) {
         my $dbo_ref = shift @{$opt{connect_ok}};
         $$dbo_ref = connect_dbo(@{$opt{connect_ok}}) or plan skip_all => "Can't connect: $DBI::errstr";
@@ -89,35 +100,39 @@ sub connect_dbo {
 
 sub basic_methods {
     my $dbo = shift;
-    my $test_tbl = shift;
-    my $quoted_tbl = shift;
+    my $schema = shift;
+    my $table = shift;
+    my $quoted_table = $dbo->_qi($schema, $table);
 
     SKIP: {
         # Create a test table
-        ok $dbo->do("CREATE TABLE $quoted_tbl (id INT, name TEXT)"), 'Method DBIx::DBO->do'
-            or diag sql_err($dbo) or skip "Can't create test table $quoted_tbl", 3;
+        ok $dbo->do("CREATE TABLE $quoted_table (id INT, name TEXT)"), 'Method DBIx::DBO->do'
+            or diag sql_err($dbo) or skip "Can't create test table $quoted_table", 3;
 
         # Insert data
-        $dbo->do("INSERT INTO $quoted_tbl VALUES (1, 'John Doe')") or diag sql_err($dbo);
-        $dbo->do("INSERT INTO $quoted_tbl VALUES (?, ?)", undef, 2, 'Jane Smith') or diag sql_err($dbo);
+        $dbo->do("INSERT INTO $quoted_table VALUES (1, 'John Doe')") or diag sql_err($dbo);
+        $dbo->do("INSERT INTO $quoted_table VALUES (?, ?)", undef, 2, 'Jane Smith') or diag sql_err($dbo);
 
         # Check the DBO select* methods
         my $rv = [];
-        @$rv = $dbo->selectrow_array("SELECT * FROM $quoted_tbl") or diag sql_err($dbo);
+        @$rv = $dbo->selectrow_array("SELECT * FROM $quoted_table") or diag sql_err($dbo);
         is_deeply $rv, [1,'John Doe'], 'Method DBIx::DBO->selectrow_array';
 
-        $rv = $dbo->selectrow_arrayref("SELECT * FROM $quoted_tbl") or diag sql_err($dbo);
+        $rv = $dbo->selectrow_arrayref("SELECT * FROM $quoted_table") or diag sql_err($dbo);
         is_deeply $rv, [1,'John Doe'], 'Method DBIx::DBO->selectrow_arrayref';
 
-        $rv = $dbo->selectall_arrayref("SELECT * FROM $quoted_tbl") or diag sql_err($dbo);
+        $rv = $dbo->selectall_arrayref("SELECT * FROM $quoted_table") or diag sql_err($dbo);
         is_deeply $rv, [[1,'John Doe'],[2,'Jane Smith']], 'Method DBIx::DBO->selectall_arrayref';
 
+my $info = $dbo->rdbh->primary_key_info(undef, $schema, $table);
+use Data::Dumper;
+warn  'info', substr Dumper($info), 5;
         # Create a table object
-        my $t = $dbo->table($test_tbl);
+        my $t = $dbo->table([$schema, $table]);
         isa_ok $t, 'DBIx::DBO::Table', '$t';
 
         # Remove the created table
-        $dbo->do("DROP TABLE $quoted_tbl") or diag sql_err($dbo);
+        $dbo->do("DROP TABLE $quoted_table") or diag sql_err($dbo);
     }
 }
 

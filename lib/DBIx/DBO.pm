@@ -101,8 +101,7 @@ sub connect {
     }
     my $new = { rdbh => undef, ConnectArgs => [], ConnectReadOnlyArgs => [], TransactionDepth => 0 };
     $new->{dbh} = _connect($new->{ConnectArgs}, @_) or return;
-    my $class = $me.'::'.$new->{dbh}->{Driver}->{Name};
-    _require_dbo_class($class);
+    my $class = $me->_require_dbo_class($new->{dbh}) or return;
     bless $new, $class;
 }
 
@@ -116,22 +115,35 @@ sub connect_readonly {
     }
     my $new = { dbh => undef, ConnectArgs => [], ConnectReadOnlyArgs => [], TransactionDepth => 0 };
     $new->{rdbh} = _connect($new->{ConnectReadOnlyArgs}, @_) or return;
-    my $class = $me.'::'.$new->{rdbh}->{Driver}->{Name};
-    bless $new, _require_dbo_class($class);
+    my $class = $me->_require_dbo_class($new->{rdbh}) or return;
+    bless $new, $class;
 }
 
 sub _require_dbo_class {
-    my $class = shift;
-    return $class if eval "require $class";
+    my $me = shift;
+    my $dbh = shift;
+    my $class = $me.'::'.$dbh->{Driver}{Name};
+    my @warn;
+    {
+        local $SIG{__WARN__} = sub { push @warn, join '', @_ };
+        return $class if eval "require $class";
+    }
 
     (my $file = $class.'.pm') =~ s'::'/'g;
-    die $@ if $@ !~ / \Q$file\E in \@INC /;
+    if ($@ !~ / \Q$file\E in \@INC /) {
+        # Set $DBI::errstr
+        (my $err = $@) =~ s/\n.*$//; # Remove the last line
+        chomp @warn;
+        chomp $err;
+        $dbh->set_err('', join("\n", "Can't load driver $class", @warn, $err));
+        return;
+    }
 
     delete $INC{$file};
     $INC{$file} = 1;
     {
         no strict 'refs';
-        @{$class.'::ISA'} = __PACKAGE__;
+        @{$class.'::ISA'} = (__PACKAGE__);
     }
     return $class;
 }
@@ -249,21 +261,21 @@ sub _get_table_schema {
 
 sub _get_table_info {
     my $me = shift;
-    my $schema = my $q_schema = shift;
-    my $table = my $q_table = shift;
+    my $schema = shift;
+    my $table = shift;
     ouch 'No table name supplied' unless defined $table and length $table;
 
-    $q_schema =~ s/([\\_%])/\\$1/g if defined $q_schema;
-    $q_table =~ s/([\\_%])/\\$1/g;
-
-    my $cols = $me->rdbh->column_info(undef, $q_schema, $q_table, '%')->fetchall_arrayref({});
+    my $cols = $me->rdbh->column_info(undef, $schema, $table, '%')->fetchall_arrayref({});
     ouch 'Invalid table: '.$me->_qi($table) unless @$cols;
-    my $keys = $me->rdbh->primary_key_info(undef, $schema, $table)->fetchall_arrayref({});
 
     my %h;
     $h{Fields}{$_->{COLUMN_NAME}} = $_->{ORDINAL_POSITION} for @$cols;
-    $h{PrimaryKeys} = [ map $cols->[$_->{KEY_SEQ} - 1]{COLUMN_NAME}, @$keys ];
-    $me->{TableInfo}{$schema}{$table} = \%h;
+    if (my $keys = $me->rdbh->primary_key_info(undef, $schema, $table)) {
+        $h{PrimaryKeys} = [ map $cols->[$_->{KEY_SEQ} - 1]{COLUMN_NAME}, @{$keys->fetchall_arrayref({})} ];
+    } else {
+        $h{PrimaryKeys} = [];
+    }
+    $me->{TableInfo}{$schema // ''}{$table} = \%h;
 }
 
 =head2 table_info
