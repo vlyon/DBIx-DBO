@@ -14,9 +14,9 @@ BEGIN {
 diag "Testing DBIx::DBO $DBIx::DBO::VERSION, Perl $], $^X";
 note 'Available DBI drivers: '.join(', ', DBI->available_drivers);
 
-is $DBIx::DBO::QuoteIdentifier, 1, 'QuoteIdentifier setting is ON by default';
-import DBIx::DBO 'NoQuoteIdentifier';
-is $DBIx::DBO::QuoteIdentifier, 0, "Check 'NoQuoteIdentifier' import option";
-import DBIx::DBO 'QuoteIdentifier';
-is $DBIx::DBO::QuoteIdentifier, 1, "Check 'QuoteIdentifier' import option";
+ok $DBIx::DBO::Config{QuoteIdentifier}, 'QuoteIdentifier setting is ON by default';
+import DBIx::DBO QuoteIdentifier => 123;
+is $DBIx::DBO::Config{QuoteIdentifier}, 123, "Check 'QuoteIdentifier' import option";
+DBIx::DBO->config(QuoteIdentifier => 456);
+is +DBIx::DBO->config('QuoteIdentifier'), 456, 'Method DBIx::DBO->config';
 

@@ -20,7 +20,7 @@ sub _get_table_schema {
     my $table = my $q_table = shift;
     ouch 'No table name supplied' unless defined $table and length $table;
 
-    return '';
+    return;
 }
 
 sub _get_table_info {
@@ -46,7 +46,7 @@ sub _get_table_info {
         $h{Fields}{$col} = ++$i;
     }
     $h{PrimaryKeys} = [];
-    $me->{TableInfo}{$schema}{$table} = \%h;
+    $me->{TableInfo}{$schema // ''}{$table} = \%h;
 }
 
 1;
