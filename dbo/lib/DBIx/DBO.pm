@@ -319,7 +319,7 @@ Create a table object.
 =cut
 
 sub table {
-  DBIx::DBO::Table->new(@_);
+    DBIx::DBO::Table->_new(@_);
 }
 
 =head2 disconnect

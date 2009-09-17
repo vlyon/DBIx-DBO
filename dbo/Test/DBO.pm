@@ -128,6 +128,10 @@ sub basic_methods {
         my $t = $dbo->table([$schema, $table]);
         isa_ok $t, 'DBIx::DBO::Table', '$t';
 
+        # Insert via table object
+        $rv = $t->insert(id => 3, name => 'Vernon Lyon') or diag sql_err($dbo);
+        ok $rv, 'Method DBIx::DBO::Table->insert';
+
         # Remove the created table
         $dbo->do("DROP TABLE $quoted_table") or diag sql_err($dbo);
     }
