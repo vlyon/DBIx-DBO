@@ -124,9 +124,6 @@ sub basic_methods {
         $rv = $dbo->selectall_arrayref("SELECT * FROM $quoted_table") or diag sql_err($dbo);
         is_deeply $rv, [[1,'John Doe'],[2,'Jane Smith']], 'Method DBIx::DBO->selectall_arrayref';
 
-my $info = $dbo->rdbh->primary_key_info(undef, $schema, $table);
-use Data::Dumper;
-warn  'info', substr Dumper($info), 5;
         # Create a table object
         my $t = $dbo->table([$schema, $table]);
         isa_ok $t, 'DBIx::DBO::Table', '$t';
