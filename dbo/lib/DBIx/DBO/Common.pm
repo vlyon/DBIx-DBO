@@ -28,8 +28,10 @@ use subs qw(ouch oops);
 *oops = \&Carp::carp;
 *ouch = \&Carp::croak;
 
-our $QuoteIdentifier = 1;
-our $_Debug_SQL = 0;
+our %Config = (
+    QuoteIdentifier => 1,
+    _Debug_SQL => 0,
+);
 our @CARP_NOT;
 our $placeholder = PLACEHOLDER;
 $placeholder = qr/\Q$placeholder/;
@@ -38,9 +40,10 @@ sub import {
     my $caller = caller;
     push @CARP_NOT, $caller;
     no strict 'refs';
-    for (qw(QuoteIdentifier _Debug_SQL)) {
-        *{$caller.'::'.$_} = \${__PACKAGE__.'::'.$_};
-    }
+#    for (qw(QuoteIdentifier _Debug_SQL)) {
+#        *{$caller.'::'.$_} = \${__PACKAGE__.'::'.$_};
+#    }
+    *{$caller.'::Config'} = \%{__PACKAGE__.'::Config'};
     *{$caller.'::CARP_NOT'} = \@{__PACKAGE__.'::CARP_NOT'};
     for (qw(oops ouch blessed _qi _last_sql _carp_last_sql _sql do _parse_col _build_col _parse_val _build_val)) {
         *{$caller.'::'.$_} = \&{$_};
@@ -49,7 +52,8 @@ sub import {
 
 sub _qi {
     my $me = shift;
-    $QuoteIdentifier ? $me->dbh->quote_identifier(@_) : join '.', @_;
+Carp::confess 'ooh' if (defined $_[0] and $_[0] eq '');
+    $me->config('QuoteIdentifier') ? $me->dbh->quote_identifier(@_) : join '.', @_;
 }
 
 sub _last_sql {
@@ -62,7 +66,7 @@ sub _last_sql {
 sub _carp_last_sql {
     my $me = shift;
     my ($cmd, $sql, @bind) = @{$me->_last_sql};
-    local $Carp::Verbose = 1 if $_Debug_SQL > 1;
+    local $Carp::Verbose = 1 if $me->config('_Debug_SQL') > 1;
     my @mess = split /\n/, Carp::shortmess("\t$cmd called");
     splice @mess, 0, 3 if $Carp::Verbose;
     warn join "\n", $sql, '('.join(', ', map $me->rdbh->quote($_), @bind).')', @mess;
@@ -72,7 +76,7 @@ sub _sql {
     my ($me, $sql) = splice @_, 0, 2;
     my $cmd = (caller(1))[3];
     $me->_last_sql($cmd, $sql, @_);
-    $me->_carp_last_sql if $_Debug_SQL;
+    $me->_carp_last_sql if $me->config('_Debug_SQL');
 }
 
 sub do {

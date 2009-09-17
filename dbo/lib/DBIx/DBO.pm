@@ -65,9 +65,16 @@ This module provides a convenient and efficient way to access a database. It can
 
 sub import {
     my $class = shift;
-    for (@_) {
-        if (/^(No|)QuoteIdentifier$/) { $QuoteIdentifier = $1 ? 0 : 1; next }
-        oops 'Unknown import option: '.$_;
+    if (@_ & 1) {
+        my $opt = pop;
+        oops "Import option '$opt' passed without a value";
+    }
+    while (my ($opt, $val) = splice @_, 0, 2) {
+        if (exists $Config{$opt}) {
+            $Config{$opt} = $val;
+        } else {
+            oops "Unknown import option '$opt'";
+        }
     }
 }
 
@@ -167,7 +174,7 @@ sub _connect {
 
 ### Add a stack trace to PrintError & RaiseError
         $attr{HandleError} = sub {
-            if ($_Debug_SQL > 1) {
+            if ($Config{_Debug_SQL} > 1) {
                 $_[0] = Carp::longmess($_[0]);
                 return 0;
             }
@@ -205,6 +212,20 @@ sub rdbh {
     return $me->dbh unless $me->{rdbh};
     return $me->{rdbh} if $me->{rdbh}->ping;
     $me->{rdbh} = _connect($me->{ConnectReadOnlyArgs});
+}
+
+sub config {
+    my $me = shift;
+    my $opt = shift;
+    ouch "Invalid config option '$opt'" unless exists $Config{$opt};
+    unless (blessed $me) {
+        my $val = $Config{$opt};
+        $Config{$opt} = shift if @_;
+        return $val;
+    }
+    my $val = $me->{Config}{$opt} // $Config{$opt};
+    $me->{Config}{$opt} = shift if @_;
+    return $val;
 }
 
 =head2 selectrow_array
@@ -295,17 +316,17 @@ sub table_info {
 
     if (blessed $table and $table->isa('DBIx::DBO::Table')) {
         ($schema, $table) = @$table{qw(Schema Name)};
-        return ($schema, $table, $me->{TableInfo}{$schema}{$table});
+        return ($schema, $table, $me->{TableInfo}{$schema // ''}{$table});
     }
     if (ref $table eq 'ARRAY') {
         ($schema, $table) = @$table;
     }
-    $schema = $me->_get_table_schema($schema, $table) unless defined $schema and length $schema;
+    $schema //= $me->_get_table_schema($schema, $table);
 
-    unless (exists $me->{TableInfo}{$schema}{$table}) {
+    unless (exists $me->{TableInfo}{$schema // ''}{$table}) {
         $me->_get_table_info($schema, $table);
     }
-    return ($schema, $table, $me->{TableInfo}{$schema}{$table});
+    return ($schema, $table, $me->{TableInfo}{$schema // ''}{$table});
 }
 
 =head2 table
