@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 my $dir;
-use Test::DBO DBM => 7, tempdir => \$dir;
+use Test::DBO DBM => 8, tempdir => \$dir;
 
 # Create the DBO
 my $dbo = Test::DBO::connect_ok("f_dir=$dir");
