@@ -50,7 +50,7 @@ sub import {
     no strict 'refs';
     *{$caller.'::Config'} = \%{__PACKAGE__.'::Config'};
     *{$caller.'::CARP_NOT'} = \@{__PACKAGE__.'::CARP_NOT'};
-    for (qw(oops ouch blessed _qi _last_sql _carp_last_sql _sql do _parse_col _build_col _parse_val _build_val)) {
+    for (qw(oops ouch blessed _qi _last_sql _carp_last_sql _sql do _parse_col _build_col _parse_val _build_val _build_where)) {
         *{$caller.'::'.$_} = \&{$_};
     }
 }
@@ -172,6 +172,17 @@ sub _build_val {
     return $ary[0].$alias unless defined $func;
     $func =~ s/$placeholder/shift @ary/eg;
     return $func.$alias;
+}
+
+sub _build_where {
+    ouch 'Wrong number of arguments' if @_ & 1;
+    my ($me, $bind) = splice @_, 0, 2;
+    my @where;
+    while (my ($col, $val) = splice @_, 0, 2) {
+        # FIXME: Doesn't work with NULLs (mysql can do <=>)
+        push @where, $me->_build_col($me->_parse_col($col)).' = '.$me->_build_val($bind, $me->_parse_val($val));
+    }
+    return @where ? ' WHERE '.join(' AND ', @where) : '';
 }
 
 1;
