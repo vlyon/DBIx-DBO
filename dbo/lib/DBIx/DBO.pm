@@ -109,7 +109,7 @@ sub connect {
     my $new = { rdbh => undef, ConnectArgs => [], ConnectReadOnlyArgs => [], TransactionDepth => 0 };
     $new->{dbh} = _connect($new->{ConnectArgs}, @_) or return;
     my $class = $me->_require_dbo_class($new->{dbh}) or return;
-    bless $new, $class;
+    $class->_bless_dbo($new);
 }
 
 sub connect_readonly {
@@ -123,7 +123,7 @@ sub connect_readonly {
     my $new = { dbh => undef, ConnectArgs => [], ConnectReadOnlyArgs => [], TransactionDepth => 0 };
     $new->{rdbh} = _connect($new->{ConnectReadOnlyArgs}, @_) or return;
     my $class = $me->_require_dbo_class($new->{rdbh}) or return;
-    bless $new, $class;
+    $class->_bless_dbo($new);
 }
 
 sub _require_dbo_class {
@@ -153,6 +153,12 @@ sub _require_dbo_class {
         @{$class.'::ISA'} = (__PACKAGE__);
     }
     return $class;
+}
+
+sub _bless_dbo {
+    my $class = shift;
+    my $new = shift;
+    bless $new, $class;
 }
 
 sub _check_driver {
@@ -190,16 +196,6 @@ sub _connect {
     DBI->connect(@$conn);
 }
 
-=head2 dbh
-
-The read-write DBI handle.
-
-=head2 rdbh
-
-The read-only DBI handle, or if there is no read-only connection, the read-write DBI handle.
-
-=cut
-
 sub dbh {
     my $me = shift;
     ouch 'Invalid action for a read-only connection' unless $me->{dbh};
@@ -213,6 +209,18 @@ sub rdbh {
     return $me->{rdbh} if $me->{rdbh}->ping;
     $me->{rdbh} = _connect($me->{ConnectReadOnlyArgs});
 }
+
+=head2 config
+
+  $global_setting = DBIx::DBO->config($option)
+  DBIx::DBO->config($option => $global_setting)
+  $dbo_setting = $dbo->config($option)
+  $dbo->config($option => $dbo_setting)
+
+Get or set the global or dbo config settings.
+When setting an option, the previous value is returned.
+
+=cut
 
 sub config {
     my $me = shift;

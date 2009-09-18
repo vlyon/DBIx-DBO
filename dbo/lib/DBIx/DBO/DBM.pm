@@ -5,13 +5,12 @@ use DBIx::DBO::Common;
 use strict;
 use warnings;
 
-sub _like_to_regex {
-    my $me = shift;
-    my $like = shift;
-    my @re = ($like =~ s'^%'' ? '' : '^', $like =~ s'%$'' ? '' : '$');
-    $like = quotemeta($like);
-    $like =~ s/(\\+[\%_])/length($1) & 1 ? $1 : $2 eq '%' ? '.*' : '.'/eg;
-    join '', @re;
+sub _bless_dbo {
+    my $class = shift;
+    my $me = $class->SUPER::_bless_dbo(@_);
+    # DBM does not supported QuoteIdentifier correctly!
+    $me->config(QuoteIdentifier => 0);
+    return $me;
 }
 
 sub _get_table_schema {

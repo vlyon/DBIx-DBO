@@ -22,6 +22,14 @@ This module automatically exports ALL the methods and variables for use in the o
 
 This provides access to DBI C<do> method.
 
+=head2 dbh
+
+The read-write DBI handle.
+
+=head2 rdbh
+
+The read-only DBI handle, or if there is no read-only connection, the read-write DBI handle.
+
 =cut
 
 use subs qw(ouch oops);
@@ -40,9 +48,6 @@ sub import {
     my $caller = caller;
     push @CARP_NOT, $caller;
     no strict 'refs';
-#    for (qw(QuoteIdentifier _Debug_SQL)) {
-#        *{$caller.'::'.$_} = \${__PACKAGE__.'::'.$_};
-#    }
     *{$caller.'::Config'} = \%{__PACKAGE__.'::Config'};
     *{$caller.'::CARP_NOT'} = \@{__PACKAGE__.'::CARP_NOT'};
     for (qw(oops ouch blessed _qi _last_sql _carp_last_sql _sql do _parse_col _build_col _parse_val _build_val)) {
@@ -52,8 +57,10 @@ sub import {
 
 sub _qi {
     my $me = shift;
-Carp::confess 'ooh' if (defined $_[0] and $_[0] eq '');
-    $me->config('QuoteIdentifier') ? $me->dbh->quote_identifier(@_) : join '.', @_;
+    return $me->dbh->quote_identifier(@_) if $me->config('QuoteIdentifier');
+    # Strip off any null/undef elements (ie schema)
+    shift while @_ and !defined $_[0];
+    join '.', @_;
 }
 
 sub _last_sql {

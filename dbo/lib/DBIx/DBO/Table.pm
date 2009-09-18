@@ -9,6 +9,25 @@ use overload '**' => \&column, fallback => 1;
 sub dbh { $_[0]{DBO}->dbh }
 sub rdbh { $_[0]{DBO}->rdbh }
 
+=head2 config
+
+  $table_setting = $dbo->config($option)
+  $dbo->config($option => $table_setting)
+
+Get or set the global or dbo config settings.
+When setting an option, the previous value is returned.
+
+=cut
+
+sub config {
+    my $me = shift;
+    my $opt = shift;
+    ouch "Invalid config option '$opt'" unless exists $Config{$opt};
+    my $val = $me->{Config}{$opt} // $me->{DBO}->config($opt);
+    $me->{Config}{$opt} = shift if @_;
+    return $val;
+}
+
 sub _new {
     my ($proto, $dbo, $table) = @_;
     my $class = ref($proto) || $proto;
