@@ -15,12 +15,12 @@ BEGIN {
         diag "DBO_DEBUG_SQL=$ENV{DBO_DEBUG_SQL}";
         package DBIx::DBO::Common;
 
-        $DBIx::DBO::Common::_Debug_SQL = $ENV{DBO_DEBUG_SQL};
+        $DBIx::DBO::Common::Config{_Debug_SQL} = $ENV{DBO_DEBUG_SQL};
         no warnings 'redefine';
         *DBIx::DBO::Common::_carp_last_sql = sub {
             my $me = shift;
             my ($cmd, $sql, @bind) = @{$me->_last_sql};
-            local $Carp::Verbose = 1 if $DBIx::DBO::Common::_Debug_SQL > 1;
+            local $Carp::Verbose = 1 if $me->config('_Debug_SQL') > 1;
             my @mess = split /\n/, Carp::shortmess("\t$cmd called");
             splice @mess, 0, 3 if $Carp::Verbose;
             Test::More::diag join "\n", "DEBUG_SQL: $sql", 'DEBUG_SQL: ('.join(', ', map $me->rdbh->quote($_), @bind).')', @mess;
@@ -128,13 +128,32 @@ sub basic_methods {
         my $t = $dbo->table([$schema, $table]);
         isa_ok $t, 'DBIx::DBO::Table', '$t';
 
+        # Create a column object
+        my $c = $t->column('id');
+        isa_ok $c, 'DBIx::DBO::Column', '$c';
+
         # Insert via table object
-        $rv = $t->insert(id => 3, name => 'Vernon Lyon') or diag sql_err($dbo);
+        $rv = $t->insert($c => 3, name => 'Uncle Arnie') or diag sql_err($t);
         ok $rv, 'Method DBIx::DBO::Table->insert';
+
+        # Delete via table object
+        $rv = $t->delete(id => 1) or diag sql_err($t);
+        is $rv, 1, 'Method DBIx::DBO::Table->delete';
 
         # Remove the created table
         $dbo->do("DROP TABLE $quoted_table") or diag sql_err($dbo);
     }
+}
+
+sub advanced_table_methods {
+    my $dbo = shift;
+    my $schema = shift;
+    my $table = shift;
+    my $quoted_table = $dbo->_qi($schema, $table);
+
+        # Comming soon
+#        $rv = $t->insert($c => { FUNC => '? + 2', VAL => 2 }, name => \"'Vernon Lyon'") or diag sql_err($t);
+#        ok $rv, 'Method DBIx::DBO::Table->insert (advanced)';
 }
 
 1;

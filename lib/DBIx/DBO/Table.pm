@@ -93,6 +93,22 @@ sub insert {
     return $rv;
 }
 
+=head2 delete
+
+  $t->delete(name => 'Richard', age => 103)
+
+Delete all rows from the table matching the criteria.
+
+=cut
+
+sub delete {
+    my $me = shift;
+    my $sql = 'DELETE FROM '.$me->_quoted_name;
+    my @bind;
+    $sql .= $me->_build_where(\@bind, @_);
+    $me->do($sql, undef, @bind);
+}
+
 sub DESTROY {
     undef %{$_[0]};
 }
