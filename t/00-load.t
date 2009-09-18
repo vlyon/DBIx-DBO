@@ -11,7 +11,7 @@ BEGIN {
         or BAIL_OUT 'DBIx::DBO failed!';
 }
 
-diag "Testing DBIx::DBO $DBIx::DBO::VERSION, Perl $], $^X";
+diag "DBIx::DBO $DBIx::DBO::VERSION, Perl $], $^X";
 note 'Available DBI drivers: '.join(', ', DBI->available_drivers);
 
 ok $DBIx::DBO::Config{QuoteIdentifier}, 'QuoteIdentifier setting is ON by default';
