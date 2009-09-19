@@ -31,6 +31,7 @@ use DBIx::DBO;
 
 our $dbd;
 (our $prefix = "DBO_${DBIx::DBO::VERSION}_test") =~ s/\W/_/g;
+our @_cleanup_sql;
 
 sub import {
     my $class = shift;
@@ -107,7 +108,7 @@ sub basic_methods {
     SKIP: {
         # Create a test table
         ok $dbo->do("CREATE TABLE $quoted_table (id INT, name TEXT)"), 'Method DBIx::DBO->do'
-            or diag sql_err($dbo) or skip "Can't create test table $quoted_table", 3;
+            or diag sql_err($dbo) or skip "Can't create test table $quoted_table", 8;
 
         # Insert data
         $dbo->do("INSERT INTO $quoted_table VALUES (1, 'John Doe')") or diag sql_err($dbo);
@@ -128,32 +129,56 @@ sub basic_methods {
         my $t = $dbo->table([$schema, $table]);
         isa_ok $t, 'DBIx::DBO::Table', '$t';
 
+        # Insert via table object
+        $rv = $t->insert(id => 3, name => 'Uncle Arnie') or diag sql_err($t);
+        ok $rv, 'Method DBIx::DBO::Table->insert';
+
         # Create a column object
         my $c = $t->column('id');
         isa_ok $c, 'DBIx::DBO::Column', '$c';
 
-        # Insert via table object
-        $rv = $t->insert($c => 3, name => 'Uncle Arnie') or diag sql_err($t);
+        # Advanced insert using a column object
+        $rv = $t->insert($c => {FUNC => '4'}, name => \"'James Bond'") or diag sql_err($t);
         ok $rv, 'Method DBIx::DBO::Table->insert';
 
         # Delete via table object
-        $rv = $t->delete(id => 1) or diag sql_err($t);
+        $rv = $t->delete(id => 3) or diag sql_err($t);
         is $rv, 1, 'Method DBIx::DBO::Table->delete';
 
-        # Remove the created table
-        $dbo->do("DROP TABLE $quoted_table") or diag sql_err($dbo);
+        # Remove the created table during cleanup
+        push @_cleanup_sql, "DROP TABLE $quoted_table";
+
+        return $t;
     }
 }
 
 sub advanced_table_methods {
     my $dbo = shift;
-    my $schema = shift;
-    my $table = shift;
-    my $quoted_table = $dbo->_qi($schema, $table);
+    my $t = shift;
 
-        # Comming soon
-#        $rv = $t->insert($c => { FUNC => '? + 2', VAL => 2 }, name => \"'Vernon Lyon'") or diag sql_err($t);
-#        ok $rv, 'Method DBIx::DBO::Table->insert (advanced)';
+    SKIP: {
+        skip "No test table for advanced table tests", 2 unless $t;
+
+        # Create a column object
+        my $c = $t->column('id');
+
+        # Advanced insert
+        my $rv = $t->insert(id => { FUNC => '? + 2', VAL => 2 }, name => \"'Vernon Lyon'") or diag sql_err($t);
+        ok $rv, 'Method DBIx::DBO::Table->insert (advanced)';
+
+        # Advanced delete
+        $rv = $t->delete(id => \'NOT NULL', name => undef) or diag sql_err($t);
+        ok $rv, 'Method DBIx::DBO::Table->insert (advanced)';
+    }
+}
+
+sub cleanup {
+    my $dbo = shift;
+
+    note 'Doing cleanup';
+    for my $sql (@_cleanup_sql) {
+        $dbo->do($sql) or diag sql_err($dbo);
+    }
 }
 
 1;

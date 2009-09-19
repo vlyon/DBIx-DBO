@@ -5,7 +5,7 @@ use warnings;
 
 # Create the DBO
 my $dbo;
-use Test::DBO mysql => 15, connect_ok => [\$dbo];
+use Test::DBO mysql => 18, connect_ok => [\$dbo];
 
 ok $dbo->do('SET NAMES utf8'), 'SET NAMES utf8' or diag sql_err($dbo);
 
@@ -22,9 +22,15 @@ SKIP: {
     is $dbo->selectrow_array('SELECT DATABASE()'), $test_db, 'Correct DB selected'
         or diag sql_err($dbo) && skip 'Incorrect DB selected!', 21;
 
+    # Test methods: do, select* (8 tests)
+    my $t = Test::DBO::basic_methods($dbo, $test_db, $test_tbl);
+
     # Test methods: do, select* (4 tests)
-    Test::DBO::basic_methods($dbo, $test_db, $test_tbl);
+    Test::DBO::advanced_table_methods($dbo, $t);
 }
+
+# Cleanup
+Test::DBO::cleanup($dbo);
 
 undef $drop_db;
 ok $dbo->do("DROP DATABASE $quoted_db"), "Drop database $quoted_db" or die sql_err($dbo);

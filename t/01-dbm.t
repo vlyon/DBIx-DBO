@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::DBO DBM => 11, tempdir => 1;
+use Test::DBO DBM => 12, tempdir => 1;
 
 # Create the DBO
 my $dbo = Test::DBO::connect_ok();
@@ -15,4 +15,7 @@ is $dbo->config('QuoteIdentifier'), 0, 'Method $dbo->config';
 
 # Test methods: do, select* (4 tests)
 Test::DBO::basic_methods($dbo, undef, $test_tbl);
+
+# Cleanup
+Test::DBO::cleanup($dbo);
 
