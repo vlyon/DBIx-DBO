@@ -141,9 +141,11 @@ sub _parse_val {
     if (defined $field[1]) {
         my $need = 0;
         $field[1] =~ s/((?<!\\)(['"`]).*?[^\\]\2|\?)/$1 eq '?' ? scalar($need++, PLACEHOLDER) : $1/eg;
-        ouch 'Wrong number of fields/values, called with '.$with.' while needing '.$need if $need != $with;
+#        ouch 'Wrong number of fields/values, called with '.$with.' while needing '.$need if $need != $with;
+        ouch "The number of params ($with) does not match the number of placeholders ($need)" if $need != $with;
     } elsif (!$nochk and $with != 1) {
-        ouch 'Wrong number of fields/values, called with '.$with.' while needing 1';
+#        ouch 'Wrong number of fields/values, called with '.$with.' while needing 1';
+        ouch "The number of params ($with) does not match the number of placeholders (1)";
     }
     return (@field);
 }
@@ -179,8 +181,11 @@ sub _build_where {
     my ($me, $bind) = splice @_, 0, 2;
     my @where;
     while (my ($col, $val) = splice @_, 0, 2) {
-        # FIXME: Doesn't work with NULLs (mysql can do <=>)
-        push @where, $me->_build_col($me->_parse_col($col)).' = '.$me->_build_val($bind, $me->_parse_val($val));
+        push @where, $me->_build_col($me->_parse_col($col)) .
+            ( defined $val ? (ref $val ne 'SCALAR' or $$val !~ /^\s*(?:NOT\s+)NULL\s*$/is) ?
+                ' = '.$me->_build_val($bind, $me->_parse_val($val)) :
+                ' IS '.$$val :
+                ' IS NULL' );
     }
     return @where ? ' WHERE '.join(' AND ', @where) : '';
 }

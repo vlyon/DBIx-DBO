@@ -49,7 +49,7 @@ if ($ENV{DBO_TEST_PG_DB}) {
     plan skip_all => "Can't connect to newly created test database: $DBI::errstr" unless $dbo;
 }
 
-plan tests => 12;
+plan tests => 15;
 pass "Connect to PostgreSQL $quoted_db database";
 isa_ok $dbo, 'DBIx::DBO::Pg', '$dbo';
 
@@ -61,8 +61,14 @@ if (ok $dbo->do("CREATE SCHEMA $quoted_sch"), "Create $quoted_sch test schema") 
     note sql_err($dbo);
 }
 
-# Test methods: do, select* (4 tests)
-Test::DBO::basic_methods($dbo, $test_sch, $test_tbl);
+# Test methods: do, select*, ... (8 tests)
+my $t = Test::DBO::basic_methods($dbo, $test_sch, $test_tbl);
+
+# Test methods: 
+Test::DBO::advanced_table_methods($dbo, $t);
+
+# Cleanup
+Test::DBO::cleanup($dbo);
 
 SKIP: {
     skip 'Create test schema failed', 1 unless $drop_sch;
