@@ -50,7 +50,7 @@ sub import {
     no strict 'refs';
     *{$caller.'::Config'} = \%{__PACKAGE__.'::Config'};
     *{$caller.'::CARP_NOT'} = \@{__PACKAGE__.'::CARP_NOT'};
-    for (qw(oops ouch blessed _qi _last_sql _carp_last_sql _sql do _parse_col _build_col _parse_val _build_val _build_where)) {
+    for (qw(oops ouch blessed)) {
         *{$caller.'::'.$_} = \&{$_};
     }
 }

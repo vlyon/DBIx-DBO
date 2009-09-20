@@ -1,5 +1,4 @@
 package DBIx::DBO::SQLite;
-our @ISA = ('DBIx::DBO');
 use DBIx::DBO::Common;
 
 use strict;

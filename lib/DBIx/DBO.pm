@@ -108,7 +108,7 @@ sub connect {
     }
     my $new = { rdbh => undef, ConnectArgs => [], ConnectReadOnlyArgs => [], TransactionDepth => 0 };
     $new->{dbh} = _connect($new->{ConnectArgs}, @_) or return;
-    my $class = $me->_require_dbo_class($new->{dbh}) or return;
+    my $class = $me->_require_dbd_class($new->{dbh}) or return;
     $class->_bless_dbo($new);
 }
 
@@ -122,14 +122,23 @@ sub connect_readonly {
     }
     my $new = { dbh => undef, ConnectArgs => [], ConnectReadOnlyArgs => [], TransactionDepth => 0 };
     $new->{rdbh} = _connect($new->{ConnectReadOnlyArgs}, @_) or return;
-    my $class = $me->_require_dbo_class($new->{rdbh}) or return;
+    my $class = $me->_require_dbd_class($new->{rdbh}) or return;
     $class->_bless_dbo($new);
 }
 
-sub _require_dbo_class {
+sub _require_dbd_class {
     my $me = shift;
     my $dbh = shift;
     my $class = $me.'::'.$dbh->{Driver}{Name};
+
+    # Set inheritance for all dbd classes
+    {
+        no strict 'refs';
+        @{$class.'::Common::ISA'} = ($me.'::Common');
+        @{$class.'::ISA'} = ($me, $class.'::Common');
+        @{$class.'::Table::ISA'} = ($me.'::Table', $class.'::Common');
+    }
+
     my @warn;
     {
         local $SIG{__WARN__} = sub { push @warn, join '', @_ };
@@ -148,10 +157,6 @@ sub _require_dbo_class {
 
     delete $INC{$file};
     $INC{$file} = 1;
-    {
-        no strict 'refs';
-        @{$class.'::ISA'} = (__PACKAGE__);
-    }
     return $class;
 }
 
@@ -348,7 +353,8 @@ Create a table object.
 =cut
 
 sub table {
-    DBIx::DBO::Table->_new(@_);
+    my $class = ref($_[0]).'::Table';
+    $class->_new(@_);
 }
 
 =head2 disconnect
