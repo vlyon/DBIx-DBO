@@ -1,4 +1,4 @@
-package DBIx::DBO::Pg;
+package DBIx::DBO::DBD::Pg;
 use DBIx::DBO::Common;
 
 use strict;

@@ -66,7 +66,7 @@ sub import {
 
         plan tests => $tests;
         pass "Connect to $dbd";
-        isa_ok $$dbo_ref, "DBIx::DBO::$dbd", '$dbo';
+        isa_ok $$dbo_ref, "DBIx::DBO::DBD::$dbd", '$dbo';
     } else {
         plan tests => $tests;
     }
@@ -87,7 +87,7 @@ sub sql_err {
 
 sub connect_ok {
     ok my $dbo = connect_dbo(@_), "Connect to $dbd" or die $DBI::errstr;
-    isa_ok $dbo, "DBIx::DBO::$dbd", '$dbo';
+    isa_ok $dbo, "DBIx::DBO::DBD::$dbd", '$dbo';
     return $dbo;
 }
 

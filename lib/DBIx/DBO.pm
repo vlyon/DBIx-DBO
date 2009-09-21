@@ -129,7 +129,7 @@ sub connect_readonly {
 sub _require_dbd_class {
     my $me = shift;
     my $dbh = shift;
-    my $class = $me.'::'.$dbh->{Driver}{Name};
+    my $class = $me.'::DBD::'.$dbh->{Driver}{Name};
 
     # Set inheritance for all dbd classes
     {

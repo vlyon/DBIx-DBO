@@ -51,7 +51,7 @@ if ($ENV{DBO_TEST_PG_DB}) {
 
 plan tests => 15;
 pass "Connect to PostgreSQL $quoted_db database";
-isa_ok $dbo, 'DBIx::DBO::Pg', '$dbo';
+isa_ok $dbo, 'DBIx::DBO::DBD::Pg', '$dbo';
 
 # Create the schema
 my $drop_sch;
