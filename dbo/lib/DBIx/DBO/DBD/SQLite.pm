@@ -1,4 +1,4 @@
-package DBIx::DBO::SQLite;
+package DBIx::DBO::DBD::SQLite;
 use DBIx::DBO::Common;
 
 use strict;
