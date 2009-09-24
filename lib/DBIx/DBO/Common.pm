@@ -55,6 +55,9 @@ sub import {
     }
 }
 
+sub dbh { $_[0]{DBO}->dbh }
+sub rdbh { $_[0]{DBO}->rdbh }
+
 sub _qi {
     my $me = shift;
     return $me->dbh->quote_identifier(@_) if $me->config('QuoteIdentifier');

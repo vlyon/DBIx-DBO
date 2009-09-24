@@ -6,9 +6,6 @@ use warnings;
 
 use overload '**' => \&column, fallback => 1;
 
-sub dbh { $_[0]{DBO}->dbh }
-sub rdbh { $_[0]{DBO}->rdbh }
-
 =head2 config
 
   $table_setting = $dbo->config($option)
@@ -64,6 +61,60 @@ sub column {
     ouch 'Invalid column '.$me->_qi($col).' in table '.$me->_quoted_name
         unless exists $me->{Fields}{$col};
     $me->{Column}{$col} //= bless [ $me, $col ], 'DBIx::DBO::Column';
+}
+
+=head2 fetch_val
+
+  $t->fetch_val($column, %where)
+
+Fetch the first matching row from the table returning the value in one column.
+
+=cut
+
+sub fetch_val {
+    my ($me, $col) = splice @_, 0, 2;
+    $col = $me->_parse_col($col);
+    my $sql = 'SELECT '.$me->_qi($col->[1]).' FROM '.$me->_quoted_name;
+    my @bind;
+    $sql .= $me->_build_where(\@bind, @_);
+    $me->_sql($sql, @bind);
+    my $ref = $me->rdbh->selectrow_arrayref($sql, undef, @bind);
+    return $ref && $ref->[0];
+}
+
+=head2 fetch_row
+
+  $t->fetch_row(%where)
+
+Fetch the first matching row from the table returning it as a hashref.
+
+=cut
+
+sub fetch_row {
+    my $me = shift;
+    my $sql = 'SELECT * FROM '.$me->_quoted_name;
+    my @bind;
+    $sql .= $me->_build_where(\@bind, @_);
+    $me->_sql($sql, @bind);
+    return $me->rdbh->selectrow_hashref($sql, undef, @bind);
+}
+
+=head2 fetch_col
+
+  $t->fetch_col($column, %where)
+
+Fetch all matching rows from the table returning an arrayref of the values in one column.
+
+=cut
+
+sub fetch_col {
+    my ($me, $col) = splice @_, 0, 2;
+    $col = $me->_parse_col($col);
+    my $sql = 'SELECT '.$me->_qi($col->[1]).' FROM '.$me->_quoted_name;
+    my @bind;
+    $sql .= $me->_build_where(\@bind, @_);
+    $me->_sql($sql, @bind);
+    return $me->rdbh->selectcol_arrayref($sql, undef, @bind);
 }
 
 =head2 insert
