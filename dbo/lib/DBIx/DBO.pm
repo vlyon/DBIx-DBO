@@ -7,6 +7,7 @@ use DBI;
 use DBIx::DBO::Common;
 use DBIx::DBO::Table;
 use DBIx::DBO::Query;
+use DBIx::DBO::Record;
 
 =head1 NAME
 
@@ -139,6 +140,7 @@ sub _require_dbd_class {
         @{$class.'::ISA'} = ($me, $class.'::Common');
         @{$class.'::Table::ISA'} = ($me.'::Table', $class.'::Common');
         @{$class.'::Query::ISA'} = ($me.'::Query', $class.'::Common');
+        @{$class.'::Record::ISA'} = ($me.'::Record', $class.'::Common');
     }
 
     my @warn;
@@ -373,6 +375,19 @@ In list context table objects will also be returned for each table specified.
 
 sub query {
     my $class = ref($_[0]).'::Query';
+    $class->_new(@_);
+}
+
+=head2 record
+
+  $dbo->record($query_object);
+
+Create a new record object.
+
+=cut
+
+sub record {
+    my $class = ref($_[0]).'::Record';
     $class->_new(@_);
 }
 
