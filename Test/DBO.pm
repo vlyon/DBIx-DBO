@@ -185,6 +185,11 @@ sub query_methods {
     my $sql = $q->sql;
     is $sql, "SELECT * FROM $quoted_table", 'Method DBIx::DBO::Query->sql';
 
+    # Get a Record object
+    my $r = $q->fetch;
+use Data::Dumper;
+diag '$r', substr Dumper($r), 5;
+
     return $q;
 }
 

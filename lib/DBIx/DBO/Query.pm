@@ -61,6 +61,45 @@ sub undo_where {
     undef $me->{sql};
 }
 
+sub fetch {
+    my $me = shift;
+    $me->run unless $me->sth->{Active};
+
+    my $rec = $me->record;
+    $$rec->{columns} ||= [ @{$me->{sth}{NAME}} ];
+    $$rec->{hash} = $me->{hash};
+
+    # Fetch and store the data then return the Record on success and undef on failure or no more rows
+    ($$rec->{row} = $me->{sth}->fetch) ? $me->{Record} : undef %$rec;
+}
+
+sub record {
+    my $me = shift;
+    return $me->{Record} if $me->{Record} and $me->{sql};
+#    $me->{Record} = \{ DBO => $me->{DBO}, row => undef, hash => {}, Query => $me };
+#    bless $me->{Record}, 'DBIx::DBO::Record';
+    $me->{Record} = $me->{DBO}->record;
+}
+
+sub run {
+    my $me = shift;
+    my $rec = $me->record;
+    undef $$rec->{row};
+    undef %$rec;
+
+    my $rv = $me->sth->execute();
+
+    unless ($me->{hash}) {
+        # Bind only to the first column of the same name
+        my $i = 1;
+        for (@{$me->{sth}{NAME}}) {
+            $me->{sth}->bind_col($i, \$me->{hash}{$_}) unless exists $me->{hash}{$_};
+            $i++;
+        }
+    }
+    return $rv;
+}
+
 sub sth {
     my $me = shift;
     # Ensure the sql is rebuilt if needed
