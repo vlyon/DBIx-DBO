@@ -168,8 +168,24 @@ sub advanced_table_methods {
 
         # Advanced delete
         $rv = $t->delete(id => \'NOT NULL', name => undef) or diag sql_err($t);
-        ok $rv, 'Method DBIx::DBO::Table->insert (advanced)';
+        ok $rv, 'Method DBIx::DBO::Table->delete (advanced)';
     }
+}
+
+sub query_methods {
+    my $dbo = shift;
+    my $t = shift;
+    my $quoted_table = $t->_quoted_name;
+
+    # Create a query object
+    my $q = $dbo->query($t);
+    isa_ok $q, 'DBIx::DBO::Query', '$q';
+
+    # Default sql = select everything
+    my $sql = $q->sql;
+    is $sql, "SELECT * FROM $quoted_table", 'Method DBIx::DBO::Query->sql';
+
+    return $q;
 }
 
 sub cleanup {

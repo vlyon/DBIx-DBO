@@ -6,6 +6,7 @@ use warnings;
 use DBI;
 use DBIx::DBO::Common;
 use DBIx::DBO::Table;
+use DBIx::DBO::Query;
 
 =head1 NAME
 
@@ -137,6 +138,7 @@ sub _require_dbd_class {
         @{$class.'::Common::ISA'} = ($me.'::Common');
         @{$class.'::ISA'} = ($me, $class.'::Common');
         @{$class.'::Table::ISA'} = ($me.'::Table', $class.'::Common');
+        @{$class.'::Query::ISA'} = ($me.'::Query', $class.'::Common');
     }
 
     my @warn;
@@ -348,12 +350,29 @@ sub table_info {
   $dbo->table([$schema, $table]);
   $dbo->table($table_object);
 
-Create a table object.
+Create a new table object for the table specified.
 
 =cut
 
 sub table {
     my $class = ref($_[0]).'::Table';
+    $class->_new(@_);
+}
+
+=head2 query
+
+  $dbo->query($table, ...);
+  $dbo->query([$schema, $table], ...);
+  $dbo->query($table_object, ...);
+
+Create a new query object from the tables specified.
+In scalar context, just the query object will be returned.
+In list context table objects will also be returned for each table specified.
+
+=cut
+
+sub query {
+    my $class = ref($_[0]).'::Query';
     $class->_new(@_);
 }
 
