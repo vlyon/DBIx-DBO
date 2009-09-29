@@ -31,7 +31,7 @@ sub _get_table_info {
     ouch 'Invalid table: '.$me->_qi($table) unless @$cols;
 
     my %h;
-    $h{Fields}{$_->{pg_column}} = $_->{ORDINAL_POSITION} for @$cols;
+    $h{Column_Idx}{$_->{pg_column}} = $_->{ORDINAL_POSITION} for @$cols;
     if (my $keys = $me->rdbh->primary_key_info(undef, $schema, $table)) {
         $h{PrimaryKeys} = [ map $cols->[$_->{KEY_SEQ} - 1]{pg_column}, @{$keys->fetchall_arrayref({})} ];
     } else {

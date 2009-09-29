@@ -41,7 +41,7 @@ sub _get_table_info {
     my %h;
     my $i;
     for my $col (@{$me->rdbh->{dbm_tables}{$q_table}{cols}}) {
-        $h{Fields}{$col} = ++$i;
+        $h{Column_Idx}{$col} = ++$i;
     }
     $h{PrimaryKeys} = [];
     $me->{TableInfo}{$schema // ''}{$table} = \%h;

@@ -106,7 +106,7 @@ sub _parse_col {
     }
     ouch 'Invalid column: '.$col if ref $col;
     for my $tbl ($me->_tables) {
-        return $tbl->column($col) if exists $tbl->{Fields}{$col};
+        return $tbl->column($col) if exists $tbl->{Column_Idx}{$col};
     }
     ouch 'No such column: '.$col;
 }

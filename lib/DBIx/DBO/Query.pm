@@ -65,27 +65,27 @@ sub fetch {
     my $me = shift;
     $me->run unless $me->sth->{Active};
 
-    my $rec = $me->row;
-    $$rec->{columns} ||= [ @{$me->{sth}{NAME}} ];
-    $$rec->{hash} = $me->{hash};
+    my $row = $me->row;
+    $$row->{columns} ||= [ @{$me->{sth}{NAME}} ];
+    $$row->{hash} = $me->{hash};
 
     # Fetch and store the data then return the Row on success and undef on failure or no more rows
-    ($$rec->{row} = $me->{sth}->fetch) ? $me->{Row} : undef %$rec;
+    ($$row->{array} = $me->{sth}->fetch) ? $me->{Row} : undef %$row;
 }
 
 sub row {
     my $me = shift;
     return $me->{Row} if $me->{Row} and $me->{sql};
-#    $me->{Row} = \{ DBO => $me->{DBO}, row => undef, hash => {}, Query => $me };
+#    $me->{Row} = \{ DBO => $me->{DBO}, array => undef, hash => {}, Query => $me };
 #    bless $me->{Row}, 'DBIx::DBO::Row';
-    $me->{Row} = $me->{DBO}->row;
+    $me->{Row} = $me->{DBO}->row($me);
 }
 
 sub run {
     my $me = shift;
-    my $rec = $me->row;
-    undef $$rec->{row};
-    undef %$rec;
+    my $row = $me->row;
+    undef $$row->{array};
+    undef %$row;
 
     my $rv = $me->sth->execute();
 

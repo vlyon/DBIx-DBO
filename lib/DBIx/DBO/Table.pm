@@ -59,7 +59,7 @@ Returns the DBO column object for this column.
 sub column {
     my ($me, $col) = @_;
     ouch 'Invalid column '.$me->_qi($col).' in table '.$me->_quoted_name
-        unless exists $me->{Fields}{$col};
+        unless exists $me->{Column_Idx}{$col};
     $me->{Column}{$col} //= bless [ $me, $col ], 'DBIx::DBO::Column';
 }
 
