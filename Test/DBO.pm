@@ -187,6 +187,7 @@ sub query_methods {
 
     # Get a Record object
     my $r = $q->fetch;
+    is $r->{name}, 'John Doe', 'Access row as a hash';
 use Data::Dumper;
 diag '$r', substr Dumper($r), 5;
 
