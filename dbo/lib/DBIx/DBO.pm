@@ -7,7 +7,7 @@ use DBI;
 use DBIx::DBO::Common;
 use DBIx::DBO::Table;
 use DBIx::DBO::Query;
-use DBIx::DBO::Record;
+use DBIx::DBO::Row;
 
 =head1 NAME
 
@@ -43,18 +43,18 @@ our $VERSION = '0.01';
   # Return only the first 10 rows
   $query->limit(10);
 
-  # Fetch the records
-  while (my $record = $query->fetch) {
+  # Fetch the rows
+  while (my $row = $query->fetch) {
 
-      # Use the record as an array reference
-      printf "id=%d  name=%s  status=%s\n", $record->[0], $record->[1], $record->[4];
+      # Use the row as an array reference
+      printf "id=%d  name=%s  status=%s\n", $row->[0], $row->[1], $row->[4];
 
       # Or as a hash reference
-      print 'id=', $record->{id}, "\n", 'name=', $record->{name};
+      print 'id=', $row->{id}, "\n", 'name=', $row->{name};
 
-      # Update records
-      $record->update(status => 'Fired!') if $record->{name} eq 'Harry';
-      $record->delete if $record->{id} == 27;
+      # Update/delete rows
+      $row->update(status => 'Fired!') if $row->{name} eq 'Harry';
+      $row->delete if $record->{id} == 27;
   }
 
 =head1 DESCRIPTION
@@ -140,7 +140,7 @@ sub _require_dbd_class {
         @{$class.'::ISA'} = ($me, $class.'::Common');
         @{$class.'::Table::ISA'} = ($me.'::Table', $class.'::Common');
         @{$class.'::Query::ISA'} = ($me.'::Query', $class.'::Common');
-        @{$class.'::Record::ISA'} = ($me.'::Record', $class.'::Common');
+        @{$class.'::Row::ISA'} = ($me.'::Row', $class.'::Common');
     }
 
     my @warn;
@@ -386,8 +386,8 @@ Create a new record object.
 
 =cut
 
-sub record {
-    my $class = ref($_[0]).'::Record';
+sub row {
+    my $class = ref($_[0]).'::Row';
     $class->_new(@_);
 }
 
