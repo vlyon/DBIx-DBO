@@ -187,9 +187,17 @@ sub query_methods {
 
     # Get a Record object
     my $r = $q->fetch;
-    is $r->{name}, 'John Doe', 'Access row as a hash';
-use Data::Dumper;
-diag '$r', substr Dumper($r), 5;
+    isa_ok $r, 'DBIx::DBO::Row', '$r';
+
+    # Access methods
+    is $r->{name}, 'John Doe', 'Access row as a hashref';
+    is $r->[0], 1, 'Access row as an arrayref';
+    $q->fetch;
+    is $r->value($t->column('name')), 'John Doe', 'Access row via method DBIx::DBO::Row::value';
+    is $r ** $t ** 'name', 'John Doe', 'Access row via shortcut method **';
+
+#use Data::Dumper;
+#diag '$r', substr Dumper($r), 5;
 
     return $q;
 }
