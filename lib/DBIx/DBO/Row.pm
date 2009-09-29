@@ -1,4 +1,4 @@
-package DBIx::DBO::Record;
+package DBIx::DBO::Row;
 use DBIx::DBO::Common;
 
 use strict;
