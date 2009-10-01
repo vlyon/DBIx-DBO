@@ -159,17 +159,21 @@ sub advanced_table_methods {
     SKIP: {
         skip "No test table for advanced table tests", 2 unless $t;
 
-        # Create a column object
-        my $c = $t->column('id');
-
         # Advanced insert
-        my $rv = $t->insert(id => { FUNC => '? + 2', VAL => 2 }, name => \"'Vernon Lyon'") or diag sql_err($t);
+        my $rv = $t->insert(id => { FUNC => '? + 3', VAL => 2 }, name => \"'Vernon Lyon'") or diag sql_err($t);
         ok $rv, 'Method DBIx::DBO::Table->insert (advanced)';
 
         # Advanced delete
         $rv = $t->delete(id => \'NOT NULL', name => undef) or diag sql_err($t);
         ok $rv, 'Method DBIx::DBO::Table->delete (advanced)';
     }
+}
+
+sub skip_advanced_table_methods {
+    my $dbo = shift;
+    my $t = shift;
+
+    $t->insert(id => 5, name => 'Vernon Lyon') or diag sql_err($t);
 }
 
 sub query_methods {
@@ -185,6 +189,12 @@ sub query_methods {
     my $sql = $q->sql;
     is $sql, "SELECT * FROM $quoted_table", 'Method DBIx::DBO::Query->sql';
 
+    # Get a valid sth
+    isa_ok $q->sth, 'DBI::st', '$q->sth';
+
+    # Count the number of rows
+    is $q->rows, 4, 'Row count is 4';
+
     # Get a Record object
     my $r = $q->fetch;
     isa_ok $r, 'DBIx::DBO::Row', '$r';
@@ -192,12 +202,17 @@ sub query_methods {
     # Access methods
     is $r->{name}, 'John Doe', 'Access row as a hashref';
     is $r->[0], 1, 'Access row as an arrayref';
-    $q->fetch;
-    is $r->value($t->column('name')), 'John Doe', 'Access row via method DBIx::DBO::Row::value';
-    is $r ** $t ** 'name', 'John Doe', 'Access row via shortcut method **';
-
+    $r = $q->fetch;
 #use Data::Dumper;
-#diag '$r', substr Dumper($r), 5;
+#warn Data::Dumper->Dump([$dbo, $q, $r], [qw($dbo $q $r)]);
+    is $r->value($t->column('name')), 'Jane Smith', 'Access row via method DBIx::DBO::Row::value';
+    is $r ** $t ** 'name', 'Jane Smith', 'Access row via shortcut method **';
+
+    # Where clause
+    $q->where('name', 'LIKE', '%r%');
+#die $q->sql;
+    $r = $q->fetch;
+die join '|', '', @$r, '';
 
     return $q;
 }

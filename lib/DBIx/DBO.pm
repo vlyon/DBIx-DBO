@@ -293,7 +293,7 @@ sub _get_table_schema {
     $q_table =~ s/([\\_%])/\\$1/g;
 
     my $info = $me->rdbh->table_info(undef, $q_schema, $q_table)->fetchall_arrayref;
-    ouch 'Invalid table: '.$table unless $info and @$info == 1 and $info->[0][2] eq $table;
+    ouch 'Invalid table: '.$me->_qi($table) unless $info and @$info == 1 and $info->[0][2] eq $table;
     return $info->[0][1];
 }
 
