@@ -1,8 +1,28 @@
 package DBIx::DBO::Query;
 use DBIx::DBO::Common;
+use Devel::Peek 'SvREFCNT';
 
 use strict;
 use warnings;
+
+=head2 config
+
+  $table_setting = $dbo->config($option)
+  $dbo->config($option => $table_setting)
+
+Get or set the global or dbo config settings.
+When setting an option, the previous value is returned.
+
+=cut
+
+sub config {
+    my $me = shift;
+    my $opt = shift;
+    ouch "Invalid config option '$opt'" unless exists $Config{$opt};
+    my $val = $me->{Config}{$opt} // $me->{DBO}->config($opt);
+    $me->{Config}{$opt} = shift if @_;
+    return $val;
+}
 
 sub _new {
     my $proto = shift;
@@ -50,23 +70,137 @@ sub _table_alias {
 
 sub blank {
     my $me = shift;
-    $me->undo_where;
+    $me->unwhere;
 #    $me->{'IsDistinct'} = 0;
 }
 
-sub undo_where {
+sub unwhere {
     my $me = shift;
     # TODO: ...
+    $me->{Where_Logic} = [];
+    $me->{Bracket_Refs} = [];
+    $me->{Brackets} = [];
     # This forces a new search
     undef $me->{sql};
+}
+
+sub where {
+    my $me = shift;
+    # Find the current Where_Logic
+    my $ref = $me->{Where_Logic};
+    $ref = $ref->[$_] for (@{$me->{Bracket_Refs}});
+
+    $me->_add_where($ref, @_);
+}
+
+sub _add_where {
+    my $me = shift;
+    my ($ref, $fld, $op, $val, %opt) = @_;
+
+    undef $me->{sql}; # Force a new search
+    if ($opt{FORCE}) {
+        ouch 'Invalid option, FORCE must be AND or OR' if $opt{FORCE} ne 'AND' and $opt{FORCE} ne 'OR';
+    }
+
+    # If the $fld is just a scalar use it as a column name not a value
+    ($fld, my $func1) = $me->_parse_col_val($fld);
+    ($val, my $func2) = $me->_parse_val($val, 1);
+
+    # Deal with NULL values
+    if (@$val == 1 and !defined $val->[0] and !defined $func2) {
+        if ($op eq '=') { $op = 'IS'; $func2 = 'NULL'; delete $val->[0]; }
+        elsif ($op eq '!=') { $op = 'IS NOT'; $func2 = 'NULL'; delete $val->[0]; }
+    }
+    $op = 'NOT IN' if $op eq '!IN';
+    $op = 'NOT BETWEEN' if $op eq '!BETWEEN';
+
+    # Deal with array values: BETWEEN & IN
+    unless (defined $func2) {
+        if ($op eq 'BETWEEN' or $op eq 'NOT BETWEEN') {
+            ouch 'Invalid value argument, BETWEEN requires 2 values'
+                if ref $val ne 'ARRAY' or @$val != 2;
+            $func2 = $me->PLACEHOLDER.' AND '.$me->PLACEHOLDER;
+$func2 = '? AND ?';
+        } elsif ($op eq 'IN' or $op eq 'NOT IN') {
+            if (ref $val eq 'ARRAY') {
+                ouch 'Invalid value argument, IN requires at least 1 value' if @$val == 0;
+            } else {
+                $val = [ $val ];
+            }
+            # Add to previous 'IN' and 'NOT IN' Wheres
+            unless ($opt{FORCE} and $opt{FORCE} ne _op_ag($op)) {
+                for my $lim (grep $$_[0] eq $op, @{$ref}) {
+                    next if defined $$lim[1] xor defined $fld;
+                    next if defined $$lim[1] and defined $fld and $$lim[1] != $fld;
+                    last if ($$lim[5] and $$lim[5] ne _op_ag($op));
+                    last if $$lim[4] ne '('.join(',', ($me->PLACEHOLDER) x @{$$lim[2]}).')';
+                    push @{$$lim[2]}, @$val;
+                    $$lim[4] = '('.join(',', ($me->PLACEHOLDER) x @{$$lim[2]}).')';
+                    return;
+                }
+            }
+            $func2 = '('.join(',', ($me->PLACEHOLDER) x @$val).')';
+        } elsif (@$val != 1) {
+            # Check that there is only 1 placeholder
+            ouch 'Wrong number of fields/values, called with '.@$val.' while needing 1';
+        }
+    }
+
+    # Validate the fields
+    for my $f (@$fld, @$val) {
+        if (blessed $f and $f->isa('DBIx::DBO::Column')) {
+            ouch 'Invalid table field' unless defined $me->_table_idx($f->[0]);
+        } elsif (my $type = ref $f) {
+            ouch 'Invalid value type: '.$type;
+        }
+    }
+
+    push @{$ref}, [ $op, $func1, $fld, $func2, $val, $opt{FORCE} ];
+use Data::Dumper; warn Data::Dumper->Dump([$me->{DBO}, $ref], [qw(dbo ref)]);
+}
+
+sub _parse_col_val {
+    my $me = shift;
+    my $col = shift;
+    return $me->_parse_val($col) if ref $col;
+    for my $tbl ($me->tables) {
+        return [ $tbl->column($col) ] if exists $tbl->{Column_Idx}{$col};
+    }
+    ouch 'No such column: '.$col;
+}
+
+sub _op_ag {
+    return 'OR' if $_[0] eq '=' or $_[0] eq 'IS' or $_[0] eq '<=>' or $_[0] eq 'IN' or $_[0] eq 'BETWEEN';
+    return 'AND' if $_[0] eq '!=' or $_[0] eq 'IS NOT' or $_[0] eq '<>' or $_[0] eq 'NOT IN' or $_[0] eq 'NOT BETWEEN';
+}
+
+
+sub arrayref {
+    my $me = shift;
+    my $slice = shift;
+    $slice = {Slice => $slice} if $slice;
+    # TODO: Add from/where bind
+    $me->_sql($me->sql, @{$me->{From_Bind}}, @{$me->{Where_Bind}});
+    $me->rdbh->selectall_arrayref($me->sql, $slice, @{$me->{From_Bind}}, @{$me->{Where_Bind}});
+}
+
+sub hashref {
+    my $me = shift;
+    my $key = shift;
+    # TODO: Add from/where bind
+    $me->_sql($me->sql);
+    $me->rdbh->selectall_hashref($me->sql, $key, undef);
 }
 
 sub fetch {
     my $me = shift;
     $me->run unless $me->sth->{Active};
 
+    # Detach the old record if there is still another referance to it
+    $me->{Row}->_detach if defined $me->{Row} and SvREFCNT(${$me->{Row}}) > 1;
+
     my $row = $me->row;
-    $$row->{columns} ||= [ @{$me->{sth}{NAME}} ];
+#    $$row->{columns} ||= [ @{$me->{sth}{NAME}} ]; # Is this needed?
     $$row->{hash} = $me->{hash};
 
     # Fetch and store the data then return the Row on success and undef on failure or no more rows
@@ -87,8 +221,19 @@ sub run {
     undef $$row->{array};
     undef %$row;
 
-    my $rv = $me->sth->execute();
+    my $rv = $me->_execute;
+    $me->_bind_cols_to_hash;
+    return $rv;
+}
 
+sub _execute {
+    my $me = shift;
+    $me->_sql($me->sql, @{$me->{From_Bind}}, @{$me->{Where_Bind}});
+    $me->sth->execute(@{$me->{From_Bind}}, @{$me->{Where_Bind}});
+}
+
+sub _bind_cols_to_hash {
+    my $me = shift;
     unless ($me->{hash}) {
         # Bind only to the first column of the same name
         my $i = 1;
@@ -97,7 +242,20 @@ sub run {
             $i++;
         }
     }
-    return $rv;
+}
+
+sub rows {
+    my $me = shift;
+    unless (defined $me->{Count}) {
+        $me->run unless $me->sth->{Active}; # Should this be $me->sth->{Active}?
+        $me->{Count} = $me->sth->rows;
+        if ($me->{Count} == -1) {
+            # TODO: Handle DISTINCT and GROUP BY
+            (my $sql = $me->sql) =~ s/\Q $me->{show} FROM / COUNT(*) FROM /;
+            $me->{Count} = ( $me->rdbh->selectrow_array($sql, undef, @{$me->{bind}}) )[0];
+        }
+    }
+    $me->{Count};
 }
 
 sub sth {
@@ -115,6 +273,7 @@ sub sql {
 sub _build_sql {
     my $me = shift;
     undef $me->{sth};
+    $me->{Where_Bind} = [];
     my $sql = 'SELECT ';
     $sql .= $me->_build_show;
     $sql .= ' FROM '.$me->_build_from;
@@ -132,6 +291,7 @@ sub _build_show {
 
 sub _build_from {
     my $me = shift;
+    $me->{From_Bind} = [];
     $me->{from} = $me->_build_table($me->{Tables}[0]);
     for (my $i = 1; $i < @{$me->{Tables}}; $i++) {
         $me->{from} .= $me->{Join}[$i].$me->_build_table($me->{Tables}[$i]);
@@ -150,9 +310,45 @@ sub _build_table {
 
 sub _build_complex_where {
     my $me = shift;
-    my @chunks;
-    # TODO: ...
+    my @chunks = $me->_build_complex_chunk($me->{Where_Bind}, 'OR', $me->{Where_Logic});
     $me->{where} = join ' AND ', @chunks;
+}
+
+sub _build_complex_chunk {
+    my ($me, $bind, $ag, $lims) = @_;
+    my @str;
+    # Make a copy so we can hack at it
+    my @lims = @$lims;
+    while (my $lim = shift @lims) {
+        my @ary;
+        if (ref $lim->[0]) {
+            @ary = $me->_build_complex_chunk($bind, $ag eq 'OR' ? 'AND' : 'OR', $lim);
+        } else {
+            @ary = $me->_build_complex_piece($bind, @$lim);
+            my ($op, $modl, $fld, $modr, $val, $force) = @$lim;
+            # Group AND/OR'ed for same fld if $force or $op requires it
+            if ($ag eq ($force || _op_ag($op))) {
+                for (my $i = $#lims; $i >= 0; $i--) {
+                    # Right now this starts with the last @lims and works backward
+                    # It splices when the ag is the correct AND/OR and the funcs match and all flds match
+                    next if (ref $lims[$i]->[0] or $ag ne ($lims[$i]->[5] || _op_ag($lims[$i]->[0])));
+                    no warnings 'uninitialized';
+                    next if $lims[$i]->[1] ne $modl;
+                    use warnings 'uninitialized';
+                    my $l = $lims[$i]->[2];
+                    next if ((ref $l eq 'ARRAY' ? "@$l" : $l) ne (ref $fld eq 'ARRAY' ? "@$fld" : $fld));
+                    push @ary, $me->_build_complex_piece($bind, @{splice @lims, $i, 1});
+                }
+            }
+        }
+        push @str, @ary == 1 ? $ary[0] : '('.join(' '.$ag.' ', @ary).')';
+    }
+    return @str;
+}
+
+sub _build_complex_piece {
+    my ($me, $bind, $op, $modl, $fld, $modr, $val) = @_;
+    $me->_build_val($bind, $fld, $modl) .' '.$op.' '.$me->_build_val($bind, $val, $modr);
 }
 
 sub _build_order {
