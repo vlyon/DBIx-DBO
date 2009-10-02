@@ -117,11 +117,15 @@ sub _build_col {
 }
 
 sub _parse_val {
-    my ($me, $fld, $nochk) = @_;
+    my $me = shift;
+    my $fld = shift;
+    my $check_fld = shift || '';
     my @field;
     if (ref $fld eq 'SCALAR') {
         $field[0] = [];
         $field[1] = $$fld;
+        ouch 'Invalid '.($check_fld eq 'Column' ? 'column' : 'field').' reference (scalar ref to undef)'
+            unless defined $field[1];
     } elsif (ref $fld eq 'HASH') {
         if (exists $fld->{COL}) {
             ouch 'Invalid HASH containing both COL and VAL' if exists $fld->{VAL};
@@ -139,18 +143,23 @@ sub _parse_val {
         $field[0] = $fld;
     }
     $field[0] = [ $field[0] ] unless ref $field[0] eq 'ARRAY';
+
     # Swap placeholders
     my $with = @{$field[0]};
     if (defined $field[1]) {
-        my $need = 0;
-        $field[1] =~ s/((?<!\\)(['"`]).*?[^\\]\2|\?)/$1 eq '?' ? scalar($need++, PLACEHOLDER) : $1/eg;
-#        ouch 'Wrong number of fields/values, called with '.$with.' while needing '.$need if $need != $with;
+        my $need = $me->_substitute_placeholders($field[1]);
         ouch "The number of params ($with) does not match the number of placeholders ($need)" if $need != $with;
-    } elsif (!$nochk and $with != 1) {
-#        ouch 'Wrong number of fields/values, called with '.$with.' while needing 1';
-        ouch "The number of params ($with) does not match the number of placeholders (1)";
+    } elsif ($with != 1 and $check_fld ne 'Auto') {
+        ouch 'Invalid '.($check_fld eq 'Column' ? 'column' : 'field')." reference (passed $with params instead of 1)";
     }
     return (@field);
+}
+
+sub _substitute_placeholders {
+    my $me = shift;
+    my $num_placeholders = 0;
+    $_[0] =~ s/((?<!\\)(['"`]).*?[^\\]\2|\?)/$1 eq '?' ? ++$num_placeholders && PLACEHOLDER : $1/eg;
+    return $num_placeholders;
 }
 
 sub _build_val {
