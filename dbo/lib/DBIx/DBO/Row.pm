@@ -11,6 +11,16 @@ use overload '**' => \&value, fallback => 1;
 sub dbh { ${$_[0]}->{DBO}->dbh }
 sub rdbh { ${$_[0]}->{DBO}->rdbh }
 
+=head2 config
+
+  $parent_setting = $dbo->config($option)
+  $dbo->config($option => $parent_setting)
+
+Get or set the parent (if it has one) or dbo or global config settings.
+When setting an option, the previous value is returned.
+
+=cut
+
 sub config {
     my $me = shift;
     ($$me->{Parent} || $$me->{DBO})->config(@_);
@@ -28,10 +38,10 @@ sub _new {
     bless $me, $class;
 }
 
-sub tables {
+sub _tables {
     my $me = shift;
     return unless $$me->{Parent};
-    $$me->{Parent}->tables;
+    $$me->{Parent}->_tables;
 }
 
 sub _column_idx {
@@ -39,12 +49,21 @@ sub _column_idx {
     my $col = shift;
     my $idx = -1;
     # TODO: Select fields ?
-    for my $t ($me->tables) {
+    for my $t ($me->_tables) {
         return $idx + $t->{Column_Idx}{$col->[1]} if exists $t->{Column_Idx}{$col->[1]};
         $idx += keys %{$t->{Column_Idx}};
     }
     return undef;
 }
+
+=head2 value
+
+  $row->value($column)
+
+Return the value in this field.
+$column can be a column name or a column object.
+
+=cut
 
 sub value {
     my $me = shift;

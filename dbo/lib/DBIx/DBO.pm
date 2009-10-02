@@ -378,11 +378,11 @@ sub query {
     $class->_new(@_);
 }
 
-=head2 record
+=head2 row
 
-  $dbo->record($query_object);
+  $dbo->row($query_object);
 
-Create a new record object.
+Create a new row object.
 
 =cut
 
