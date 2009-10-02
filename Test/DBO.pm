@@ -211,6 +211,10 @@ sub query_methods {
     is $r->value($t->column('name')), 'Jane Smith', 'Access row via method DBIx::DBO::Row::value';
     is $r ** $t ** 'name', 'Jane Smith', 'Access row via shortcut method **';
 
+    # Show specific columns only
+    $q->show('name');
+    die $q-sql;
+
     # Where clause
     $q->where('name', 'LIKE', '%a%');
 #    $q->where('name', 'LIKE BINARY', '%s%');
