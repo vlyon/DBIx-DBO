@@ -163,6 +163,9 @@ sub advanced_table_methods {
         my $rv = $t->insert(id => { FUNC => '? + 3', VAL => 2 }, name => \"'Vernon Lyon'") or diag sql_err($t);
         ok $rv, 'Method DBIx::DBO::Table->insert (advanced)';
 
+        $t->insert(id => 6, name => 'Harry Harrelson') or diag sql_err($t);
+        $t->insert(id => 7, name => 'Amanda Huggenkiss') or diag sql_err($t);
+
         # Advanced delete
         $rv = $t->delete(id => \'NOT NULL', name => undef) or diag sql_err($t);
         ok $rv, 'Method DBIx::DBO::Table->delete (advanced)';
@@ -174,6 +177,8 @@ sub skip_advanced_table_methods {
     my $t = shift;
 
     $t->insert(id => 5, name => 'Vernon Lyon') or diag sql_err($t);
+    $t->insert(id => 6, name => 'Harry Harrelson') or diag sql_err($t);
+    $t->insert(id => 7, name => 'Amanda Huggenkiss') or diag sql_err($t);
 }
 
 sub query_methods {
@@ -203,16 +208,17 @@ sub query_methods {
     is $r->{name}, 'John Doe', 'Access row as a hashref';
     is $r->[0], 1, 'Access row as an arrayref';
     $r = $q->fetch;
-#use Data::Dumper;
-#warn Data::Dumper->Dump([$dbo, $q, $r], [qw($dbo $q $r)]);
     is $r->value($t->column('name')), 'Jane Smith', 'Access row via method DBIx::DBO::Row::value';
     is $r ** $t ** 'name', 'Jane Smith', 'Access row via shortcut method **';
 
     # Where clause
-    $q->where('name', 'LIKE', '%r%');
-#die $q->sql;
-    $r = $q->fetch;
-die join '|', '', @$r, '';
+    $q->where('name', 'LIKE', '%a%');
+    $q->where('name', 'LIKE', '%s%');
+    $q->where('id', 'BETWEEN', [2, 4]);
+    my $a = $q->arrayref;
+use Data::Dumper;
+warn 'arrayref', substr Dumper($a), 5;
+#    $r = $q->fetch;
 
     return $q;
 }

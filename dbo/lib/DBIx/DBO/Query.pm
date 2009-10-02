@@ -126,6 +126,13 @@ sub unwhere {
     undef $me->{sql};
 }
 
+##
+# This will ad an arrayref to the $ref given.
+# The arrayref will contain 5 values:
+#  $op, $fld_func, $fld, $val_func, $val, $force
+#  $op is the operator (those supported differ by DBD)
+#  $fld_func is a SCALAR of the form ...
+##
 sub _add_where {
     my $me = shift;
     my ($ref, $fld, $op, $val, %opt) = @_;
@@ -136,24 +143,21 @@ sub _add_where {
     }
 
     # If the $fld is just a scalar use it as a column name not a value
-    ($fld, my $func1) = $me->_parse_col_val($fld);
-    ($val, my $func2) = $me->_parse_val($val, 1);
+    ($fld, my $fld_func) = $me->_parse_col_val($fld);
+    ($val, my $val_func) = $me->_parse_val($val, 1);
 
     # Deal with NULL values
-    if (@$val == 1 and !defined $val->[0] and !defined $func2) {
-        if ($op eq '=') { $op = 'IS'; $func2 = 'NULL'; delete $val->[0]; }
-        elsif ($op eq '!=') { $op = 'IS NOT'; $func2 = 'NULL'; delete $val->[0]; }
+    if (@$val == 1 and !defined $val->[0] and !defined $val_func) {
+        if ($op eq '=') { $op = 'IS'; $val_func = 'NULL'; delete $val->[0]; }
+        elsif ($op eq '!=') { $op = 'IS NOT'; $val_func = 'NULL'; delete $val->[0]; }
     }
-    $op = 'NOT IN' if $op eq '!IN';
-    $op = 'NOT BETWEEN' if $op eq '!BETWEEN';
 
     # Deal with array values: BETWEEN & IN
-    unless (defined $func2) {
+    unless (defined $val_func) {
         if ($op eq 'BETWEEN' or $op eq 'NOT BETWEEN') {
             ouch 'Invalid value argument, BETWEEN requires 2 values'
                 if ref $val ne 'ARRAY' or @$val != 2;
-            $func2 = $me->PLACEHOLDER.' AND '.$me->PLACEHOLDER;
-$func2 = '? AND ?';
+            $val_func = $me->PLACEHOLDER.' AND '.$me->PLACEHOLDER;
         } elsif ($op eq 'IN' or $op eq 'NOT IN') {
             if (ref $val eq 'ARRAY') {
                 ouch 'Invalid value argument, IN requires at least 1 value' if @$val == 0;
@@ -172,7 +176,7 @@ $func2 = '? AND ?';
                     return;
                 }
             }
-            $func2 = '('.join(',', ($me->PLACEHOLDER) x @$val).')';
+            $val_func = '('.join(',', ($me->PLACEHOLDER) x @$val).')';
         } elsif (@$val != 1) {
             # Check that there is only 1 placeholder
             ouch 'Wrong number of fields/values, called with '.@$val.' while needing 1';
@@ -188,8 +192,8 @@ $func2 = '? AND ?';
         }
     }
 
-    push @{$ref}, [ $op, $func1, $fld, $func2, $val, $opt{FORCE} ];
-use Data::Dumper; warn Data::Dumper->Dump([$me->{DBO}, $ref], [qw(dbo ref)]);
+    push @{$ref}, [ $op, $fld_func, $fld, $val_func, $val, $opt{FORCE} ];
+#use Data::Dumper; warn Data::Dumper->Dump([$me->{DBO}, $ref], [qw(dbo ref)]);
 }
 
 sub _parse_col_val {
@@ -385,7 +389,7 @@ sub _build_complex_chunk {
             @ary = $me->_build_complex_chunk($bind, $ag eq 'OR' ? 'AND' : 'OR', $lim);
         } else {
             @ary = $me->_build_complex_piece($bind, @$lim);
-            my ($op, $modl, $fld, $modr, $val, $force) = @$lim;
+            my ($op, $fld_func, $fld, $val_func, $val, $force) = @$lim;
             # Group AND/OR'ed for same fld if $force or $op requires it
             if ($ag eq ($force || _op_ag($op))) {
                 for (my $i = $#lims; $i >= 0; $i--) {
@@ -393,7 +397,7 @@ sub _build_complex_chunk {
                     # It splices when the ag is the correct AND/OR and the funcs match and all flds match
                     next if (ref $lims[$i]->[0] or $ag ne ($lims[$i]->[5] || _op_ag($lims[$i]->[0])));
                     no warnings 'uninitialized';
-                    next if $lims[$i]->[1] ne $modl;
+                    next if $lims[$i]->[1] ne $fld_func;
                     use warnings 'uninitialized';
                     my $l = $lims[$i]->[2];
                     next if ((ref $l eq 'ARRAY' ? "@$l" : $l) ne (ref $fld eq 'ARRAY' ? "@$fld" : $fld));
@@ -407,8 +411,8 @@ sub _build_complex_chunk {
 }
 
 sub _build_complex_piece {
-    my ($me, $bind, $op, $modl, $fld, $modr, $val) = @_;
-    $me->_build_val($bind, $fld, $modl) .' '.$op.' '.$me->_build_val($bind, $val, $modr);
+    my ($me, $bind, $op, $fld_func, $fld, $val_func, $val) = @_;
+    $me->_build_val($bind, $fld, $fld_func) .' '.$op.' '.$me->_build_val($bind, $val, $val_func);
 }
 
 sub _build_order {
