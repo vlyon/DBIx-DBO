@@ -175,7 +175,11 @@ sub _build_val {
         }
     } @$fld;
     return $ary[0].$alias unless defined $func;
+    # Add one value to @ary to make sure the number of placeholders & values match
+    push @ary, 'Error';
     $func =~ s/$placeholder/shift @ary/eg;
+    # At this point all the values should have been used and @ary must only have 1 item!
+    die "Number of placeholders and values don't match!" if @ary != 1;
     return $func.$alias;
 }
 
