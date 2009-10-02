@@ -198,7 +198,7 @@ sub query_methods {
     isa_ok $q->sth, 'DBI::st', '$q->sth';
 
     # Count the number of rows
-    is $q->rows, 4, 'Row count is 4';
+    is $q->rows, 6, 'Row count is 6';
 
     # Get a Record object
     my $r = $q->fetch;
@@ -213,8 +213,10 @@ sub query_methods {
 
     # Where clause
     $q->where('name', 'LIKE', '%a%');
+#    $q->where('name', 'LIKE BINARY', '%s%');
     $q->where('name', 'LIKE', '%s%');
     $q->where('id', 'BETWEEN', [2, 4]);
+warn $q->sql;
     my $a = $q->arrayref;
 use Data::Dumper;
 warn 'arrayref', substr Dumper($a), 5;

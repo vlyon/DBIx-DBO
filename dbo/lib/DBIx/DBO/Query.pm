@@ -131,20 +131,24 @@ sub unwhere {
 # The arrayref will contain 5 values:
 #  $op, $fld_func, $fld, $val_func, $val, $force
 #  $op is the operator (those supported differ by DBD)
-#  $fld_func is a SCALAR of the form ...
+#  $fld_func is undef or a SCALAR of the form '? AND ?' or 'POSITION(? IN ?)'
+#  $fld is an arrayref of columns/values for use with $fld_func
+#  $val_func is similar to $fld_func
+#  $val is an arrayref of values for use with $val_func
+#  $force is one of undef / 'AND' / 'OR' which if defined, overrides the default aggregator
 ##
 sub _add_where {
     my $me = shift;
     my ($ref, $fld, $op, $val, %opt) = @_;
 
     undef $me->{sql}; # Force a new search
-    if ($opt{FORCE}) {
+    if (defined $opt{FORCE}) {
         ouch 'Invalid option, FORCE must be AND or OR' if $opt{FORCE} ne 'AND' and $opt{FORCE} ne 'OR';
     }
 
     # If the $fld is just a scalar use it as a column name not a value
     ($fld, my $fld_func) = $me->_parse_col_val($fld);
-    ($val, my $val_func) = $me->_parse_val($val, 1);
+    ($val, my $val_func) = $me->_parse_val($val, 'Auto');
 
     # Deal with NULL values
     if (@$val == 1 and !defined $val->[0] and !defined $val_func) {
@@ -199,7 +203,7 @@ sub _add_where {
 sub _parse_col_val {
     my $me = shift;
     my $col = shift;
-    return $me->_parse_val($col) if ref $col;
+    return $me->_parse_val($col, 'Column') if ref $col;
     for my $tbl ($me->_tables) {
         return [ $tbl->column($col) ] if exists $tbl->{Column_Idx}{$col};
     }
