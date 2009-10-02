@@ -95,7 +95,7 @@ sub show {
     my $me = shift;
     undef $me->{'sql'};
     my @flds;
-    while (my $fld = shift @_) {
+    for my $fld (@_) {
         if (blessed $fld and $fld->isa('DBIx::DBO::Table')) {
             ouch 'Invalid table field' unless defined $me->_table_idx($fld);
             push @flds, $fld;
@@ -147,8 +147,8 @@ sub _add_where {
     }
 
     # If the $fld is just a scalar use it as a column name not a value
-    ($fld, my $fld_func) = $me->_parse_col_val($fld);
-    ($val, my $val_func) = $me->_parse_val($val, 'Auto');
+    ($fld, my $fld_func, my $fld_opt) = $me->_parse_col_val($fld);
+    ($val, my $val_func, my $val_opt) = $me->_parse_val($val, 'Auto');
 
     # Deal with NULL values
     if (@$val == 1 and !defined $val->[0] and !defined $val_func) {
@@ -187,6 +187,14 @@ sub _add_where {
         }
     }
 
+    # Collation
+#    if (exists $fld_opt->{COLLATE}) {
+#        $fld_func .= " COLLATE $fld_opt->{COLLATE}";
+#    }
+#    if (exists $val_opt->{COLLATE}) {
+#        $val_func .= " COLLATE $val_opt->{COLLATE}";
+#    }
+
     # Validate the fields
     for my $f (@$fld, @$val) {
         if (blessed $f and $f->isa('DBIx::DBO::Column')) {
@@ -196,7 +204,7 @@ sub _add_where {
         }
     }
 
-    push @{$ref}, [ $op, $fld_func, $fld, $val_func, $val, $opt{FORCE} ];
+    push @{$ref}, [ $op, $fld, $fld_func, $fld_opt, $val, $val_func, $val_opt, $opt{FORCE} ];
 #use Data::Dumper; warn Data::Dumper->Dump([$me->{DBO}, $ref], [qw(dbo ref)]);
 }
 
@@ -415,8 +423,9 @@ sub _build_complex_chunk {
 }
 
 sub _build_complex_piece {
-    my ($me, $bind, $op, $fld_func, $fld, $val_func, $val) = @_;
-    $me->_build_val($bind, $fld, $fld_func) .' '.$op.' '.$me->_build_val($bind, $val, $val_func);
+    my ($me, $bind, $op, $fld, $fld_func, $fld_opt, $val, $val_func, $val_opt) = @_;
+#    my ($me, $bind, $op, $fld_func, $fld, $val_func, $val) = @_;
+    $me->_build_val($bind, $fld, $fld_func, $fld_opt)." $op ".$me->_build_val($bind, $val, $val_func, $val_opt);
 }
 
 sub _build_order {

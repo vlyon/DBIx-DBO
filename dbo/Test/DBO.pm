@@ -212,16 +212,16 @@ sub query_methods {
     is $r ** $t ** 'name', 'Jane Smith', 'Access row via shortcut method **';
 
     # Show specific columns only
-    $q->show('name');
-    die $q-sql;
+#    $q->show({ FUNC => 'UCASE(?)', COL => 'name' });
+#    die "\n", $q->sql;
 
     # Where clause
     $q->where('name', 'LIKE', '%a%');
-#    $q->where('name', 'LIKE BINARY', '%s%');
-    $q->where('name', 'LIKE', '%s%');
+    $q->where('name', 'LIKE', {FUNC => "'%s%'", COLLATE => 'utf8_bin'});
+#    $q->where({COL => 'name', COLLATE => 'utf8_bin'}, 'LIKE', '%s%');
     $q->where('id', 'BETWEEN', [2, 4]);
 warn $q->sql;
-    my $a = $q->arrayref;
+    my $a = $q->arrayref or diag sql_err($q);
 use Data::Dumper;
 warn 'arrayref', substr Dumper($a), 5;
 #    $r = $q->fetch;

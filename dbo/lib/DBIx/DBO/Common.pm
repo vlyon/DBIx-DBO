@@ -120,39 +120,41 @@ sub _parse_val {
     my $me = shift;
     my $fld = shift;
     my $check_fld = shift || '';
-    my @field;
+
+    my $func;
+    my %opt;
     if (ref $fld eq 'SCALAR') {
-        $field[0] = [];
-        $field[1] = $$fld;
         ouch 'Invalid '.($check_fld eq 'Column' ? 'column' : 'field').' reference (scalar ref to undef)'
-            unless defined $field[1];
+            unless defined $$fld;
+        $func = $$fld;
+        $fld = [];
     } elsif (ref $fld eq 'HASH') {
+        $func = $fld->{FUNC} if exists $fld->{FUNC};
+        $opt{AS} = $fld->{AS} if exists $fld->{AS};
+        if (exists $fld->{ORDER}) {
+            ouch 'Invalid ORDER, must be ASC or DESC' if $fld->{ORDER} !~ /^(A|DE)SC$/;
+die 'ORDER not yet supported!';
+            $opt{ORDER} = $fld->{ORDER};
+        }
+        $opt{COLLATE} = $fld->{COLLATE} if exists $fld->{COLLATE};
         if (exists $fld->{COL}) {
             ouch 'Invalid HASH containing both COL and VAL' if exists $fld->{VAL};
-            $field[0] = $me->_parse_col($fld->{COL});
+            $fld = $me->_parse_col($fld->{COL});
         } else {
-            $field[0] = exists $fld->{VAL} ? $fld->{VAL} : [];
+            $fld = exists $fld->{VAL} ? $fld->{VAL} : [];
         }
-        $field[1] = $fld->{FUNC} if defined $fld->{FUNC};
-        $field[2] = $fld->{AS} if defined $fld->{AS};
-        if (defined $fld->{ORDER}) {
-            $field[3] = $fld->{ORDER};
-            ouch 'Invalid ORDER, must be ASC or DESC' if $field[3] !~ /^(A|DE)SC$/;
-        }
-    } else {
-        $field[0] = $fld;
     }
-    $field[0] = [ $field[0] ] unless ref $field[0] eq 'ARRAY';
+    $fld = [$fld] unless ref $fld eq 'ARRAY';
 
     # Swap placeholders
-    my $with = @{$field[0]};
-    if (defined $field[1]) {
-        my $need = $me->_substitute_placeholders($field[1]);
+    my $with = @$fld;
+    if (defined $func) {
+        my $need = $me->_substitute_placeholders($func);
         ouch "The number of params ($with) does not match the number of placeholders ($need)" if $need != $with;
     } elsif ($with != 1 and $check_fld ne 'Auto') {
         ouch 'Invalid '.($check_fld eq 'Column' ? 'column' : 'field')." reference (passed $with params instead of 1)";
     }
-    return (@field);
+    return ($fld, $func, \%opt);
 }
 
 sub _substitute_placeholders {
@@ -163,14 +165,13 @@ sub _substitute_placeholders {
 }
 
 sub _build_val {
-    my ($me, $bind, $fld, $func, $alias, $order) = @_;
-    if (defined $alias) {
-        $alias = ' AS '.$me->_qi($alias);
-    } elsif (defined $order) {
-        $alias = ' '.$order;
-    } else {
-        $alias = '';
-    }
+#    my ($me, $bind, $fld, $func, $alias, $order, $coll) = @_;
+    my ($me, $bind, $fld, $func, $opt) = @_;
+    my $extra = '';
+    $extra .= ' COLLATE '.$me->rdbh->quote($opt->{COLLATE}) if exists $opt->{COLLATE};
+    $extra .= ' AS '.$me->_qi($opt->{AS}) if exists $opt->{AS};
+    $extra .= " $opt->{ORDER}" if exists $opt->{ORDER};
+
     my @ary = map {
         if (!ref $_) {
             push @$bind, $_;
@@ -183,13 +184,16 @@ sub _build_val {
             ouch 'Invalid field: '.$_;
         }
     } @$fld;
-    return $ary[0].$alias unless defined $func;
+    unless (defined $func) {
+        die "Number of placeholders and values don't match!" if @ary != 1;
+        return $ary[0].$extra;
+    }
     # Add one value to @ary to make sure the number of placeholders & values match
     push @ary, 'Error';
     $func =~ s/$placeholder/shift @ary/eg;
     # At this point all the values should have been used and @ary must only have 1 item!
-    die "Number of placeholders and values don't match!" if @ary != 1;
-    return $func.$alias;
+    die "Number of placeholders and values don't match @ary!" if @ary != 1;
+    return $func.$extra;
 }
 
 sub _build_where {
