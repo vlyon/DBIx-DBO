@@ -22,8 +22,11 @@ plan skip_all => "Pod::Coverage $min_pc required for testing POD coverage" if $@
     my %isa = (
         'DBIx::DBO' => [qw(DBIx::DBO::Common)],
         'DBIx::DBO::Table' => [qw(DBIx::DBO::Common)],
+        'DBIx::DBO::Query' => [qw(DBIx::DBO::Common)],
+        'DBIx::DBO::Row' => [qw(DBIx::DBO::Common)],
         'DBIx::DBO::DBD::DBM' => [qw(DBIx::DBO)],
         'DBIx::DBO::DBD::SQLite' => [qw(DBIx::DBO)],
+        'DBIx::DBO::DBD::mysql' => [qw(DBIx::DBO::Query)],
         'DBIx::DBO::DBD::Pg' => [qw(DBIx::DBO)],
     );
     my %pods;

@@ -35,9 +35,22 @@ sub _new {
     for my $table (@_) {
         $me->add_table($table);
     }
-    $me->blank;
-    return wantarray ? ($me, $me->tables) : $me;
+    $me->_blank;
+    return wantarray ? ($me, $me->_tables) : $me;
 }
+
+=head2 add_table
+
+  $query->add_table($table);
+  $query->add_table([$schema, $table]);
+  $query->add_table($table_object);
+
+Add a new table object for the table specified to this query.
+This will perform a comma (", ") join.
+
+Returns the table object.
+
+=cut
 
 sub add_table {
     my ($me, $tbl) = @_;
@@ -48,7 +61,7 @@ sub add_table {
     return $tbl;
 }
 
-sub tables {
+sub _tables {
     my $me = shift;
     @{$me->{'Tables'}};
 }
@@ -68,10 +81,39 @@ sub _table_alias {
     $#{$me->{'Tables'}} > 0 ? 't'.($i + 1) : ();
 }
 
-sub blank {
+sub _blank {
     my $me = shift;
     $me->unwhere;
 #    $me->{'IsDistinct'} = 0;
+    $me->{Row_Count} = undef;
+    $me->{OrderBy} = [];
+    $me->{GroupBy} = [];
+    $me->{Showing} = [];
+}
+
+sub show {
+    my $me = shift;
+    undef $me->{'sql'};
+    my @flds;
+    while (my $fld = shift @_) {
+        if (blessed $fld and $fld->isa('DBIx::DBO::Table')) {
+            ouch 'Invalid table field' unless defined $me->_table_idx($fld);
+            push @flds, $fld;
+            next;
+        }
+        # If the $fld is just a scalar use it as a column name not a value
+        push @flds, [ $me->_parse_col_val($fld) ];
+    }
+    $me->{Showing} = \@flds;
+}
+
+sub where {
+    my $me = shift;
+    # Find the current Where_Logic
+    my $ref = $me->{Where_Logic};
+    $ref = $ref->[$_] for (@{$me->{Bracket_Refs}});
+
+    $me->_add_where($ref, @_);
 }
 
 sub unwhere {
@@ -82,15 +124,6 @@ sub unwhere {
     $me->{Brackets} = [];
     # This forces a new search
     undef $me->{sql};
-}
-
-sub where {
-    my $me = shift;
-    # Find the current Where_Logic
-    my $ref = $me->{Where_Logic};
-    $ref = $ref->[$_] for (@{$me->{Bracket_Refs}});
-
-    $me->_add_where($ref, @_);
 }
 
 sub _add_where {
@@ -163,7 +196,7 @@ sub _parse_col_val {
     my $me = shift;
     my $col = shift;
     return $me->_parse_val($col) if ref $col;
-    for my $tbl ($me->tables) {
+    for my $tbl ($me->_tables) {
         return [ $tbl->column($col) ] if exists $tbl->{Column_Idx}{$col};
     }
     ouch 'No such column: '.$col;
@@ -174,22 +207,42 @@ sub _op_ag {
     return 'AND' if $_[0] eq '!=' or $_[0] eq 'IS NOT' or $_[0] eq '<>' or $_[0] eq 'NOT IN' or $_[0] eq 'NOT BETWEEN';
 }
 
+=head2 arrayref
+
+  $query->arrayref($slice);
+
+Run the query using L<DBI-E<gt>selectall_arrayref|DBI/"selectall_arrayref"> which returns the result as an arrayref.
+C<$slice> is optional, if given it will be added to $attr{Slice} - See L<DBI-E<gt>selectall_arrayref|DBI/"selectall_arrayref">.
+
+=cut
 
 sub arrayref {
     my $me = shift;
     my $slice = shift;
     $slice = {Slice => $slice} if $slice;
-    # TODO: Add from/where bind
-    $me->_sql($me->sql, @{$me->{From_Bind}}, @{$me->{Where_Bind}});
-    $me->rdbh->selectall_arrayref($me->sql, $slice, @{$me->{From_Bind}}, @{$me->{Where_Bind}});
+    $me->_sql($me->sql, $me->_bind_params);
+    $me->rdbh->selectall_arrayref($me->sql, $slice, $me->_bind_params);
 }
+
+=head2 hashref
+
+  $query->hashref($key_field);
+
+Run the query using L<DBI-E<gt>selectall_hashref|DBI/"selectall_hashref"> which returns the result as an hashref.
+C<$key_field> defines which column, or columns, are used as keys in the returned hash.
+
+=cut
 
 sub hashref {
     my $me = shift;
     my $key = shift;
-    # TODO: Add from/where bind
-    $me->_sql($me->sql);
-    $me->rdbh->selectall_hashref($me->sql, $key, undef);
+    $me->_sql($me->sql, $me->_bind_params);
+    $me->rdbh->selectall_hashref($me->sql, $key, undef, $me->_bind_params);
+}
+
+sub _bind_params {
+    my $me = shift;
+    @{$me->{Show_Bind}}, @{$me->{From_Bind}}, @{$me->{Where_Bind}};
 }
 
 sub fetch {
@@ -228,8 +281,8 @@ sub run {
 
 sub _execute {
     my $me = shift;
-    $me->_sql($me->sql, @{$me->{From_Bind}}, @{$me->{Where_Bind}});
-    $me->sth->execute(@{$me->{From_Bind}}, @{$me->{Where_Bind}});
+    $me->_sql($me->sql, $me->_bind_params);
+    $me->sth->execute($me->_bind_params);
 }
 
 sub _bind_cols_to_hash {
@@ -246,16 +299,16 @@ sub _bind_cols_to_hash {
 
 sub rows {
     my $me = shift;
-    unless (defined $me->{Count}) {
+    unless (defined $me->{Row_Count}) {
         $me->run unless $me->sth->{Active}; # Should this be $me->sth->{Active}?
-        $me->{Count} = $me->sth->rows;
-        if ($me->{Count} == -1) {
+        $me->{Row_Count} = $me->sth->rows;
+        if ($me->{Row_Count} == -1) {
             # TODO: Handle DISTINCT and GROUP BY
             (my $sql = $me->sql) =~ s/\Q $me->{show} FROM / COUNT(*) FROM /;
-            $me->{Count} = ( $me->rdbh->selectrow_array($sql, undef, @{$me->{bind}}) )[0];
+            $me->{Row_Count} = ( $me->rdbh->selectrow_array($sql, undef, $me->_bind_params) )[0];
         }
     }
-    $me->{Count};
+    $me->{Row_Count};
 }
 
 sub sth {
@@ -273,7 +326,6 @@ sub sql {
 sub _build_sql {
     my $me = shift;
     undef $me->{sth};
-    $me->{Where_Bind} = [];
     my $sql = 'SELECT ';
     $sql .= $me->_build_show;
     $sql .= ' FROM '.$me->_build_from;
@@ -285,13 +337,20 @@ sub _build_sql {
 
 sub _build_show {
     my $me = shift;
-    # TODO: Implement
-    $me->{show} = '*';
+    undef @{$me->{Show_Bind}};
+    return $me->{show} = '*' unless @{$me->{Showing}};
+    my @flds;
+    for my $fld (@{$me->{Showing}}) {
+        push @flds, (blessed $fld and $fld->isa('DBIx::DBO::Table'))
+            ? $me->_qi($me->_table_alias($fld) || $fld->{Name}).'.*'
+            : $me->_build_val($me->{Show_Bind}, @$fld);
+    }
+    $me->{show} = join ', ', @flds;
 }
 
 sub _build_from {
     my $me = shift;
-    $me->{From_Bind} = [];
+    undef @{$me->{From_Bind}};
     $me->{from} = $me->_build_table($me->{Tables}[0]);
     for (my $i = 1; $i < @{$me->{Tables}}; $i++) {
         $me->{from} .= $me->{Join}[$i].$me->_build_table($me->{Tables}[$i]);
@@ -310,6 +369,7 @@ sub _build_table {
 
 sub _build_complex_where {
     my $me = shift;
+    undef @{$me->{Where_Bind}};
     my @chunks = $me->_build_complex_chunk($me->{Where_Bind}, 'OR', $me->{Where_Logic});
     $me->{where} = join ' AND ', @chunks;
 }
