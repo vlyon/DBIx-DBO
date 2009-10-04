@@ -30,13 +30,14 @@ BEGIN {
 use DBIx::DBO;
 
 our $dbd;
+our $dbd_name;
 (our $prefix = "DBO_${DBIx::DBO::VERSION}_test") =~ s/\W/_/g;
 our @_cleanup_sql;
 
 sub import {
     my $class = shift;
     $dbd = shift;
-    my $tests = shift;
+    $dbd_name = shift;
     my %opt = splice @_;
 
     grep $_ eq $dbd, DBI->available_drivers or
@@ -46,8 +47,6 @@ sub import {
         no strict 'refs';
         *{caller().'::sql_err'} = \&sql_err;
     }
-
-    return unless $tests;
 
     if (exists $opt{tempdir}) {
         require File::Temp;
@@ -60,15 +59,17 @@ sub import {
         }
     }
 
+    return unless exists $opt{tests};
+
     if (exists $opt{connect_ok}) {
         my $dbo_ref = shift @{$opt{connect_ok}};
         $$dbo_ref = connect_dbo(@{$opt{connect_ok}}) or plan skip_all => "Can't connect: $DBI::errstr";
 
-        plan tests => $tests;
-        pass "Connect to $dbd";
+        plan tests => $opt{tests};
+        pass "Connect to $dbd_name";
         isa_ok $$dbo_ref, "DBIx::DBO::DBD::$dbd", '$dbo';
     } else {
-        plan tests => $tests;
+        plan tests => $opt{tests};
     }
 }
 
@@ -86,7 +87,7 @@ sub sql_err {
 }
 
 sub connect_ok {
-    ok my $dbo = connect_dbo(@_), "Connect to $dbd" or die $DBI::errstr;
+    ok my $dbo = connect_dbo(@_), "Connect to $dbd_name" or die $DBI::errstr;
     isa_ok $dbo, "DBIx::DBO::DBD::$dbd", '$dbo';
     return $dbo;
 }
@@ -212,18 +213,35 @@ sub query_methods {
     is $r ** $t ** 'name', 'Jane Smith', 'Access row via shortcut method **';
 
     # Show specific columns only
-#    $q->show({ FUNC => 'UCASE(?)', COL => 'name' });
-#    die "\n", $q->sql;
+    $q->show({ FUNC => 'UPPER(?)', COL => 'name', AS => 'name' }, 'id', 'name');
+    $r = $q->fetch;
+    is $r->{name}, 'JOHN DOE', 'Method DBIx::DBO::Query->show';
+    is $r->_column_idx($t ** 'name'), 2, 'Vern';
+    is $r->{$t ** 'name'}, 'John Doe', 'Access specific column';
+
+    # Check case sensitivity of LIKE
+    my $case_sensitive = $dbo->selectrow_arrayref('SELECT ? LIKE ?', undef, 'a', 'A') or diag sql_err($dbo);
+    $case_sensitive = $case_sensitive->[0];
+    note "$dbd_name 'LIKE' is".($case_sensitive ? '' : ' NOT').' case sensitive';
 
     # Where clause
     $q->where('name', 'LIKE', '%a%');
-    $q->where('name', 'LIKE', {FUNC => "'%s%'", COLLATE => 'utf8_bin'});
+#    $q->where('name', 'LIKE', {FUNC => "'%s%'", COLLATE => 'utf8_bin'});
 #    $q->where({COL => 'name', COLLATE => 'utf8_bin'}, 'LIKE', '%s%');
-    $q->where('id', 'BETWEEN', [2, 4]);
+    $q->where('id', 'BETWEEN', [2, 6]);
+    $q->where('name', 'NOT LIKE', '%i%');
+
+    # Show specific columns only
+#    $q->show('id');
+
+use Data::Dumper;
 warn $q->sql;
     my $a = $q->arrayref or diag sql_err($q);
-use Data::Dumper;
 warn 'arrayref', substr Dumper($a), 5;
+$q->show('id');
+$a = $q->col_arrayref or diag sql_err($q);
+warn 'col_arrayref', substr Dumper($a), 5;
+
 #    $r = $q->fetch;
 
     return $q;

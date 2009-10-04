@@ -48,6 +48,22 @@ sub _column_idx {
     my $me = shift;
     my $col = shift;
     my $idx = -1;
+use Data::Dumper;
+    for my $shown (@{$$me->{Showing}}) {
+        if (blessed $shown->[0] and $shown->[0]->isa('DBIx::DBO::Table')) {
+            return $idx + $shown->[0]{Column_Idx}{$col->[1]} if exists $shown->[0]{Column_Idx}{$col->[1]};
+            $idx += keys %{$shown->[0]{Column_Idx}};
+            next;
+        }
+        $idx++;
+warn 'not defined' if not defined $shown->[1];
+warn 'equal' if $col == $shown->[0];
+warn 'isa Column' if blessed $shown->[0] and $shown->[0]->isa('DBIx::DBO::Column');
+#warn 'is name' if blessed $shown->[0] and $shown->[0]->isa('DBIx::DBO::Column');
+        return $idx if not defined $shown->[1] and $col == $shown->[0];
+#warn 'shown', substr Dumper($shown), 5;
+    }
+    return undef;
     # TODO: Select fields ?
     for my $t ($me->_tables) {
         return $idx + $t->{Column_Idx}{$col->[1]} if exists $t->{Column_Idx}{$col->[1]};
@@ -80,9 +96,11 @@ sub value {
 
 sub _detach {
     my $me = shift;
+Carp::cluck '_detach';
     if ($$me->{array}) {
         $$me->{array} = [ @$me ];
         $$me->{hash} = { %$me };
+        $$me->{Showing} = [ $$me->{Showing} ];
     }
     undef $$me->{Parent}{Row};
     undef $$me->{Parent};

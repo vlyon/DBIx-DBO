@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::DBO DBM => 21, tempdir => 1;
+use Test::DBO DBM => 'DBM', tests => 21, tempdir => 1;
 
 # Create the DBO
 my $dbo = Test::DBO::connect_ok();
