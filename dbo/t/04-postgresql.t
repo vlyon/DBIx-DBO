@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::DBO 'Pg';
+use Test::DBO Pg => 'PostgreSQL';
 
 my $dbo;
 my $drop_db;

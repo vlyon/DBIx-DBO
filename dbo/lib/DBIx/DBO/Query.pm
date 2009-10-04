@@ -63,13 +63,13 @@ sub add_table {
 
 sub _tables {
     my $me = shift;
-    @{$me->{'Tables'}};
+    @{$me->{Tables}};
 }
 
 sub _table_idx {
     my ($me, $tbl) = @_;
-    for my $i (0 .. $#{$me->{'Tables'}}) {
-        return $i if $tbl == $me->{'Tables'}[$i];
+    for my $i (0 .. $#{$me->{Tables}}) {
+        return $i if $tbl == $me->{Tables}[$i];
     }
     return undef;
 }
@@ -78,13 +78,13 @@ sub _table_alias {
     my ($me, $tbl) = @_;
     my $i = $me->_table_idx($tbl);
     ouch 'The table is not in this query' unless defined $i;
-    $#{$me->{'Tables'}} > 0 ? 't'.($i + 1) : ();
+    $#{$me->{Tables}} > 0 ? 't'.($i + 1) : ();
 }
 
 sub _blank {
     my $me = shift;
     $me->unwhere;
-#    $me->{'IsDistinct'} = 0;
+#    $me->{IsDistinct} = 0;
     $me->{Row_Count} = undef;
     $me->{OrderBy} = [];
     $me->{GroupBy} = [];
@@ -93,7 +93,7 @@ sub _blank {
 
 sub show {
     my $me = shift;
-    undef $me->{'sql'};
+    undef $me->{sql};
     my @flds;
     for my $fld (@_) {
         if (blessed $fld and $fld->isa('DBIx::DBO::Table')) {
@@ -225,24 +225,26 @@ sub _op_ag {
 
 =head2 arrayref
 
-  $query->arrayref($slice);
+  $query->arrayref;
+  $query->arrayref(\%attr);
 
 Run the query using L<DBI-E<gt>selectall_arrayref|DBI/"selectall_arrayref"> which returns the result as an arrayref.
-C<$slice> is optional, if given it will be added to $attr{Slice} - See L<DBI-E<gt>selectall_arrayref|DBI/"selectall_arrayref">.
+You can specify a slice by including a 'Slice' or 'Columns' attribute in \%attr - See L<DBI-E<gt>selectall_arrayref|DBI/"selectall_arrayref">.
 
 =cut
 
 sub arrayref {
     my $me = shift;
-    my $slice = shift;
-    $slice = {Slice => $slice} if $slice;
+    my $attr = shift;
     $me->_sql($me->sql, $me->_bind_params);
-    $me->rdbh->selectall_arrayref($me->sql, $slice, $me->_bind_params);
+    my $sql_or_sth = $me->sth->{Active} ? 'sql' : 'sth';
+    $me->rdbh->selectall_arrayref($me->{$sql_or_sth}, $attr, $me->_bind_params);
 }
 
 =head2 hashref
 
   $query->hashref($key_field);
+  $query->hashref($key_field, \%attr);
 
 Run the query using L<DBI-E<gt>selectall_hashref|DBI/"selectall_hashref"> which returns the result as an hashref.
 C<$key_field> defines which column, or columns, are used as keys in the returned hash.
@@ -252,8 +254,33 @@ C<$key_field> defines which column, or columns, are used as keys in the returned
 sub hashref {
     my $me = shift;
     my $key = shift;
+    my $attr = shift;
     $me->_sql($me->sql, $me->_bind_params);
-    $me->rdbh->selectall_hashref($me->sql, $key, undef, $me->_bind_params);
+    my $sql_or_sth = $me->sth->{Active} ? 'sql' : 'sth';
+    $me->rdbh->selectall_hashref($me->{$sql_or_sth}, $key, $attr, $me->_bind_params);
+}
+
+=head2 col_arrayref
+
+  $query->col_arrayref;
+  $query->col_arrayref(\%attr);
+
+Run the query using L<DBI-E<gt>selectcol_arrayref|DBI/"selectcol_arrayref"> which returns the result as an arrayref of the values of each row in one array. By default it pushes all the columns requested by the L<show> method onto the result array (this differs from the DBI). To specify which columns to include in the result use the 'Columns' attribute in %attr - see L<DBI-E<gt>selectcol_arrayref|DBI/"selectcol_arrayref">.
+
+=cut
+
+sub col_arrayref {
+    my $me = shift;
+    my $attr = shift;
+    $me->_sql($me->sql, $me->_bind_params);
+    my $sth = $me->sth->{Active} ? $me->rdbh->prepare($me->{sql}) : $me->{sth};
+    return unless $sth and $sth->execute($me->_bind_params);
+    my @columns = ($attr->{Columns}) ? @{$attr->{Columns}} : (1 .. $sth->{NUM_OF_FIELDS});
+    my @ary;
+    while (my $ref = $sth->fetch) {
+        push @ary, @$ref;
+    }
+    \@ary;
 }
 
 sub _bind_params {
@@ -265,10 +292,16 @@ sub fetch {
     my $me = shift;
     $me->run unless $me->sth->{Active};
 
-    # Detach the old record if there is still another referance to it
-    $me->{Row}->_detach if defined $me->{Row} and SvREFCNT(${$me->{Row}}) > 1;
+    # Detach the old record if there is still another reference to it
+    my $row;
+    if (defined $me->{Row} and SvREFCNT($me->{Row}) > 1) {
+        $me->{Row}->_detach;
+        $row = $me->row;
+        $$row->{Showing} = @{$me->{Showing}} ? $me->{Showing} : [ $me->{Tables} ];
+    } else {
+        $row = $me->row;
+    }
 
-    my $row = $me->row;
 #    $$row->{columns} ||= [ @{$me->{sth}{NAME}} ]; # Is this needed?
     $$row->{hash} = $me->{hash};
 
@@ -278,19 +311,19 @@ sub fetch {
 
 sub row {
     my $me = shift;
-    return $me->{Row} if $me->{Row} and $me->{sql};
-#    $me->{Row} = \{ DBO => $me->{DBO}, array => undef, hash => {}, Query => $me };
-#    bless $me->{Row}, 'DBIx::DBO::Row';
-    $me->{Row} = $me->{DBO}->row($me);
+    $me->sql; # Detach if needed
+    $me->{Row} //= $me->{DBO}->row($me);
 }
 
 sub run {
     my $me = shift;
+    my $rv = $me->_execute;
+
     my $row = $me->row;
     undef $$row->{array};
     undef %$row;
+    $$row->{Showing} = @{$me->{Showing}} ? $me->{Showing} : [ $me->{Tables} ];
 
-    my $rv = $me->_execute;
     $me->_bind_cols_to_hash;
     return $rv;
 }
@@ -342,6 +375,16 @@ sub sql {
 sub _build_sql {
     my $me = shift;
     undef $me->{sth};
+    undef $me->{hash};
+    if (defined $me->{Row}) {
+        if (SvREFCNT($me->{Row}) > 1) {
+            $me->{Row}->_detach;
+        } else {
+            undef ${$me->{Row}}{array};
+            undef %{$me->{Row}};
+        }
+    }
+
     my $sql = 'SELECT ';
     $sql .= $me->_build_show;
     $sql .= ' FROM '.$me->_build_from;

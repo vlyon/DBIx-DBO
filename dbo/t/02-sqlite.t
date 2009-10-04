@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use File::Temp;
 my $dbo;
-use Test::DBO SQLite => 22, tempdir => 1, connect_ok => [\$dbo];
+use Test::DBO SQLite => 'SQLite', tests => 22, tempdir => 1, connect_ok => [\$dbo];
 
 my $test_tbl = $Test::DBO::prefix.'_tbl';
 
