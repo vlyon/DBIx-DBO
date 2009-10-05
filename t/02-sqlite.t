@@ -3,19 +3,24 @@
 use strict;
 use warnings;
 use File::Temp;
+
+# Create the DBO (2 tests)
 my $dbo;
-use Test::DBO SQLite => 'SQLite', tests => 22, tempdir => 1, connect_ok => [\$dbo];
+use Test::DBO SQLite => 'SQLite', tests => 31, tempdir => 1, connect_ok => [\$dbo];
 
 my $test_tbl = $Test::DBO::prefix.'_tbl';
 
-# Test methods: do, select* (9 tests)
+# Table methods: do, select* (9 tests)
 my $t = Test::DBO::basic_methods($dbo, undef, $test_tbl);
 
-# Test methods: do, select* (2 tests)
+# Advanced table methods: insert, update, delete (2 tests)
 Test::DBO::advanced_table_methods($dbo, $t);
 
 # Query methods: (9 tests)
-Test::DBO::query_methods($dbo, $t);
+my $q = Test::DBO::query_methods($dbo, $t);
+
+# Advanced query methods: (9 tests)
+Test::DBO::query_methods($dbo, $t, $q);
 
 # Cleanup
 Test::DBO::cleanup($dbo);

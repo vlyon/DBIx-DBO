@@ -177,6 +177,7 @@ sub skip_advanced_table_methods {
     my $dbo = shift;
     my $t = shift;
 
+    note "No advanced table tests for $dbd_name";
     $t->insert(id => 5, name => 'Vernon Lyon') or diag sql_err($t);
     $t->insert(id => 6, name => 'Harry Harrelson') or diag sql_err($t);
     $t->insert(id => 7, name => 'Amanda Huggenkiss') or diag sql_err($t);
@@ -212,12 +213,24 @@ sub query_methods {
     is $r->value($t->column('name')), 'Jane Smith', 'Access row via method DBIx::DBO::Row::value';
     is $r ** $t ** 'name', 'Jane Smith', 'Access row via shortcut method **';
 
+    return $q;
+}
+
+sub advanced_query_methods {
+    my $dbo = shift;
+    my $t = shift;
+    my $q = shift;
+
     # Show specific columns only
     $q->show({ FUNC => 'UPPER(?)', COL => 'name', AS => 'name' }, 'id', 'name');
-    $r = $q->fetch;
+    my $r = $q->fetch;
     is $r->{name}, 'JOHN DOE', 'Method DBIx::DBO::Query->show';
-    is $r->_column_idx($t ** 'name'), 2, 'Vern';
-    is $r->{$t ** 'name'}, 'John Doe', 'Access specific column';
+    is $r ** $t ** 'name', 'John Doe', 'Access specific column';
+
+    # Show whole tables
+    $q->show({ FUNC => "'who?'", AS => 'name' }, $t);
+    $r = $q->fetch;
+    is $r ** $t ** 'name', 'John Doe', 'Access specific column from a shown table';
 
     # Check case sensitivity of LIKE
     my $case_sensitive = $dbo->selectrow_arrayref('SELECT ? LIKE ?', undef, 'a', 'A') or diag sql_err($dbo);
@@ -225,26 +238,20 @@ sub query_methods {
     note "$dbd_name 'LIKE' is".($case_sensitive ? '' : ' NOT').' case sensitive';
 
     # Where clause
-    $q->where('name', 'LIKE', '%a%');
-#    $q->where('name', 'LIKE', {FUNC => "'%s%'", COLLATE => 'utf8_bin'});
-#    $q->where({COL => 'name', COLLATE => 'utf8_bin'}, 'LIKE', '%s%');
-    $q->where('id', 'BETWEEN', [2, 6]);
-    $q->where('name', 'NOT LIKE', '%i%');
+    $q->show('id');
+    ok $q->where('name', 'LIKE', '%a%'), 'Method DBIx::DBO::Query->where LIKE';
+    my $a = $q->col_arrayref or diag sql_err($q);
+    is_deeply $a, [2,4,6,7], 'Method DBIx::DBO::Query->col_arrayref';
+    ok $q->where('id', 'BETWEEN', [2, 6]), 'Method DBIx::DBO::Query->where BETWEEN';
+    $a = $q->arrayref or diag sql_err($q);
+    is_deeply $a, [[2],[4],[6]], 'Method DBIx::DBO::Query->arrayref';
+    ok $q->where('name', 'NOT LIKE', '%i%'), 'Method DBIx::DBO::Query->where NOT LIKE';
+    $a = $q->hashref('id') or diag sql_err($q);
+    is_deeply $a, {4 => {id => 4},6 => {id => 6}}, 'Method DBIx::DBO::Query->hashref';
+}
 
-    # Show specific columns only
-#    $q->show('id');
-
-use Data::Dumper;
-warn $q->sql;
-    my $a = $q->arrayref or diag sql_err($q);
-warn 'arrayref', substr Dumper($a), 5;
-$q->show('id');
-$a = $q->col_arrayref or diag sql_err($q);
-warn 'col_arrayref', substr Dumper($a), 5;
-
-#    $r = $q->fetch;
-
-    return $q;
+sub skip_advanced_query_methods {
+    note "No advanced query tests for $dbd_name";
 }
 
 sub cleanup {

@@ -49,7 +49,7 @@ if ($ENV{DBO_TEST_PG_DB}) {
     plan skip_all => "Can't connect to newly created test database: $DBI::errstr" unless $dbo;
 }
 
-plan tests => 24;
+plan tests => 33;
 pass "Connect to PostgreSQL $quoted_db database";
 isa_ok $dbo, 'DBIx::DBO::DBD::Pg', '$dbo';
 
@@ -61,23 +61,19 @@ if (ok $dbo->do("CREATE SCHEMA $quoted_sch"), "Create $quoted_sch test schema") 
     note sql_err($dbo);
 }
 
-# Test methods: do, select*, ... (9 tests)
+# Table methods: do, select*, ... (9 tests)
 my $t = Test::DBO::basic_methods($dbo, $test_sch, $test_tbl);
 
-# Test methods: 
+# Advanced table methods: insert, update, delete (2 tests)
 Test::DBO::advanced_table_methods($dbo, $t);
 
 # Query methods: (9 tests)
-Test::DBO::query_methods($dbo, $t);
+my $q = Test::DBO::query_methods($dbo, $t);
 
-sub show_child_handles {
-    my ($h, $level) = @_;
-    printf "%sh %s %s\n", $h->{Type}, "\t" x $level, $h;
-    show_child_handles($_, $level + 1) for (grep defined, @{$h->{ChildHandles}});
-}
-show_child_handles($dbo->rdbh, 0);
+# Advanced query methods: (9 tests)
+Test::DBO::query_methods($dbo, $t, $q);
 
-# Cleanup
+# Cleanup (1 test)
 Test::DBO::cleanup($dbo);
 
 SKIP: {

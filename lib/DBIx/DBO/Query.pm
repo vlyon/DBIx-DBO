@@ -297,7 +297,7 @@ sub fetch {
     if (defined $me->{Row} and SvREFCNT($me->{Row}) > 1) {
         $me->{Row}->_detach;
         $row = $me->row;
-        $$row->{Showing} = @{$me->{Showing}} ? $me->{Showing} : [ $me->{Tables} ];
+        $$row->{Showing} = @{$me->{Showing}} ? $me->{Showing} : $me->{Tables};
     } else {
         $row = $me->row;
     }
@@ -322,7 +322,7 @@ sub run {
     my $row = $me->row;
     undef $$row->{array};
     undef %$row;
-    $$row->{Showing} = @{$me->{Showing}} ? $me->{Showing} : [ $me->{Tables} ];
+    $$row->{Showing} = @{$me->{Showing}} ? $me->{Showing} : $me->{Tables};
 
     $me->_bind_cols_to_hash;
     return $rv;
