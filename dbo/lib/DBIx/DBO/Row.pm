@@ -48,20 +48,19 @@ sub _column_idx {
     my $me = shift;
     my $col = shift;
     my $idx = -1;
-use Data::Dumper;
+#use Data::Dumper;
+#my ($t) = $me->_tables;
+#my $d = Data::Dumper->new([$t, $col, $$me->{Showing}], [qw($t $col $$me->{Showing})]);
+#$d->Seen({ '$dbo' => $$me->{DBO} });
+#warn $d->Dump;
     for my $shown (@{$$me->{Showing}}) {
-        if (blessed $shown->[0] and $shown->[0]->isa('DBIx::DBO::Table')) {
-            return $idx + $shown->[0]{Column_Idx}{$col->[1]} if exists $shown->[0]{Column_Idx}{$col->[1]};
-            $idx += keys %{$shown->[0]{Column_Idx}};
+        if (blessed $shown and $shown->isa('DBIx::DBO::Table')) {
+            return $idx + $shown->{Column_Idx}{$col->[1]} if exists $shown->{Column_Idx}{$col->[1]};
+            $idx += keys %{$shown->{Column_Idx}};
             next;
         }
         $idx++;
-warn 'not defined' if not defined $shown->[1];
-warn 'equal' if $col == $shown->[0];
-warn 'isa Column' if blessed $shown->[0] and $shown->[0]->isa('DBIx::DBO::Column');
-#warn 'is name' if blessed $shown->[0] and $shown->[0]->isa('DBIx::DBO::Column');
-        return $idx if not defined $shown->[1] and $col == $shown->[0];
-#warn 'shown', substr Dumper($shown), 5;
+        return $idx if not defined $shown->[1] and @{$shown->[0]} == 1 and $col == $shown->[0][0];
     }
     return undef;
     # TODO: Select fields ?
