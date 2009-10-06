@@ -18,7 +18,6 @@ When setting an option, the previous value is returned.
 sub config {
     my $me = shift;
     my $opt = shift;
-    ouch "Invalid config option '$opt'" unless exists $Config{$opt};
     my $val = $me->{Config}{$opt} // $me->{DBO}->config($opt);
     $me->{Config}{$opt} = shift if @_;
     return $val;
@@ -33,31 +32,43 @@ sub _new {
     bless $me, $class;
 
     for my $table (@_) {
-        $me->add_table($table);
+        $me->join_table($table);
     }
     $me->_blank;
     return wantarray ? ($me, $me->_tables) : $me;
 }
 
-=head2 add_table
+=head2 join_table
 
-  $query->add_table($table);
-  $query->add_table([$schema, $table]);
-  $query->add_table($table_object);
+  $query->join_table($table, $join_type);
+  $query->join_table([$schema, $table], $join_type);
+  $query->join_table($table_object, $join_type);
 
-Add a new table object for the table specified to this query.
-This will perform a comma (", ") join.
+Join a new table object for the table specified to this query.
+This will perform a comma (", ") join unless $join_type is specified.
 
 Returns the table object.
 
 =cut
 
-sub add_table {
-    my ($me, $tbl) = @_;
-    $tbl = $me->{DBO}->table($tbl) unless blessed $tbl and $tbl->isa('DBIx::DBO::Table');
+##
+# Comma, INNER, NATURAL, LEFT, RIGHT, FULL
+##
+sub join_table {
+    my ($me, $tbl, $type) = @_;
+    $tbl = $me->{DBO}->table($tbl);
+    if (defined $type) {
+        $type =~ s/^\s*/ /;
+        $type =~ s/\s*$/ /;
+        $type = uc $type;
+        $type .= 'JOIN ' if $type !~ /\bJOIN\b/;
+    } else {
+        $type = ', ';
+    }
     push @{$me->{Tables}}, $tbl;
-    push @{$me->{Join}}, ', ';
-#    push @{$me->{JoinOn}}, undef;
+    push @{$me->{Join}}, $type;
+    push @{$me->{JoinOn}}, undef;
+    undef $me->{sql};
     return $tbl;
 }
 
@@ -86,34 +97,77 @@ sub _blank {
     $me->unwhere;
 #    $me->{IsDistinct} = 0;
     $me->{Row_Count} = undef;
-    $me->{OrderBy} = [];
-    $me->{GroupBy} = [];
     $me->{Showing} = [];
+    $me->{GroupBy} = [];
+    $me->{OrderBy} = [];
+    $me->{Limit} = undef;
 }
 
 sub show {
     my $me = shift;
     undef $me->{sql};
-    my @flds;
     for my $fld (@_) {
         if (blessed $fld and $fld->isa('DBIx::DBO::Table')) {
             ouch 'Invalid table field' unless defined $me->_table_idx($fld);
-            push @flds, $fld;
+            push @{$me->{Showing}}, $fld;
             next;
         }
         # If the $fld is just a scalar use it as a column name not a value
-        push @flds, [ $me->_parse_col_val($fld) ];
+        push @{$me->{Showing}}, [ $me->_parse_col_val($fld) ];
     }
-    $me->{Showing} = \@flds;
+}
+
+sub join_on {
+    my $me = shift;
+    my $t2 = shift;
+    my $i = $me->_table_idx($t2) or ouch 'Invalid table object to join onto';
+
+    my ($col1, $col1_func, $col1_opt) = $me->_parse_col_val(shift);
+    my $op = shift;
+    my ($col2, $col2_func, $col2_opt) = $me->_parse_col_val(shift);
+
+    # Validate the fields
+    for my $c (@$col1, @$col2) {
+        if (blessed $c and $c->isa('DBIx::DBO::Column')) {
+            ouch 'Invalid table field' unless defined $me->_table_idx($c->[0]);
+        } elsif (my $type = ref $c) {
+            ouch 'Invalid value type: '.$type;
+        }
+    }
+
+    $me->{Join}[$i] = ' JOIN ' if $me->{Join}[$i] eq ', ';
+    $me->_add_where($me->{JoinOn}[$i] //= [], $op,
+        $col1, $col1_func, $col1_opt, $col2, $col2_func, $col2_opt, @_);
+
+#use Data::Dumper;
+#my @t = $me->_tables;
+#my $d = Data::Dumper->new([$ref], [qw(join_on)]);
+#$d->Seen({ '$dbo' => $me->{DBO}, map { 't'.$_ => $t[$_-1] } (1 .. @t) });
+#die $d->Dump;
 }
 
 sub where {
     my $me = shift;
-    # Find the current Where_Logic
+
+    # If the $fld is just a scalar use it as a column name not a value
+    my ($fld, $fld_func, $fld_opt) = $me->_parse_col_val(shift);
+    my $op = shift;
+    my ($val, $val_func, $val_opt) = $me->_parse_val(shift, 'Auto');
+
+    # Validate the fields
+    for my $f (@$fld, @$val) {
+        if (blessed $f and $f->isa('DBIx::DBO::Column')) {
+            ouch 'Invalid table field' unless defined $me->_table_idx($f->[0]);
+        } elsif (my $type = ref $f) {
+            ouch 'Invalid value type: '.$type;
+        }
+    }
+
+    # Find the current Where_Logic reference
     my $ref = $me->{Where_Logic};
     $ref = $ref->[$_] for (@{$me->{Bracket_Refs}});
 
-    $me->_add_where($ref, @_);
+    $me->_add_where($ref, $op, $fld, $fld_func, $fld_opt, $val, $val_func, $val_opt, @_);
 }
 
 sub unwhere {
@@ -139,16 +193,12 @@ sub unwhere {
 ##
 sub _add_where {
     my $me = shift;
-    my ($ref, $fld, $op, $val, %opt) = @_;
+    my ($ref, $op, $fld, $fld_func, $fld_opt, $val, $val_func, $val_opt, %opt) = @_;
 
     undef $me->{sql}; # Force a new search
     if (defined $opt{FORCE}) {
         ouch 'Invalid option, FORCE must be AND or OR' if $opt{FORCE} ne 'AND' and $opt{FORCE} ne 'OR';
     }
-
-    # If the $fld is just a scalar use it as a column name not a value
-    ($fld, my $fld_func, my $fld_opt) = $me->_parse_col_val($fld);
-    ($val, my $val_func, my $val_opt) = $me->_parse_val($val, 'Auto');
 
     # Deal with NULL values
     if (@$val == 1 and !defined $val->[0] and !defined $val_func) {
@@ -195,17 +245,7 @@ sub _add_where {
 #        $val_func .= " COLLATE $val_opt->{COLLATE}";
 #    }
 
-    # Validate the fields
-    for my $f (@$fld, @$val) {
-        if (blessed $f and $f->isa('DBIx::DBO::Column')) {
-            ouch 'Invalid table field' unless defined $me->_table_idx($f->[0]);
-        } elsif (my $type = ref $f) {
-            ouch 'Invalid value type: '.$type;
-        }
-    }
-
     push @{$ref}, [ $op, $fld, $fld_func, $fld_opt, $val, $val_func, $val_opt, $opt{FORCE} ];
-#use Data::Dumper; warn Data::Dumper->Dump([$me->{DBO}, $ref], [qw(dbo ref)]);
 }
 
 sub _parse_col_val {
@@ -221,6 +261,15 @@ sub _parse_col_val {
 sub _op_ag {
     return 'OR' if $_[0] eq '=' or $_[0] eq 'IS' or $_[0] eq '<=>' or $_[0] eq 'IN' or $_[0] eq 'BETWEEN';
     return 'AND' if $_[0] eq '!=' or $_[0] eq 'IS NOT' or $_[0] eq '<>' or $_[0] eq 'NOT IN' or $_[0] eq 'NOT BETWEEN';
+}
+
+sub limit {
+    my ($me, $rows, $offset) = @_;
+    return undef $me->{Limit} unless defined $rows;
+    eval { use warnings FATAL => 'numeric'; $rows+=0; $offset+=0 };
+    ouch 'Non-numeric arguments in limit' if $@;
+    @{$me->{Limit}} = ($rows, $offset);
+#    $me->{Limit} = $offset ? "$rows OFFSET $offset" : $rows;
 }
 
 =head2 arrayref
@@ -385,13 +434,19 @@ sub _build_sql {
         }
     }
 
-    my $sql = 'SELECT ';
-    $sql .= $me->_build_show;
+    my $sql = $me->_build_sql_prefix;
+    $sql .= ' ' if $sql;
+    $sql .= 'SELECT '.$me->_build_show;
     $sql .= ' FROM '.$me->_build_from;
     $sql .= ' WHERE '.$_ if $_ = $me->_build_complex_where;
     $sql .= ' ORDER BY '.$_ if $_ = $me->_build_order;
-    $sql .= ' LIMIT '.$me->{Limit} if defined $me->{Limit};
+    $sql .= $me->_build_sql_suffix;
     $me->{sql} = $sql;
+}
+
+sub _build_sql_prefix {
+    my $me = shift;
+    $me->{sql_prefix} //= '';
 }
 
 sub _build_show {
@@ -413,7 +468,9 @@ sub _build_from {
     $me->{from} = $me->_build_table($me->{Tables}[0]);
     for (my $i = 1; $i < @{$me->{Tables}}; $i++) {
         $me->{from} .= $me->{Join}[$i].$me->_build_table($me->{Tables}[$i]);
-        # TODO: JoinOn
+        if ($me->{JoinOn}[$i]) {
+            $me->{from} .= ' ON '.join(' AND ', $me->_build_complex_chunk($me->{From_Bind}, 'OR', $me->{JoinOn}[$i]));
+        }
     }
     $me->{from};
 }
@@ -467,7 +524,6 @@ sub _build_complex_chunk {
 
 sub _build_complex_piece {
     my ($me, $bind, $op, $fld, $fld_func, $fld_opt, $val, $val_func, $val_opt) = @_;
-#    my ($me, $bind, $op, $fld_func, $fld, $val_func, $val) = @_;
     $me->_build_val($bind, $fld, $fld_func, $fld_opt)." $op ".$me->_build_val($bind, $val, $val_func, $val_opt);
 }
 
@@ -475,6 +531,14 @@ sub _build_order {
     my $me = shift;
     # TODO: ...
     $me->{order} = '';
+}
+
+sub _build_sql_suffix {
+    my $me = shift;
+    return $me->{sql_suffix} = '' unless defined $me->{Limit};
+    $me->{sql_suffix} = 'LIMIT '.$me->{Limit}[0];
+    $me->{sql_suffix} .= ' OFFSET '.$me->{Limit}[1] if $me->{Limit}[1];
+    $me->{sql_suffix};
 }
 
 sub DESTROY {

@@ -165,7 +165,6 @@ sub _substitute_placeholders {
 }
 
 sub _build_val {
-#    my ($me, $bind, $fld, $func, $alias, $order, $coll) = @_;
     my ($me, $bind, $fld, $func, $opt) = @_;
     my $extra = '';
     $extra .= ' COLLATE '.$me->rdbh->quote($opt->{COLLATE}) if exists $opt->{COLLATE};

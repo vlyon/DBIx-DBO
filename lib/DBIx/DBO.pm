@@ -57,6 +57,15 @@ our $VERSION = '0.01';
       $row->delete if $record->{id} == 27;
   }
 
+  # Join tables (INNER JOIN)
+  my ($query, $table1, $table2, $table3) = $dbo->query('my_table', 't2', 'third');
+  $query->join_on($table2 ** 'parent_id', '=', $table3 ** 'child_id');
+
+  # Join tables (LEFT JOIN)
+  my ($query, $table1) = $dbo->query('my_table');
+  my $table2 = $query->join_table('another_table', 'LEFT');
+  $query->join_on($table2 ** 'parent_id', '=', $table1 ** 'child_id');
+
 =head1 DESCRIPTION
 
 This module provides a convenient and efficient way to access a database. It can construct queries for you and returns the results in an easy to use method.
@@ -234,7 +243,6 @@ When setting an option, the previous value is returned.
 sub config {
     my $me = shift;
     my $opt = shift;
-    ouch "Invalid config option '$opt'" unless exists $Config{$opt};
     unless (blessed $me) {
         my $val = $Config{$opt};
         $Config{$opt} = shift if @_;

@@ -23,7 +23,7 @@ When setting an option, the previous value is returned.
 
 sub config {
     my $me = shift;
-    ($$me->{Parent} || $$me->{DBO})->config(@_);
+    ($$me->{Parent} // $$me->{DBO})->config(@_);
 }
 
 sub _new {
@@ -33,6 +33,7 @@ sub _new {
     blessed $$me->{DBO} and $$me->{DBO}->isa('DBIx::DBO') or ouch 'Invalid DBO Object';
     if (defined $$me->{Parent}) {
         ouch 'Invalid Parent Object' unless blessed $$me->{Parent};
+        # We must weaken this to avoid a circular reference
         weaken $$me->{Parent};
     }
     bless $me, $class;
@@ -48,11 +49,6 @@ sub _column_idx {
     my $me = shift;
     my $col = shift;
     my $idx = -1;
-#use Data::Dumper;
-#my ($t) = $me->_tables;
-#my $d = Data::Dumper->new([$t, $col, $$me->{Showing}], [qw($t $col $$me->{Showing})]);
-#$d->Seen({ '$dbo' => $$me->{DBO} });
-#warn $d->Dump;
     for my $shown (@{$$me->{Showing}}) {
         if (blessed $shown and $shown->isa('DBIx::DBO::Table')) {
             return $idx + $shown->{Column_Idx}{$col->[1]} if exists $shown->{Column_Idx}{$col->[1]};
@@ -61,12 +57,6 @@ sub _column_idx {
         }
         $idx++;
         return $idx if not defined $shown->[1] and @{$shown->[0]} == 1 and $col == $shown->[0][0];
-    }
-    return undef;
-    # TODO: Select fields ?
-    for my $t ($me->_tables) {
-        return $idx + $t->{Column_Idx}{$col->[1]} if exists $t->{Column_Idx}{$col->[1]};
-        $idx += keys %{$t->{Column_Idx}};
     }
     return undef;
 }
@@ -95,7 +85,6 @@ sub value {
 
 sub _detach {
     my $me = shift;
-Carp::cluck '_detach';
     if ($$me->{array}) {
         $$me->{array} = [ @$me ];
         $$me->{hash} = { %$me };
