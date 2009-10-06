@@ -19,7 +19,6 @@ When setting an option, the previous value is returned.
 sub config {
     my $me = shift;
     my $opt = shift;
-    ouch "Invalid config option '$opt'" unless exists $Config{$opt};
     my $val = $me->{Config}{$opt} // $me->{DBO}->config($opt);
     $me->{Config}{$opt} = shift if @_;
     return $val;

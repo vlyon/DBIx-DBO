@@ -254,6 +254,28 @@ sub skip_advanced_query_methods {
     note "No advanced query tests for $dbd_name";
 }
 
+sub join_methods {
+    my $dbo = shift;
+    my $table = shift;
+
+    my ($q, $t1, $t2) = $dbo->query($table, $table);
+    $q->join_on($t2, $t1 ** 'id', '=', { FUNC => '?/2', COL => $t2 ** 'id' });
+$q->config(CalcFoundRows => 1);
+    my $a = $q->arrayref or diag sql_err($q);
+use Data::Dumper;
+warn $q->sql;
+warn 'arrayref', substr Dumper($a), 5;
+
+#    my ($q, $t1) = $dbo->query($table);
+#    $t2 = $q->join_table($table, 'left');
+#    $q->join_on($t2, $t1 ** 'id', '=', { FUNC => '?/2', COL => $t2 ** 'id' });
+$q->{Join}[1] = ' LEFT JOIN ';
+undef $q->{sql};
+    $a = $q->arrayref or diag sql_err($q);
+warn $q->sql;
+warn 'arrayref', substr Dumper($a), 5;
+}
+
 sub cleanup {
     my $dbo = shift;
 
