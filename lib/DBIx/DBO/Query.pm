@@ -262,6 +262,16 @@ sub _op_ag {
     return 'AND' if $_[0] eq '!=' or $_[0] eq 'IS NOT' or $_[0] eq '<>' or $_[0] eq 'NOT IN' or $_[0] eq 'NOT BETWEEN';
 }
 
+sub order {
+    my $me = shift;
+    undef $me->{sql};
+    undef @{$me->{OrderBy}};
+    for my $col (@_) {
+        my @order = $me->_parse_col_val($col);
+        push @{$me->{OrderBy}}, \@order;
+    }
+}
+
 sub limit {
     my ($me, $rows, $offset) = @_;
     return undef $me->{Limit} unless defined $rows;
@@ -531,8 +541,8 @@ sub _build_complex_piece {
 
 sub _build_order {
     my $me = shift;
-    # TODO: ...
-    $me->{order} = '';
+    my @str = map $me->_build_val($me->{Where_Bind}, @$_), @{$me->{OrderBy}};
+    $me->{order} = join ', ', @str;
 }
 
 sub _build_sql_suffix {
