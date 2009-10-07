@@ -96,11 +96,10 @@ sub _blank {
     my $me = shift;
     $me->unwhere;
 #    $me->{IsDistinct} = 0;
-    $me->{Row_Count} = undef;
     $me->{Showing} = [];
     $me->{GroupBy} = [];
     $me->{OrderBy} = [];
-    $me->{Limit} = undef;
+    undef $me->{Limit};
 }
 
 sub show {
@@ -397,8 +396,9 @@ sub _bind_cols_to_hash {
 
 sub rows {
     my $me = shift;
+    $me->sql; # Ensure the Row_Count is cleared if needed
     unless (defined $me->{Row_Count}) {
-        $me->run unless $me->sth->{Active}; # Should this be $me->sth->{Active}?
+        $me->run unless $me->sth->{Executed};
         $me->{Row_Count} = $me->sth->rows;
         if ($me->{Row_Count} == -1) {
             # TODO: Handle DISTINCT and GROUP BY
@@ -407,6 +407,12 @@ sub rows {
         }
     }
     $me->{Row_Count};
+}
+
+sub rows_found {
+    my $me = shift;
+    $me->sql; # Ensure the Found_Rows is cleared if needed
+    $me->{Found_Rows} # By default return undef for most DBDs
 }
 
 sub sth {
@@ -425,6 +431,8 @@ sub _build_sql {
     my $me = shift;
     undef $me->{sth};
     undef $me->{hash};
+    undef $me->{Row_Count};
+    undef $me->{Found_Rows};
     if (defined $me->{Row}) {
         if (SvREFCNT($me->{Row}) > 1) {
             $me->{Row}->_detach;

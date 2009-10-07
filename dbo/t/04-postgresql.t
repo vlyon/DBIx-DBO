@@ -73,6 +73,9 @@ my $q = Test::DBO::query_methods($dbo, $t);
 # Advanced query methods: (9 tests)
 Test::DBO::query_methods($dbo, $t, $q);
 
+# Join methods:
+Test::DBO::join_methods($dbo, $t->{Name});
+
 # Cleanup (1 test)
 Test::DBO::cleanup($dbo);
 
