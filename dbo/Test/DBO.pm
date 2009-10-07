@@ -260,6 +260,8 @@ sub join_methods {
 
     my ($q, $t1, $t2) = $dbo->query($table, $table);
     $q->join_on($t2, $t1 ** 'id', '=', { FUNC => '?/2.0', VAL => $t2 ** 'id' });
+#    $q->order({ COL => 'id', ORDER => 'DESC' });
+    $q->order($t1 ** 'name');
     $q->limit(3);
 $q->config(CalcFoundRows => 1);
     my $a = $q->arrayref or diag sql_err($q);

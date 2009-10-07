@@ -132,9 +132,8 @@ sub _parse_val {
         $func = $fld->{FUNC} if exists $fld->{FUNC};
         $opt{AS} = $fld->{AS} if exists $fld->{AS};
         if (exists $fld->{ORDER}) {
-            ouch 'Invalid ORDER, must be ASC or DESC' if $fld->{ORDER} !~ /^(A|DE)SC$/;
-die 'ORDER not yet supported!';
-            $opt{ORDER} = $fld->{ORDER};
+            ouch 'Invalid ORDER, must be ASC or DESC' if $fld->{ORDER} !~ /^(A|DE)SC$/i;
+            $opt{ORDER} = uc $fld->{ORDER};
         }
         $opt{COLLATE} = $fld->{COLLATE} if exists $fld->{COLLATE};
         if (exists $fld->{COL}) {
