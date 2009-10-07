@@ -409,12 +409,6 @@ sub rows {
     $me->{Row_Count};
 }
 
-sub rows_found {
-    my $me = shift;
-    $me->sql; # Ensure the Found_Rows is cleared if needed
-    $me->{Found_Rows} # By default return undef for most DBDs
-}
-
 sub sth {
     my $me = shift;
     # Ensure the sql is rebuilt if needed
@@ -448,7 +442,7 @@ sub _build_sql {
     $sql .= ' FROM '.$me->_build_from;
     $sql .= ' WHERE '.$_ if $_ = $me->_build_complex_where;
     $sql .= ' ORDER BY '.$_ if $_ = $me->_build_order;
-    $sql .= $me->_build_sql_suffix;
+    $sql .= ' '.$_ if $_ = $me->_build_sql_suffix;
     $me->{sql} = $sql;
 }
 
