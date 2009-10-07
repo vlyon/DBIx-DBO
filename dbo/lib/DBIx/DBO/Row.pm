@@ -33,6 +33,8 @@ sub _new {
     blessed $$me->{DBO} and $$me->{DBO}->isa('DBIx::DBO') or ouch 'Invalid DBO Object';
     if (defined $$me->{Parent}) {
         ouch 'Invalid Parent Object' unless blessed $$me->{Parent};
+        $$me->{Tables} = $$me->{Parent}{Tables};
+        $$me->{Showing} = $$me->{Parent}{Showing};
         # We must weaken this to avoid a circular reference
         weaken $$me->{Parent};
     }
@@ -41,15 +43,14 @@ sub _new {
 
 sub _tables {
     my $me = shift;
-    return unless $$me->{Parent};
-    $$me->{Parent}->_tables;
+    @{$$me->{Tables}};
 }
 
 sub _column_idx {
     my $me = shift;
     my $col = shift;
     my $idx = -1;
-    for my $shown (@{$$me->{Showing}}) {
+    for my $shown (@{$$me->{ @{$$me->{Showing}} ? 'Showing' : 'Tables' }}) {
         if (blessed $shown and $shown->isa('DBIx::DBO::Table')) {
             return $idx + $shown->{Column_Idx}{$col->[1]} if exists $shown->{Column_Idx}{$col->[1]};
             $idx += keys %{$shown->{Column_Idx}};
@@ -88,7 +89,9 @@ sub _detach {
     if ($$me->{array}) {
         $$me->{array} = [ @$me ];
         $$me->{hash} = { %$me };
-        $$me->{Showing} = [ $$me->{Showing} ];
+        $$me->{Tables} = [ @{$$me->{Tables}} ];
+        $$me->{Showing} = [ @{$$me->{Showing}} ];
+        # TODO: Save configs from Parent
     }
     undef $$me->{Parent}{Row};
     undef $$me->{Parent};
