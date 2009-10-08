@@ -33,10 +33,19 @@ sub _new {
     blessed $$me->{DBO} and $$me->{DBO}->isa('DBIx::DBO') or ouch 'Invalid DBO Object';
     if (defined $$me->{Parent}) {
         ouch 'Invalid Parent Object' unless blessed $$me->{Parent};
-        $$me->{Tables} = $$me->{Parent}{Tables};
-        $$me->{Showing} = $$me->{Parent}{Showing};
-        # We must weaken this to avoid a circular reference
-        weaken $$me->{Parent};
+        if ($$me->{Parent}->isa('DBIx::DBO::Query')) {
+            $$me->{Tables} = $$me->{Parent}{Tables};
+            $$me->{Showing} = $$me->{Parent}{Showing};
+            # We must weaken this to avoid a circular reference
+            weaken $$me->{Parent};
+        } elsif ($$me->{Parent}->isa('DBIx::DBO::Table')) {
+            $$me->{show_from} = [ 'SELECT * FROM '.$$me->{Parent}->_quoted_name ];
+            $$me->{group_order} = [ '' ];
+            $$me->{Tables} = [ delete $$me->{Parent} ];
+            $$me->{Showing} = [];
+        } else {
+            ouch 'Invalid Parent Object';
+        }
     }
     bless $me, $class;
 }
@@ -84,11 +93,66 @@ sub value {
     ouch 'No such column: '.$col;
 }
 
+=head2 load
+
+  $row->load(id => 123);
+  $row->load(name => 'Bob', status => 'Employed');
+
+Fetch a new row using the where definition specified.
+
+=cut
+
+sub load {
+    my $me = shift;
+    my @bind;
+    my $sql = $me->_build_show_from(\@bind);
+    $sql .= _build_where(\@bind, @_);
+    # TODO: GroupBy, OrderBy & Limit 1
+    $sql .= $me->_build_group_order(\@bind);
+    undef $$me->{array};
+    undef %$me;
+    $me->_sql($sql, @bind);
+    my $sth = $me->rdbh->prepare($sql);
+    return unless $sth and $sth->execute(@bind);
+
+}
+
+sub _build_show_from {
+    my $me = shift;
+    my $bind = shift;
+    if ($$me->{show_from}) {
+        push @$bind, @{$$me->{show_from}[1 .. $#{$$me->{show_from}}]};
+        return $$me->{show_from}[0];
+    }
+    my $q = $$me->{Parent};
+    $q->sql;
+    push @$bind, @{$q->{Show_Bind}}, @{$q->{From_Bind}};
+    return "SELECT $q->{show} FROM $q->{from}";
+}
+
+sub _build_group_order {
+    my $me = shift;
+    my $bind = shift;
+    if ($$me->{group_order}) {
+        push @$bind, @{$$me->{group_order}[1 .. $#{$$me->{group_order}}]};
+        return $$me->{group_order}[0];
+    }
+    my $q = $$me->{Parent};
+    $q->sql;
+    my $sql = '';
+    $sql .= " GROUP BY $q->{order}" if $q->{group};
+    $sql .= " ORDER BY $q->{order}" if $q->{order};
+    push @$bind, @{$q->{Group_Bind}}, @{$q->{Order_Bind}};
+    return $sql;
+}
+
 sub _detach {
     my $me = shift;
-    if ($$me->{array}) {
+    if ($$me->{Parent}) {
         $$me->{array} = [ @$me ];
         $$me->{hash} = { %$me };
+        unshift @{$$me->{show_from}}, $me->_build_show_from($$me->{show_from});
+        unshift @{$$me->{group_order}}, $me->_build_group_order($$me->{group_order});
         $$me->{Tables} = [ @{$$me->{Tables}} ];
         $$me->{Showing} = [ @{$$me->{Showing}} ];
         # TODO: Save configs from Parent
