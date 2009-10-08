@@ -96,9 +96,9 @@ sub _blank {
     my $me = shift;
     $me->unwhere;
 #    $me->{IsDistinct} = 0;
-    $me->{Showing} = [];
-    $me->{GroupBy} = [];
-    $me->{OrderBy} = [];
+    undef @{$me->{Showing}};
+    undef @{$me->{GroupBy}};
+    undef @{$me->{OrderBy}};
     undef $me->{Limit};
 }
 
@@ -262,7 +262,17 @@ sub _op_ag {
     return 'AND' if $_[0] eq '!=' or $_[0] eq 'IS NOT' or $_[0] eq '<>' or $_[0] eq 'NOT IN' or $_[0] eq 'NOT BETWEEN';
 }
 
-sub order {
+sub group_by {
+    my $me = shift;
+    undef $me->{sql};
+    undef @{$me->{GroupBy}};
+    for my $col (@_) {
+        my @group = $me->_parse_col_val($col);
+        push @{$me->{GroupBy}}, \@group;
+    }
+}
+
+sub order_by {
     my $me = shift;
     undef $me->{sql};
     undef @{$me->{OrderBy}};
@@ -342,7 +352,7 @@ sub col_arrayref {
 
 sub _bind_params {
     my $me = shift;
-    @{$me->{Show_Bind}}, @{$me->{From_Bind}}, @{$me->{Where_Bind}};
+    @{$me->{Show_Bind}}, @{$me->{From_Bind}}, @{$me->{Where_Bind}}, @{$me->{Group_Bind}}, @{$me->{Order_Bind}};
 }
 
 sub fetch {
@@ -450,6 +460,7 @@ sub _build_sql {
     $sql .= 'SELECT '.$me->_build_show;
     $sql .= ' FROM '.$me->_build_from;
     $sql .= ' WHERE '.$_ if $_ = $me->_build_complex_where;
+    $sql .= ' GROUP BY '.$_ if $_ = $me->_build_group;
     $sql .= ' ORDER BY '.$_ if $_ = $me->_build_order;
     $sql .= ' '.$_ if $_ = $me->_build_sql_suffix;
     $me->{sql} = $sql;
@@ -538,9 +549,17 @@ sub _build_complex_piece {
     $me->_build_val($bind, $fld, $fld_func, $fld_opt)." $op ".$me->_build_val($bind, $val, $val_func, $val_opt);
 }
 
+sub _build_group {
+    my $me = shift;
+    undef @{$me->{Group_Bind}};
+    my @str = map $me->_build_val($me->{Group_Bind}, @$_), @{$me->{GroupBy}};
+    $me->{group} = join ', ', @str;
+}
+
 sub _build_order {
     my $me = shift;
-    my @str = map $me->_build_val($me->{Where_Bind}, @$_), @{$me->{OrderBy}};
+    undef @{$me->{Order_Bind}};
+    my @str = map $me->_build_val($me->{Order_Bind}, @$_), @{$me->{OrderBy}};
     $me->{order} = join ', ', @str;
 }
 
