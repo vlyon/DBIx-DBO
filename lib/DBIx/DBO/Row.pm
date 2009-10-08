@@ -55,6 +55,21 @@ sub _tables {
     @{$$me->{Tables}};
 }
 
+sub _table_idx {
+    my ($me, $tbl) = @_;
+    for my $i (0 .. $#{$$me->{Tables}}) {
+        return $i if $tbl == $$me->{Tables}[$i];
+    }
+    return undef;
+}
+
+sub _table_alias {
+    my ($me, $tbl) = @_;
+    my $i = $me->_table_idx($tbl);
+    ouch 'The table is not in this query' unless defined $i;
+    $#{$me->{Tables}} > 0 ? 't'.($i + 1) : ();
+}
+
 sub _column_idx {
     my $me = shift;
     my $col = shift;
@@ -106,15 +121,23 @@ sub load {
     my $me = shift;
     my @bind;
     my $sql = $me->_build_show_from(\@bind);
-    $sql .= _build_where(\@bind, @_);
+    $sql .= $me->_build_where(\@bind, @_);
     # TODO: GroupBy, OrderBy & Limit 1
     $sql .= $me->_build_group_order(\@bind);
+    $sql .= $me->_build_sql_suffix(\@bind);
     undef $$me->{array};
     undef %$me;
     $me->_sql($sql, @bind);
     my $sth = $me->rdbh->prepare($sql);
     return unless $sth and $sth->execute(@bind);
-
+    my $i = 1;
+    for (@{$sth->{NAME}}) {
+        $sth->bind_col($i, \$$me->{hash}{$_}) unless exists $$me->{hash}{$_};
+        $i++;
+    }
+    $$me->{array} = $sth->fetch or return;
+    $sth->finish;
+    $me;
 }
 
 sub _build_show_from {
@@ -138,12 +161,16 @@ sub _build_group_order {
         return $$me->{group_order}[0];
     }
     my $q = $$me->{Parent};
-    $q->sql;
     my $sql = '';
     $sql .= " GROUP BY $q->{order}" if $q->{group};
     $sql .= " ORDER BY $q->{order}" if $q->{order};
     push @$bind, @{$q->{Group_Bind}}, @{$q->{Order_Bind}};
     return $sql;
+}
+
+sub _build_sql_suffix {
+    my $me = shift;
+    ' LIMIT 1';
 }
 
 sub _detach {
