@@ -435,6 +435,11 @@ sub sth {
     $me->{sth} ||= $me->rdbh->prepare($sql);
 }
 
+sub finish {
+    my $me = shift;
+    $me->{sth}->finish if $me->{sth} and $me->{sth}{Active};
+}
+
 sub sql {
     my $me = shift;
     $me->{sql} ||= $me->_build_sql;
