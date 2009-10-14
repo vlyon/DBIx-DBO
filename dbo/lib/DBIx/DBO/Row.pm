@@ -67,7 +67,7 @@ sub _table_alias {
     my ($me, $tbl) = @_;
     my $i = $me->_table_idx($tbl);
     ouch 'The table is not in this query' unless defined $i;
-    $#{$me->{Tables}} > 0 ? 't'.($i + 1) : ();
+    @{$$me->{Tables}} > 1 ? 't'.($i + 1) : ();
 }
 
 sub _column_idx {

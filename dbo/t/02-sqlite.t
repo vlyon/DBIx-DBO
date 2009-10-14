@@ -20,7 +20,7 @@ Test::DBO::advanced_table_methods($dbo, $t);
 my $q = Test::DBO::query_methods($dbo, $t);
 
 # Advanced query methods: (9 tests)
-Test::DBO::query_methods($dbo, $t, $q);
+Test::DBO::advanced_query_methods($dbo, $t, $q);
 
 # Cleanup
 Test::DBO::cleanup($dbo);
