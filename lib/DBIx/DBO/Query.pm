@@ -56,7 +56,11 @@ Returns the table object.
 ##
 sub join_table {
     my ($me, $tbl, $type) = @_;
-    $tbl = $me->{DBO}->table($tbl);
+    if (blessed $tbl and $tbl->isa('DBIx::DBO::Table')) {
+        ouch 'This table is already in this query' if $me->_table_idx($tbl);
+    } else {
+        $tbl = $me->{DBO}->table($tbl);
+    }
     if (defined $type) {
         $type =~ s/^\s*/ /;
         $type =~ s/\s*$/ /;
@@ -89,7 +93,7 @@ sub _table_alias {
     my ($me, $tbl) = @_;
     my $i = $me->_table_idx($tbl);
     ouch 'The table is not in this query' unless defined $i;
-    $#{$me->{Tables}} > 0 ? 't'.($i + 1) : ();
+    @{$me->{Tables}} > 1 ? 't'.($i + 1) : ();
 }
 
 sub _blank {
@@ -102,9 +106,19 @@ sub _blank {
     undef $me->{Limit};
 }
 
+=head2 show
+
+  $query->show(@columns);
+  $query->show($table1 ** 'id', {FUNC => 'UCASE(?)', COL => 'name', AS => 'NAME'}, ...
+
+Specify which columns to show as an array. If the array is empty all columns will be shown.
+
+=cut
+
 sub show {
     my $me = shift;
     undef $me->{sql};
+    undef @{$me->{Showing}};
     for my $fld (@_) {
         if (blessed $fld and $fld->isa('DBIx::DBO::Table')) {
             ouch 'Invalid table field' unless defined $me->_table_idx($fld);
@@ -115,6 +129,16 @@ sub show {
         push @{$me->{Showing}}, [ $me->_parse_col_val($fld) ];
     }
 }
+
+=head2 join_on
+
+  $query->join_on($table_object, $expression1, $operator, $expression2);
+  $query->join_on($table2, $table1 ** 'id', '=', $table2 ** 'id');
+
+Join tables on a specific WHERE clause. The first argument is the table object being joined onto.
+Then a join on condition follows.
+
+=cut
 
 sub join_on {
     my $me = shift;
@@ -137,13 +161,16 @@ sub join_on {
     $me->{Join}[$i] = ' JOIN ' if $me->{Join}[$i] eq ', ';
     $me->_add_where($me->{JoinOn}[$i] //= [], $op,
         $col1, $col1_func, $col1_opt, $col2, $col2_func, $col2_opt, @_);
-
-#use Data::Dumper;
-#my @t = $me->_tables;
-#my $d = Data::Dumper->new([$ref], [qw(join_on)]);
-#$d->Seen({ '$dbo' => $me->{DBO}, map { 't'.$_ => $t[$_-1] } (1 .. @t) });
-#die $d->Dump;
 }
+
+=head2 where
+
+  $query->where($expression1, $operator, $expression2);
+  $query->where($table1 ** 'id', '=', $table2 ** 'id');
+
+Restrict the query with the condition specified (WHERE clause).
+
+=cut
 
 sub where {
     my $me = shift;
@@ -169,12 +196,37 @@ sub where {
     $me->_add_where($ref, $op, $fld, $fld_func, $fld_opt, $val, $val_func, $val_opt, @_);
 }
 
+=head2 unwhere
+
+  $query->unwhere();
+  $query->unwhere($column);
+  $query->unwhere($table1 ** 'id');
+
+Removes all previously added where() restrictions for a column.
+If no column is provided, ALL where() restrictions are removed.
+
+=cut
+
 sub unwhere {
     my $me = shift;
-    # TODO: ...
-    $me->{Where_Logic} = [];
-    $me->{Bracket_Refs} = [];
-    $me->{Brackets} = [];
+    my $col = shift;
+    # TODO: Remove a condition by specifying the whole condition
+    if ($col) {
+        ouch 'Invalid column' unless blessed $col and $col->isa('DBIx::DBO::Column');
+        # Find the current Where_Logic reference
+        my $ref = $me->{Where_Logic};
+        $ref = $ref->[$_] for (@{$me->{Bracket_Refs}});
+
+        for (my $i = $#$ref; $i >= 0; $i--) {
+            # Remove this Where piece if there is no FUNC and it refers to this column only
+            splice @{$ref}, $i, 1
+                if !defined $ref->[$i][2] and @{$ref->[$i][1]} == 1 and $ref->[$i][1][0] == $col;
+        }
+    } else {
+        $me->{Where_Logic} = [];
+        $me->{Bracket_Refs} = [];
+        $me->{Brackets} = [];
+    }
     # This forces a new search
     undef $me->{sql};
 }

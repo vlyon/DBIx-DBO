@@ -6,6 +6,7 @@ use 5.010_000;
 use strict;
 use warnings;
 
+use Scalar::Util qw(blessed reftype);
 use Test::More;
 BEGIN {
     # Set up _Debug_SQL if requested
@@ -262,31 +263,41 @@ sub join_methods {
     my $table = shift;
 
     my ($q, $t1, $t2) = $dbo->query($table, $table);
+    is $q->rows, 36, 'Comma JOIN';
+
     $q->join_on($t2, $t1 ** 'id', '=', { FUNC => '?/2.0', VAL => $t2 ** 'id' });
-#    $q->order_by({ COL => 'id', ORDER => 'DESC' });
-#    $q->order_by($t1 ** 'name');
     $q->order_by({ COL => $t1 ** 'name', ORDER => 'DESC' });
     $q->limit(3);
+    my $r = $q->fetch;
+    is_deeply \@$r, [ 1, 'John Doe', 2, 'Jane Smith' ], 'JOIN ON';
 
-$q->config(CalcFoundRows => 1);
-    my $a = $q->arrayref or diag sql_err($q);
-use Data::Dumper;
-warn $q->sql;
-warn 'arrayref', substr Dumper($a), 5;
+    $r->load($t1 ** id => 2) or diag sql_err($r);
+    is_deeply \@$r, [ 2, 'Jane Smith', 4, 'James Bond' ], 'Method DBIx::DBO::Row->load';
 
-#    my ($q, $t1) = $dbo->query($table);
-#    $t2 = $q->join_table($table, 'left');
-#    $q->join_on($t2, $t1 ** 'id', '=', { FUNC => '?/2', COL => $t2 ** 'id' });
-$q->{Join}[1] = ' LEFT JOIN ';
-undef $q->{sql};
-$q->where('id', 'BETWEEN', [2, 6]);
-    $a = $q->arrayref or diag sql_err($q);
-warn $q->sql;
-warn 'arrayref', substr Dumper($a), 5;
+#$q->config(CalcFoundRows => 1);
 
-my $r = $q->row->load(id => 2);
+    ($q, $t1) = $dbo->query($table);
+    $t2 = $q->join_table($table, 'left');
+    $q->join_on($t2, $t1 ** 'id', '=', { FUNC => '?/2', COL => $t2 ** 'id' });
+    $q->order_by({ COL => $t1 ** 'name', ORDER => 'DESC' });
+    $q->limit(3);
+    $r = $q->fetch;
+    is_deeply \@$r, [ 5, 'Vernon Lyon', undef, undef ], 'LEFT JOIN';
+#my $a = $q->arrayref or diag sql_err($q);
+#warn $q->sql;
+#Dump($a, 'arrayref');
 
     $q->finish;
+}
+
+sub row_methods {
+    my $dbo = shift;
+    my $table = shift;
+
+    my ($q, $t1) = $dbo->query($table);
+    my $t2 = $q->join_table($table, 'left');
+    $q->join_on($t2, $t1 ** 'id', '=', { FUNC => '?/2.0', COL => $t2 ** 'id' });
+#    my $r = $q->row->load(id => 2);
 }
 
 sub cleanup {
@@ -295,6 +306,50 @@ sub cleanup {
     note 'Doing cleanup';
     for my $sql (@_cleanup_sql) {
         $dbo->do($sql) or diag sql_err($dbo);
+    }
+}
+
+my @_no_recursion;
+sub Dump {
+    my $val = shift;
+    my $var = shift // 'dump';
+    require Data::Dumper;
+    my $d = Data::Dumper->new([$val], [$var]);
+    undef @_no_recursion;
+    my %seen;
+    _Find_Seen(\%seen, $val);
+    $d->Seen(\%seen);
+    warn $d->Dump;
+}
+
+sub _Find_Seen {
+    my $seen = shift;
+    my $val = shift;
+    return unless ref $val;
+    for (@_no_recursion) {
+        return if $val == $_;
+    }
+    push @_no_recursion, $val;
+
+    if (blessed $val) {
+        if ($val->isa('DBIx::DBO')) {
+            $seen->{dbo} = $val;
+            return;
+        } elsif ($val->isa('DBIx::DBO::Table')) {
+            my $t = 1;
+            while (my ($k, $v) = each %$seen) {
+                next if $k !~ /^t\d+$/;
+                return if $val == $v;
+                $t++;
+            }
+            $seen->{"t$t"} = $val;
+            return;
+        }
+    }
+    given (reftype $val) {
+        when ('ARRAY') { _Find_Seen($seen, $_) for @$val }
+        when ('HASH')  { _Find_Seen($seen, $_) for values %$val }
+        when ('REF')   { _Find_Seen($seen, $$val) }
     }
 }
 
