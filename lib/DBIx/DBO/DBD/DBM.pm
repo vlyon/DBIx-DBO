@@ -1,8 +1,8 @@
-package DBIx::DBO::DBD::DBM;
-use DBIx::DBO::Common;
-
 use strict;
 use warnings;
+
+package DBIx::DBO::DBD::DBM;
+use DBIx::DBO::Common;
 
 sub _bless_dbo {
     my $class = shift;
@@ -45,6 +45,18 @@ sub _get_table_info {
     }
     $h{PrimaryKeys} = [];
     $me->{TableInfo}{$schema // ''}{$table} = \%h;
+}
+
+package DBIx::DBO::DBD::DBM::Query;
+
+sub _build_sql_suffix {
+    '';
+}
+
+package DBIx::DBO::DBD::DBM::Row;
+
+sub _build_sql_suffix {
+    '';
 }
 
 1;

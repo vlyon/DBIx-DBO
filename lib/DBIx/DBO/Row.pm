@@ -32,7 +32,7 @@ sub _new {
     my $me = \{ DBO => shift, Parent => shift, array => undef, hash => {} };
     blessed $$me->{DBO} and $$me->{DBO}->isa('DBIx::DBO') or ouch 'Invalid DBO Object';
     if (defined $$me->{Parent}) {
-        ouch 'Invalid Parent Object' unless blessed $$me->{Parent};
+        $$me->{Parent} = $$me->{DBO}->table($$me->{Parent}) unless blessed $$me->{Parent};
         if ($$me->{Parent}->isa('DBIx::DBO::Query')) {
             $$me->{Tables} = $$me->{Parent}{Tables};
             $$me->{Showing} = $$me->{Parent}{Showing};
@@ -48,6 +48,7 @@ sub _new {
         }
     }
     bless $me, $class;
+    return wantarray ? ($me, $me->_tables) : $me;
 }
 
 sub _tables {
@@ -114,6 +115,8 @@ sub value {
   $row->load(name => 'Bob', status => 'Employed');
 
 Fetch a new row using the where definition specified.
+Returns the Row object if the row is found and loaded successfully.
+Returns an empty list if there is no row or an error occurs.
 
 =cut
 
@@ -144,7 +147,7 @@ sub _build_show_from {
     my $me = shift;
     my $bind = shift;
     if ($$me->{show_from}) {
-        push @$bind, @{$$me->{show_from}[1 .. $#{$$me->{show_from}}]};
+        push @$bind, @{$$me->{show_from}[1 .. $#{$$me->{show_from}}]} if $#{$$me->{show_from}} > 0;
         return $$me->{show_from}[0];
     }
     my $q = $$me->{Parent};
@@ -157,7 +160,7 @@ sub _build_group_order {
     my $me = shift;
     my $bind = shift;
     if ($$me->{group_order}) {
-        push @$bind, @{$$me->{group_order}[1 .. $#{$$me->{group_order}}]};
+        push @$bind, @{$$me->{group_order}[1 .. $#{$$me->{group_order}}]} if $#{$$me->{group_order}} > 0;
         return $$me->{group_order}[0];
     }
     my $q = $$me->{Parent};

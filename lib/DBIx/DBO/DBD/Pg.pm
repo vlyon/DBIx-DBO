@@ -1,8 +1,8 @@
-package DBIx::DBO::DBD::Pg;
-use DBIx::DBO::Common;
-
 use strict;
 use warnings;
+
+package DBIx::DBO::DBD::Pg;
+use DBIx::DBO::Common;
 
 sub _get_table_schema {
     my $me = shift;
