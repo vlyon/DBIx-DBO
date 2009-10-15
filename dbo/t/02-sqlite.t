@@ -6,7 +6,7 @@ use File::Temp;
 
 # Create the DBO (2 tests)
 my $dbo;
-use Test::DBO SQLite => 'SQLite', tests => 31, tempdir => 1, connect_ok => [\$dbo];
+use Test::DBO SQLite => 'SQLite', tests => 38, tempdir => 1, connect_ok => [\$dbo];
 
 my $test_tbl = $Test::DBO::prefix.'_tbl';
 
@@ -16,7 +16,10 @@ my $t = Test::DBO::basic_methods($dbo, undef, $test_tbl);
 # Advanced table methods: insert, update, delete (2 tests)
 Test::DBO::advanced_table_methods($dbo, $t);
 
-# Query methods: (9 tests)
+# Row methods: (6 tests)
+Test::DBO::row_methods($dbo, $t->{Name});
+
+# Query methods: (10 tests)
 my $q = Test::DBO::query_methods($dbo, $t);
 
 # Advanced query methods: (9 tests)

@@ -184,6 +184,22 @@ sub skip_advanced_table_methods {
     $t->insert(id => 7, name => 'Amanda Huggenkiss') or diag sql_err($t);
 }
 
+sub row_methods {
+    my $dbo = shift;
+    my $table = shift;
+
+    my $r = $dbo->row($table);
+    isa_ok $r, 'DBIx::DBO::Row', '$r';
+
+    is $$r->{array}, undef, 'Row is empty';
+
+    ok $r->load(id => 2), 'Method DBIx::DBO::Row->load' or $DBI::errstr && diag sql_err($r);
+    is_deeply $$r->{array}, [ 2, 'Jane Smith' ], 'Row loaded correctly';
+
+    is $r->load(name => 'non-existent'), undef, 'Load non-existent row';
+    is_deeply $$r->{array}, undef, 'Row is empty again';
+}
+
 sub query_methods {
     my $dbo = shift;
     my $t = shift;
@@ -203,9 +219,12 @@ sub query_methods {
     # Count the number of rows
     is $q->rows, 6, 'Row count is 6';
 
-    # Get a Record object
-    my $r = $q->fetch;
-    isa_ok $r, 'DBIx::DBO::Row', '$r';
+    # Get a Row object
+    my $r = $q->row;
+    isa_ok $r, 'DBIx::DBO::Row', '$q->row';
+
+    # Fetch the first row
+    is $q->fetch, $r, 'Method DBIx::DBO::Query->fetch';
 
     # Access methods
     is $r->{name}, 'John Doe', 'Access row as a hashref';
@@ -271,7 +290,7 @@ sub join_methods {
     my $r = $q->fetch;
     is_deeply \@$r, [ 1, 'John Doe', 2, 'Jane Smith' ], 'JOIN ON';
 
-    $r->load($t1 ** id => 2) or diag sql_err($r);
+    $r->load($t1 ** id => 2) or $DBI::errstr && diag sql_err($r);
     is_deeply \@$r, [ 2, 'Jane Smith', 4, 'James Bond' ], 'Method DBIx::DBO::Row->load';
 
 #$q->config(CalcFoundRows => 1);
@@ -290,16 +309,6 @@ sub join_methods {
     $q->finish;
 }
 
-sub row_methods {
-    my $dbo = shift;
-    my $table = shift;
-
-    my ($q, $t1) = $dbo->query($table);
-    my $t2 = $q->join_table($table, 'left');
-    $q->join_on($t2, $t1 ** 'id', '=', { FUNC => '?/2.0', COL => $t2 ** 'id' });
-#    my $r = $q->row->load(id => 2);
-}
-
 sub cleanup {
     my $dbo = shift;
 
@@ -312,12 +321,28 @@ sub cleanup {
 my @_no_recursion;
 sub Dump {
     my $val = shift;
-    my $var = shift // 'dump';
+    my $var = shift;
+    if (blessed $val and !defined $var) {
+        if ($val->isa('DBIx::DBO')) {
+            $var = 'dbo';
+        } elsif ($val->isa('DBIx::DBO::Table')) {
+            $var = 't';
+        } elsif ($val->isa('DBIx::DBO::Query')) {
+            $var = 'q';
+        } elsif ($val->isa('DBIx::DBO::Row')) {
+            $var = 'r';
+        }
+    }
+    $var //= 'dump';
     require Data::Dumper;
     my $d = Data::Dumper->new([$val], [$var]);
-    undef @_no_recursion;
     my %seen;
-    _Find_Seen(\%seen, $val);
+    @_no_recursion = ($val);
+    given (reftype $val) {
+        when ('ARRAY') { _Find_Seen(\%seen, $_) for @$val }
+        when ('HASH')  { _Find_Seen(\%seen, $_) for values %$val }
+        when ('REF')   { _Find_Seen(\%seen, $$val) }
+    }
     $d->Seen(\%seen);
     warn $d->Dump;
 }
@@ -343,6 +368,12 @@ sub _Find_Seen {
                 $t++;
             }
             $seen->{"t$t"} = $val;
+            return;
+        } elsif ($val->isa('DBIx::DBO::Query')) {
+            $seen->{q} = $val;
+            return;
+        } elsif ($val->isa('DBIx::DBO::Row')) {
+            $seen->{r} = $val;
             return;
         }
     }

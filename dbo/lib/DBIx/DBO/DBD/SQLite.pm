@@ -1,9 +1,9 @@
-package DBIx::DBO::DBD::SQLite;
-use DBIx::DBO::Common;
-
 use strict;
 use warnings;
 use DBD::SQLite '1.26_04';
+
+package DBIx::DBO::DBD::SQLite;
+use DBIx::DBO::Common;
 
 sub _get_table_schema {
     my $me = shift;

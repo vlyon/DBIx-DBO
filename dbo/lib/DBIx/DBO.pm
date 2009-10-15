@@ -291,6 +291,17 @@ sub selectall_arrayref {
     $me->rdbh->selectall_arrayref($sql, $attr, @_);
 }
 
+=head2 table_info
+
+  $dbo->table_info($table);
+  $dbo->table_info([$schema, $table]);
+  $dbo->table_info($table_object);
+
+Returns a hashref of PrimaryKeys and Column_Idx for the table.
+Mainly for internal use.
+
+=cut
+
 sub _get_table_schema {
     my $me = shift;
     my $schema = my $q_schema = shift;
@@ -323,16 +334,6 @@ sub _get_table_info {
     }
     $me->{TableInfo}{$schema // ''}{$table} = \%h;
 }
-
-=head2 table_info
-
-  $dbo->table_info($table);
-  $dbo->table_info([$schema, $table]);
-  $dbo->table_info($table_object);
-
-Dunno yet.
-
-=cut
 
 sub table_info {
     my $me = shift;

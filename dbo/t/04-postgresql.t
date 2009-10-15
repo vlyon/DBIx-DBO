@@ -49,7 +49,7 @@ if ($ENV{DBO_TEST_PG_DB}) {
     plan skip_all => "Can't connect to newly created test database: $DBI::errstr" unless $dbo;
 }
 
-plan tests => 37;
+plan tests => 44;
 pass "Connect to PostgreSQL $quoted_db database";
 isa_ok $dbo, 'DBIx::DBO::DBD::Pg', '$dbo';
 
@@ -67,7 +67,10 @@ my $t = Test::DBO::basic_methods($dbo, $test_sch, $test_tbl);
 # Advanced table methods: insert, update, delete (2 tests)
 Test::DBO::advanced_table_methods($dbo, $t);
 
-# Query methods: (9 tests)
+# Row methods: (6 tests)
+Test::DBO::row_methods($dbo, $t->{Name});
+
+# Query methods: (10 tests)
 my $q = Test::DBO::query_methods($dbo, $t);
 
 # Advanced query methods: (9 tests)

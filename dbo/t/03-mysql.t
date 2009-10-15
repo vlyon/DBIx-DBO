@@ -5,7 +5,7 @@ use warnings;
 
 # Create the DBO (3 tests)
 my $dbo;
-use Test::DBO mysql => 'MySQL', tests => 40, connect_ok => [\$dbo];
+use Test::DBO mysql => 'MySQL', tests => 47, connect_ok => [\$dbo];
 ok $dbo->do('SET NAMES utf8'), 'SET NAMES utf8' or diag sql_err($dbo);
 
 my $test_db = $ENV{DBO_TEST_MYSQL_DB} || $Test::DBO::prefix.'_db';
@@ -24,7 +24,10 @@ my $t = Test::DBO::basic_methods($dbo, $test_db, $test_tbl);
 # Advanced table methods: insert, update, delete (2 tests)
 Test::DBO::advanced_table_methods($dbo, $t);
 
-# Query methods: (9 tests)
+# Row methods: (6 tests)
+Test::DBO::row_methods($dbo, $t->{Name});
+
+# Query methods: (10 tests)
 my $q = Test::DBO::query_methods($dbo, $t);
 
 # Advanced query methods: (9 tests)
