@@ -43,6 +43,7 @@ sub _get_table_info {
     for my $col (@{$me->rdbh->{dbm_tables}{$q_table}{cols}}) {
         $h{Column_Idx}{$col} = ++$i;
     }
+    $h{Columns} = [ sort { $h{Column_Idx}{$a} cmp $h{Column_Idx}{$b} } keys %{$h{Column_Idx}} ];
     $h{PrimaryKeys} = [];
     $me->{TableInfo}{$schema // ''}{$table} = \%h;
 }

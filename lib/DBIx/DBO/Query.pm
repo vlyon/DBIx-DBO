@@ -96,6 +96,11 @@ sub _table_alias {
     @{$me->{Tables}} > 1 ? 't'.($i + 1) : ();
 }
 
+sub _showing {
+    my $me = shift;
+    @{$me->{@{$me->{Showing}} ? 'Showing' : 'Tables'}};
+}
+
 sub _blank {
     my $me = shift;
     $me->unwhere;
@@ -416,12 +421,10 @@ sub fetch {
     if (defined $me->{Row} and SvREFCNT($me->{Row}) > 1) {
         $me->{Row}->_detach;
         $row = $me->row;
-#        $$row->{Showing} = @{$me->{Showing}} ? $me->{Showing} : $me->{Tables};
     } else {
         $row = $me->row;
     }
 
-#    $$row->{columns} ||= [ @{$me->{sth}{NAME}} ]; # Is this needed?
     $$row->{hash} = $me->{hash};
 
     # Fetch and store the data then return the Row on success and undef on failure or no more rows
@@ -441,7 +444,6 @@ sub run {
     my $row = $me->row;
     undef $$row->{array};
     undef %$row;
-#    $$row->{Showing} = @{$me->{Showing}} ? $me->{Showing} : $me->{Tables};
 
     $me->_bind_cols_to_hash;
     return $rv;
@@ -511,6 +513,8 @@ sub _build_sql {
             undef %{$me->{Row}};
         }
     }
+
+#my $sql = $me->{DBO}->_build_sql_select($me->{build_sql});
 
     my $sql = $me->_build_sql_prefix;
     $sql .= ' ' if $sql;

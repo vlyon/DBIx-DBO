@@ -186,15 +186,22 @@ sub skip_advanced_table_methods {
 
 sub row_methods {
     my $dbo = shift;
-    my $table = shift;
+    my $t = shift;
 
-    my $r = $dbo->row($table);
+    my $r = $dbo->row($t);
     isa_ok $r, 'DBIx::DBO::Row', '$r';
 
     is $$r->{array}, undef, 'Row is empty';
 
     ok $r->load(id => 2), 'Method DBIx::DBO::Row->load' or $DBI::errstr && diag sql_err($r);
     is_deeply $$r->{array}, [ 2, 'Jane Smith' ], 'Row loaded correctly';
+
+    ok $r->update(name => 'Someone Else'), 'Method DBIx::DBO::Row->update' or diag sql_err($r);
+    is $$r->{array}, undef, 'Row is empty again';
+    is_deeply \@{$r->load(id => 2)}, [ 2, 'Someone Else' ], 'Row updated correctly';;
+
+    ok $r->delete, 'Method DBIx::DBO::Row->delete' or diag sql_err($r);
+    $t->insert(id => 2, name => 'Jane Smith');
 
     is $r->load(name => 'non-existent'), undef, 'Load non-existent row';
     is_deeply $$r->{array}, undef, 'Row is empty again';
@@ -212,6 +219,10 @@ sub query_methods {
     # Default sql = select everything
     my $sql = $q->sql;
     is $sql, "SELECT * FROM $quoted_table", 'Method DBIx::DBO::Query->sql';
+
+    # Sort the result
+    $q->order_by('id');
+    pass 'Method DBIx::DBO::Query->order_by';
 
     # Get a valid sth
     isa_ok $q->sth, 'DBI::st', '$q->sth';

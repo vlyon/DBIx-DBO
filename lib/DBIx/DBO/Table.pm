@@ -41,6 +41,10 @@ sub _table_alias {
     ouch 'The table is not in this query';
 }
 
+sub _showing {
+    $_[0];
+}
+
 sub _quoted_name {
     my $me = shift;
     $me->{_quoted_name} //= $me->_qi(@$me{qw(Schema Name)});
@@ -75,7 +79,7 @@ sub fetch_val {
     $col = $me->_parse_col($col);
     my $sql = 'SELECT '.$me->_qi($col->[1]).' FROM '.$me->_quoted_name;
     my @bind;
-    $sql .= $me->_build_where(\@bind, @_);
+    $sql .= ' WHERE '.$_ if $_ = $me->_build_where(\@bind, @_);
     $me->_sql($sql, @bind);
     my $ref = $me->rdbh->selectrow_arrayref($sql, undef, @bind);
     return $ref && $ref->[0];
@@ -93,7 +97,7 @@ sub fetch_row {
     my $me = shift;
     my $sql = 'SELECT * FROM '.$me->_quoted_name;
     my @bind;
-    $sql .= $me->_build_where(\@bind, @_);
+    $sql .= ' WHERE '.$_ if $_ = $me->_build_where(\@bind, @_);
     $me->_sql($sql, @bind);
     return $me->rdbh->selectrow_hashref($sql, undef, @bind);
 }
@@ -111,7 +115,7 @@ sub fetch_col {
     $col = $me->_parse_col($col);
     my $sql = 'SELECT '.$me->_qi($col->[1]).' FROM '.$me->_quoted_name;
     my @bind;
-    $sql .= $me->_build_where(\@bind, @_);
+    $sql .= ' WHERE '.$_ if $_ = $me->_build_where(\@bind, @_);
     $me->_sql($sql, @bind);
     return $me->rdbh->selectcol_arrayref($sql, undef, @bind);
 }
@@ -155,7 +159,7 @@ sub delete {
     my $me = shift;
     my $sql = 'DELETE FROM '.$me->_quoted_name;
     my @bind;
-    $sql .= $me->_build_where(\@bind, @_);
+    $sql .= ' WHERE '.$_ if $_ = $me->_build_where(\@bind, @_);
     $me->do($sql, undef, @bind);
 }
 
