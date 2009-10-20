@@ -205,7 +205,18 @@ sub _build_where {
                 ' IS '.$$val :
                 ' IS NULL' );
     }
-    return @where ? ' WHERE '.join(' AND ', @where) : '';
+#    return @where ? ' WHERE '.join(' AND ', @where) : '';
+    join ' AND ', @where;
+}
+
+sub _build_set {
+    ouch 'Wrong number of arguments' if @_ & 1;
+    my ($me, $bind) = splice @_, 0, 2;
+    my @set;
+    while (my ($col, $val) = splice @_, 0, 2) {
+        push @set, $me->_build_col($me->_parse_col($col)).'='.$me->_build_val($bind, $me->_parse_val($val));
+    }
+    join ', ', @set;
 }
 
 1;

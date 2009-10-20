@@ -327,6 +327,7 @@ sub _get_table_info {
 
     my %h;
     $h{Column_Idx}{$_->{COLUMN_NAME}} = $_->{ORDINAL_POSITION} for @$cols;
+    $h{Columns} = [ sort { $h{Column_Idx}{$a} cmp $h{Column_Idx}{$b} } keys %{$h{Column_Idx}} ];
     if (my $keys = $me->rdbh->primary_key_info(undef, $schema, $table)) {
         $h{PrimaryKeys} = [ map $cols->[$_->{KEY_SEQ} - 1]{COLUMN_NAME}, @{$keys->fetchall_arrayref({})} ];
     } else {

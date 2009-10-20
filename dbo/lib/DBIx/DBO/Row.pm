@@ -39,7 +39,8 @@ sub _new {
             # We must weaken this to avoid a circular reference
             weaken $$me->{Parent};
         } elsif ($$me->{Parent}->isa('DBIx::DBO::Table')) {
-            $$me->{show_from} = [ 'SELECT * FROM '.$$me->{Parent}->_quoted_name ];
+            $$me->{show} = [ '*' ];
+            $$me->{from} = [ $$me->{Parent}->_quoted_name ];
             $$me->{group_order} = [ '' ];
             $$me->{Tables} = [ delete $$me->{Parent} ];
             $$me->{Showing} = [];
@@ -71,11 +72,16 @@ sub _table_alias {
     @{$$me->{Tables}} > 1 ? 't'.($i + 1) : ();
 }
 
+sub _showing {
+    my $me = shift;
+    @{$$me->{@{$$me->{Showing}} ? 'Showing' : 'Tables'}};
+}
+
 sub _column_idx {
     my $me = shift;
     my $col = shift;
     my $idx = -1;
-    for my $shown (@{$$me->{ @{$$me->{Showing}} ? 'Showing' : 'Tables' }}) {
+    for my $shown ($me->_showing) {
         if (blessed $shown and $shown->isa('DBIx::DBO::Table')) {
             return $idx + $shown->{Column_Idx}{$col->[1]} if exists $shown->{Column_Idx}{$col->[1]};
             $idx += keys %{$shown->{Column_Idx}};
@@ -123,9 +129,9 @@ Returns an empty list if there is no row or an error occurs.
 sub load {
     my $me = shift;
     my @bind;
-    my $sql = $me->_build_show_from(\@bind);
-    $sql .= $me->_build_where(\@bind, @_);
-    # TODO: GroupBy, OrderBy & Limit 1
+    my $sql = 'SELECT '.$me->_build_show(\@bind);
+    $sql .= ' FROM '.$me->_build_from(\@bind);
+    $sql .= ' WHERE '.$_ if $_ = $me->_build_where(\@bind, @_);
     $sql .= $me->_build_group_order(\@bind);
     $sql .= $me->_build_sql_suffix(\@bind);
     undef $$me->{array};
@@ -143,17 +149,30 @@ sub load {
     $me;
 }
 
-sub _build_show_from {
+sub _build_show {
     my $me = shift;
     my $bind = shift;
-    if ($$me->{show_from}) {
-        push @$bind, @{$$me->{show_from}[1 .. $#{$$me->{show_from}}]} if $#{$$me->{show_from}} > 0;
-        return $$me->{show_from}[0];
+    if ($$me->{show}) {
+        push @$bind, @{$$me->{show}[1 .. $#{$$me->{show}}]} if $#{$$me->{show}} > 0;
+        return $$me->{show}[0];
     }
     my $q = $$me->{Parent};
     $q->sql;
-    push @$bind, @{$q->{Show_Bind}}, @{$q->{From_Bind}};
-    return "SELECT $q->{show} FROM $q->{from}";
+    push @$bind, @{$q->{Show_Bind}};
+    $q->{show};
+}
+
+sub _build_from {
+    my $me = shift;
+    my $bind = shift;
+    if ($$me->{from}) {
+        push @$bind, @{$$me->{from}[1 .. $#{$$me->{from}}]} if $#{$$me->{from}} > 0;
+        return $$me->{from}[0];
+    }
+    my $q = $$me->{Parent};
+    $q->sql;
+    push @$bind, @{$q->{From_Bind}};
+    $q->{from};
 }
 
 sub _build_group_order {
@@ -172,8 +191,7 @@ sub _build_group_order {
 }
 
 sub _build_sql_suffix {
-    my $me = shift;
-    ' LIMIT 1';
+    '';
 }
 
 sub _detach {
@@ -181,7 +199,8 @@ sub _detach {
     if ($$me->{Parent}) {
         $$me->{array} = [ @$me ];
         $$me->{hash} = { %$me };
-        unshift @{$$me->{show_from}}, $me->_build_show_from($$me->{show_from});
+        unshift @{$$me->{show}}, $me->_build_show($$me->{show});
+        unshift @{$$me->{from}}, $me->_build_from($$me->{from});
         unshift @{$$me->{group_order}}, $me->_build_group_order($$me->{group_order});
         $$me->{Tables} = [ @{$$me->{Tables}} ];
         $$me->{Showing} = [ @{$$me->{Showing}} ];
@@ -189,6 +208,70 @@ sub _detach {
     }
     undef $$me->{Parent}{Row};
     undef $$me->{Parent};
+}
+
+=head2 update
+
+  $row->update(id => 123);
+  $row->update(name => 'Bob', status => 'Employed');
+
+Updates the current row with the new values specified.
+Returns the number of rows updated or '0E0' for no rows to unsure the value is true,
+and returns false if there was an error.
+
+Note: If LIMIT is not supported on UPDATEs, then all rows matching the current row will be updated.
+
+=cut
+
+sub update {
+    my $me = shift;
+    ouch 'No current record to update!' unless $$me->{array};
+    my @bind;
+    my $sql = 'UPDATE '.$me->_build_from(\@bind);
+    $sql .= ' SET '.$me->_build_set(\@bind, @_);
+    $sql .= ' WHERE '.$me->_build_primary_key_where(\@bind);
+    $sql .= $me->_build_sql_suffix(\@bind);
+    # TODO: Reload/update instead of leaving the row empty?
+    # To update the row is difficult because columns may have been aliased
+    undef $$me->{array};
+    undef %$me;
+    $me->do($sql, undef, @bind);
+}
+
+=head2 delete
+
+  $row->delete;
+
+Deletes the current row.
+Returns the number of rows deleted or '0E0' for no rows to unsure the value is true,
+and returns false if there was an error.
+
+Note: If LIMIT is not supported on DELETEs, then all rows matching the current row will be deleted.
+
+=cut
+
+sub delete {
+    my $me = shift;
+    ouch 'No current record to delete!' unless $$me->{array};
+    my @bind;
+    my $sql = 'DELETE FROM '.$me->_build_from(\@bind);
+    $sql .= ' WHERE '.$me->_build_primary_key_where(\@bind);
+    $sql .= $me->_build_sql_suffix(\@bind);
+    undef $$me->{array};
+    undef %$me;
+    $me->do($sql, undef, @bind);
+}
+
+sub _build_primary_key_where {
+    my $me = shift;
+    my $bind = shift;
+    # TODO: Try to use any UNIQUE key, but this will mean storing them in TableInfo
+    if (@{$$me->{Tables}} == 1) {
+        my $cols = $$me->{Tables}[0]{PrimaryKeys};
+        @$cols or $cols = $$me->{Tables}[0]{Columns};
+        return join ' AND ', map { push @$bind, $me->value($$me->{Tables}[0] ** $_); $me->_qi($_).'=?' } @$cols;
+    }
+    die;
 }
 
 sub DESTROY {

@@ -30,4 +30,10 @@ sub found_rows {
     $me->{Found_Rows};
 }
 
+package DBIx::DBO::DBD::mysql::Row;
+
+sub _build_sql_suffix {
+    ' LIMIT 1';
+}
+
 1;
