@@ -19,15 +19,4 @@ sub _get_table_schema {
     return $info->[0][1];
 }
 
-package DBIx::DBO::DBD::SQLite::Row;
-
-sub _build_sql_suffix {
-    my $me = shift;
-    if ($me->config('UpdateDeleteLimit') or (caller(1))[3] =~ /::Row::load$/) {
-        ' LIMIT 1';
-    } else {
-        '';
-    }
-}
-
 1;

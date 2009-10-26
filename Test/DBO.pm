@@ -313,6 +313,13 @@ sub join_methods {
     $q->limit(3);
     $r = $q->fetch;
     is_deeply \@$r, [ 5, 'Vernon Lyon', undef, undef ], 'LEFT JOIN';
+
+Dump([$r->_showing], 'showing');
+    is $r->_column_idx($t2 ** 'id'), 2, 'Check idx';
+    is $r ** $t2 ** 'id', undef, 'Check val';
+    # Update the LEFT JOINed row
+    ok $r->update($t1 ** 'name' => 'Vernon Wayne Lyon'), 'Method DBIx::DBO::Row->update' or diag sql_err($r);
+
 #my $a = $q->arrayref or diag sql_err($q);
 #warn $q->sql;
 #Dump($a, 'arrayref');
