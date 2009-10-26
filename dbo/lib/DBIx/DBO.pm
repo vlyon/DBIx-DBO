@@ -390,6 +390,7 @@ sub query {
 
 =head2 row
 
+  $dbo->row($table_object);
   $dbo->row($query_object);
 
 Create a new row object.

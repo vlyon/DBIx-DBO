@@ -62,7 +62,7 @@ sub _table_idx {
     for my $i (0 .. $#{$$me->{Tables}}) {
         return $i if $tbl == $$me->{Tables}[$i];
     }
-    return undef;
+    return;
 }
 
 sub _table_alias {
@@ -83,14 +83,16 @@ sub _column_idx {
     my $idx = -1;
     for my $shown ($me->_showing) {
         if (blessed $shown and $shown->isa('DBIx::DBO::Table')) {
-            return $idx + $shown->{Column_Idx}{$col->[1]} if exists $shown->{Column_Idx}{$col->[1]};
+            if ($col->[0] == $shown and exists $shown->{Column_Idx}{$col->[1]}) {
+                return $idx + $shown->{Column_Idx}{$col->[1]};
+            }
             $idx += keys %{$shown->{Column_Idx}};
             next;
         }
         $idx++;
         return $idx if not defined $shown->[1] and @{$shown->[0]} == 1 and $col == $shown->[0][0];
     }
-    return undef;
+    return;
 }
 
 =head2 value
@@ -133,7 +135,6 @@ sub load {
     $sql .= ' FROM '.$me->_build_from(\@bind);
     $sql .= ' WHERE '.$_ if $_ = $me->_build_where(\@bind, @_);
     $sql .= $me->_build_group_order(\@bind);
-    $sql .= $me->_build_sql_suffix(\@bind);
     undef $$me->{array};
     undef %$me;
     $me->_sql($sql, @bind);
@@ -190,10 +191,6 @@ sub _build_group_order {
     return $sql;
 }
 
-sub _build_sql_suffix {
-    '';
-}
-
 sub _detach {
     my $me = shift;
     if ($$me->{Parent}) {
@@ -219,7 +216,8 @@ Updates the current row with the new values specified.
 Returns the number of rows updated or '0E0' for no rows to unsure the value is true,
 and returns false if there was an error.
 
-Note: If LIMIT is not supported on UPDATEs, then all rows matching the current row will be updated.
+Note: If LIMIT is supported on UPDATEs then only the first matching row will be updated
+otherwise ALL rows matching the current row will be updated.
 
 =cut
 
@@ -229,8 +227,7 @@ sub update {
     my @bind;
     my $sql = 'UPDATE '.$me->_build_from(\@bind);
     $sql .= ' SET '.$me->_build_set(\@bind, @_);
-    $sql .= ' WHERE '.$me->_build_primary_key_where(\@bind);
-    $sql .= $me->_build_sql_suffix(\@bind);
+    $sql .= ' WHERE '.$me->_build_where_matching_this_row(\@bind);
     # TODO: Reload/update instead of leaving the row empty?
     # To update the row is difficult because columns may have been aliased
     undef $$me->{array};
@@ -246,7 +243,8 @@ Deletes the current row.
 Returns the number of rows deleted or '0E0' for no rows to unsure the value is true,
 and returns false if there was an error.
 
-Note: If LIMIT is not supported on DELETEs, then all rows matching the current row will be deleted.
+Note: If LIMIT is supported on DELETEs then only the first matching row will be deleted
+otherwise ALL rows matching the current row will be deleted.
 
 =cut
 
@@ -255,23 +253,22 @@ sub delete {
     ouch 'No current record to delete!' unless $$me->{array};
     my @bind;
     my $sql = 'DELETE FROM '.$me->_build_from(\@bind);
-    $sql .= ' WHERE '.$me->_build_primary_key_where(\@bind);
-    $sql .= $me->_build_sql_suffix(\@bind);
+    $sql .= ' WHERE '.$me->_build_where_matching_this_row(\@bind);
     undef $$me->{array};
     undef %$me;
     $me->do($sql, undef, @bind);
 }
 
-sub _build_primary_key_where {
+sub _build_where_matching_this_row {
     my $me = shift;
     my $bind = shift;
     # TODO: Try to use any UNIQUE key, but this will mean storing them in TableInfo
-    if (@{$$me->{Tables}} == 1) {
-        my $cols = $$me->{Tables}[0]{PrimaryKeys};
-        @$cols or $cols = $$me->{Tables}[0]{Columns};
-        return join ' AND ', map { push @$bind, $me->value($$me->{Tables}[0] ** $_); $me->_qi($_).'=?' } @$cols;
+    my @cols;
+    for my $tbl (@{$$me->{Tables}}) {
+        # Identify the row by the PrimaryKeys if any, otherwise by all Columns
+        push @cols, map $tbl ** $_, @{$tbl->{ @{$tbl->{PrimaryKeys}} ? 'PrimaryKeys' : 'Columns' }};
     }
-    die;
+    $me->_build_where($bind, map {$_ => $me->value($_)} @cols);
 }
 
 sub DESTROY {
