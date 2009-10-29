@@ -35,7 +35,7 @@ sub _new {
         $$me->{Parent} = $$me->{DBO}->table($$me->{Parent}) unless blessed $$me->{Parent};
         if ($$me->{Parent}->isa('DBIx::DBO::Query')) {
             $$me->{Tables} = $$me->{Parent}{Tables};
-            $$me->{Showing} = $$me->{Parent}{Showing};
+            $$me->{Showing} = $$me->{Parent}{build_data}{Showing};
             # We must weaken this to avoid a circular reference
             weaken $$me->{Parent};
         } elsif ($$me->{Parent}->isa('DBIx::DBO::Table')) {
@@ -133,7 +133,7 @@ sub load {
     my @bind;
     my $sql = 'SELECT '.$me->_build_show(\@bind);
     $sql .= ' FROM '.$me->_build_from(\@bind);
-    $sql .= ' WHERE '.$_ if $_ = $me->_build_where(\@bind, @_);
+    $sql .= ' WHERE '.$_ if $_ = $me->_build_quick_where(\@bind, @_);
     $sql .= $me->_build_group_order(\@bind);
     undef $$me->{array};
     undef %$me;
@@ -159,8 +159,8 @@ sub _build_show {
     }
     my $q = $$me->{Parent};
     $q->sql;
-    push @$bind, @{$q->{Show_Bind}};
-    $q->{show};
+    push @$bind, @{$q->{build_data}{Show_Bind}};
+    $q->{build_data}{show};
 }
 
 sub _build_from {
@@ -172,8 +172,8 @@ sub _build_from {
     }
     my $q = $$me->{Parent};
     $q->sql;
-    push @$bind, @{$q->{From_Bind}};
-    $q->{from};
+    push @$bind, @{$q->{build_data}{From_Bind}};
+    $q->{build_data}{from};
 }
 
 sub _build_group_order {
@@ -185,9 +185,9 @@ sub _build_group_order {
     }
     my $q = $$me->{Parent};
     my $sql = '';
-    $sql .= " GROUP BY $q->{order}" if $q->{group};
-    $sql .= " ORDER BY $q->{order}" if $q->{order};
-    push @$bind, @{$q->{Group_Bind}}, @{$q->{Order_Bind}};
+    $sql .= " GROUP BY $q->{build_data}{group}" if $q->{build_data}{group};
+    $sql .= " ORDER BY $q->{build_data}{order}" if $q->{build_data}{order};
+    push @$bind, @{$q->{build_data}{Group_Bind}}, @{$q->{build_data}{Order_Bind}};
     return $sql;
 }
 
@@ -268,7 +268,7 @@ sub _build_where_matching_this_row {
         # Identify the row by the PrimaryKeys if any, otherwise by all Columns
         push @cols, map $tbl ** $_, @{$tbl->{ @{$tbl->{PrimaryKeys}} ? 'PrimaryKeys' : 'Columns' }};
     }
-    $me->_build_where($bind, map {$_ => $me->value($_)} @cols);
+    $me->_build_quick_where($bind, map {$_ => $me->value($_)} @cols);
 }
 
 sub DESTROY {
