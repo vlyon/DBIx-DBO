@@ -512,30 +512,7 @@ sub _build_sql {
         }
     }
 
-#    my $sql = $me->_build_sql_prefix;
-#    $sql .= ' ' if $sql;
-#    $sql .= 'SELECT '.$me->_build_show($me->{build_data});
-#    $sql .= ' FROM '.$me->_build_from($me->{build_data});
-#    $sql .= ' WHERE '.$_ if $_ = $me->_build_where($me->{build_data});
-#    $sql .= ' GROUP BY '.$_ if $_ = $me->_build_group($me->{build_data});
-#    $sql .= ' ORDER BY '.$_ if $_ = $me->_build_order($me->{build_data});
-#    $sql .= ' '.$_ if $_ = $me->_build_sql_suffix;
-#    $me->{sql} = $sql;
-
     $me->{sql} = $me->_build_sql_select($me->{build_data});
-}
-
-sub _build_sql_prefix {
-    my $me = shift;
-    $me->{sql_prefix} //= '';
-}
-
-sub _build_sql_suffix {
-    my $me = shift;
-    return $me->{sql_suffix} = '' unless defined $me->{build_data}{LimitOffset};
-    $me->{sql_suffix} = 'LIMIT '.$me->{build_data}{LimitOffset}[0];
-    $me->{sql_suffix} .= ' OFFSET '.$me->{build_data}{LimitOffset}[1] if $me->{build_data}{LimitOffset}[1];
-    $me->{sql_suffix};
 }
 
 sub DESTROY {
