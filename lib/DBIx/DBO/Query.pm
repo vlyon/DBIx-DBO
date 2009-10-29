@@ -70,8 +70,8 @@ sub join_table {
         $type = ', ';
     }
     push @{$me->{Tables}}, $tbl;
-    push @{$me->{Join}}, $type;
-    push @{$me->{JoinOn}}, undef;
+    push @{$me->{build_data}{Join}}, $type;
+    push @{$me->{build_data}{JoinOn}}, undef;
     undef $me->{sql};
     return $tbl;
 }
@@ -98,17 +98,17 @@ sub _table_alias {
 
 sub _showing {
     my $me = shift;
-    @{$me->{@{$me->{Showing}} ? 'Showing' : 'Tables'}};
+    @{$me->{build_data}{Showing}} ? @{$me->{build_data}{Showing}} : @{$me->{Tables}};
 }
 
 sub _blank {
     my $me = shift;
     $me->unwhere;
 #    $me->{IsDistinct} = 0;
-    undef @{$me->{Showing}};
-    undef @{$me->{GroupBy}};
-    undef @{$me->{OrderBy}};
-    undef $me->{Limit};
+    undef @{$me->{build_data}{Showing}};
+    undef @{$me->{build_data}{GroupBy}};
+    undef @{$me->{build_data}{OrderBy}};
+    undef $me->{build_data}{LimitOffset};
 }
 
 =head2 show
@@ -123,15 +123,15 @@ Specify which columns to show as an array. If the array is empty all columns wil
 sub show {
     my $me = shift;
     undef $me->{sql};
-    undef @{$me->{Showing}};
+    undef @{$me->{build_data}{Showing}};
     for my $fld (@_) {
         if (blessed $fld and $fld->isa('DBIx::DBO::Table')) {
             ouch 'Invalid table field' unless defined $me->_table_idx($fld);
-            push @{$me->{Showing}}, $fld;
+            push @{$me->{build_data}{Showing}}, $fld;
             next;
         }
         # If the $fld is just a scalar use it as a column name not a value
-        push @{$me->{Showing}}, [ $me->_parse_col_val($fld) ];
+        push @{$me->{build_data}{Showing}}, [ $me->_parse_col_val($fld) ];
     }
 }
 
@@ -163,8 +163,8 @@ sub join_on {
         }
     }
 
-    $me->{Join}[$i] = ' JOIN ' if $me->{Join}[$i] eq ', ';
-    $me->_add_where($me->{JoinOn}[$i] //= [], $op,
+    $me->{build_data}{Join}[$i] = ' JOIN ' if $me->{build_data}{Join}[$i] eq ', ';
+    $me->_add_where($me->{build_data}{JoinOn}[$i] //= [], $op,
         $col1, $col1_func, $col1_opt, $col2, $col2_func, $col2_opt, @_);
 }
 
@@ -194,8 +194,8 @@ sub where {
         }
     }
 
-    # Find the current Where_Logic reference
-    my $ref = $me->{Where_Logic};
+    # Find the current Where_Data reference
+    my $ref = $me->{build_data}{Where_Data};
     $ref = $ref->[$_] for (@{$me->{Bracket_Refs}});
 
     $me->_add_where($ref, $op, $fld, $fld_func, $fld_opt, $val, $val_func, $val_opt, @_);
@@ -218,8 +218,8 @@ sub unwhere {
     # TODO: Remove a condition by specifying the whole condition
     if ($col) {
         ouch 'Invalid column' unless blessed $col and $col->isa('DBIx::DBO::Column');
-        # Find the current Where_Logic reference
-        my $ref = $me->{Where_Logic};
+        # Find the current Where_Data reference
+        my $ref = $me->{build_data}{Where_Data};
         $ref = $ref->[$_] for (@{$me->{Bracket_Refs}});
 
         for (my $i = $#$ref; $i >= 0; $i--) {
@@ -228,7 +228,7 @@ sub unwhere {
                 if !defined $ref->[$i][2] and @{$ref->[$i][1]} == 1 and $ref->[$i][1][0] == $col;
         }
     } else {
-        $me->{Where_Logic} = [];
+        $me->{build_data}{Where_Data} = [];
         $me->{Bracket_Refs} = [];
         $me->{Brackets} = [];
     }
@@ -314,37 +314,32 @@ sub _parse_col_val {
     ouch 'No such column: '.$col;
 }
 
-sub _op_ag {
-    return 'OR' if $_[0] eq '=' or $_[0] eq 'IS' or $_[0] eq '<=>' or $_[0] eq 'IN' or $_[0] eq 'BETWEEN';
-    return 'AND' if $_[0] eq '!=' or $_[0] eq 'IS NOT' or $_[0] eq '<>' or $_[0] eq 'NOT IN' or $_[0] eq 'NOT BETWEEN';
-}
-
 sub group_by {
     my $me = shift;
     undef $me->{sql};
-    undef @{$me->{GroupBy}};
+    undef @{$me->{build_data}{GroupBy}};
     for my $col (@_) {
         my @group = $me->_parse_col_val($col);
-        push @{$me->{GroupBy}}, \@group;
+        push @{$me->{build_data}{GroupBy}}, \@group;
     }
 }
 
 sub order_by {
     my $me = shift;
     undef $me->{sql};
-    undef @{$me->{OrderBy}};
+    undef @{$me->{build_data}{OrderBy}};
     for my $col (@_) {
         my @order = $me->_parse_col_val($col);
-        push @{$me->{OrderBy}}, \@order;
+        push @{$me->{build_data}{OrderBy}}, \@order;
     }
 }
 
 sub limit {
     my ($me, $rows, $offset) = @_;
-    return undef $me->{Limit} unless defined $rows;
+    return undef $me->{build_data}{LimitOffset} unless defined $rows;
     eval { use warnings FATAL => 'numeric'; $rows+=0; $offset+=0 };
     ouch 'Non-numeric arguments in limit' if $@;
-    @{$me->{Limit}} = ($rows, $offset);
+    @{$me->{build_data}{LimitOffset}} = ($rows, $offset);
 }
 
 =head2 arrayref
@@ -409,12 +404,14 @@ sub col_arrayref {
 
 sub _bind_params {
     my $me = shift;
-    @{$me->{Show_Bind}}, @{$me->{From_Bind}}, @{$me->{Where_Bind}}, @{$me->{Group_Bind}}, @{$me->{Order_Bind}};
+    @{$me->{build_data}{Show_Bind}}, @{$me->{build_data}{From_Bind}}, @{$me->{build_data}{Where_Bind}}, @{$me->{build_data}{Group_Bind}}, @{$me->{build_data}{Order_Bind}};
 }
 
 sub fetch {
     my $me = shift;
-    $me->run unless $me->sth->{Active};
+    unless ($me->sth->{Active}) {
+        $me->run or return undef;
+    }
 
     # Detach the old record if there is still another reference to it
     my $row;
@@ -439,12 +436,11 @@ sub row {
 
 sub run {
     my $me = shift;
-    my $rv = $me->_execute;
-
     my $row = $me->row;
     undef $$row->{array};
     undef %$row;
 
+    my $rv = $me->_execute or return undef;
     $me->_bind_cols_to_hash;
     return $rv;
 }
@@ -471,11 +467,13 @@ sub rows {
     my $me = shift;
     $me->sql; # Ensure the Row_Count is cleared if needed
     unless (defined $me->{Row_Count}) {
-        $me->run unless $me->sth->{Executed};
+        unless ($me->sth->{Executed}) {
+            $me->run or return undef;
+        }
         $me->{Row_Count} = $me->sth->rows;
         if ($me->{Row_Count} == -1) {
             # TODO: Handle DISTINCT and GROUP BY
-            (my $sql = $me->sql) =~ s/\Q $me->{show} FROM / COUNT(*) FROM /;
+            (my $sql = $me->sql) =~ s/\Q $me->{build_data}{show} FROM / COUNT(*) FROM /;
             $me->{Row_Count} = ( $me->rdbh->selectrow_array($sql, undef, $me->_bind_params) )[0];
         }
     }
@@ -514,17 +512,17 @@ sub _build_sql {
         }
     }
 
-#my $sql = $me->{DBO}->_build_sql_select($me->{build_sql});
+#    my $sql = $me->_build_sql_prefix;
+#    $sql .= ' ' if $sql;
+#    $sql .= 'SELECT '.$me->_build_show($me->{build_data});
+#    $sql .= ' FROM '.$me->_build_from($me->{build_data});
+#    $sql .= ' WHERE '.$_ if $_ = $me->_build_where($me->{build_data});
+#    $sql .= ' GROUP BY '.$_ if $_ = $me->_build_group($me->{build_data});
+#    $sql .= ' ORDER BY '.$_ if $_ = $me->_build_order($me->{build_data});
+#    $sql .= ' '.$_ if $_ = $me->_build_sql_suffix;
+#    $me->{sql} = $sql;
 
-    my $sql = $me->_build_sql_prefix;
-    $sql .= ' ' if $sql;
-    $sql .= 'SELECT '.$me->_build_show;
-    $sql .= ' FROM '.$me->_build_from;
-    $sql .= ' WHERE '.$_ if $_ = $me->_build_complex_where;
-    $sql .= ' GROUP BY '.$_ if $_ = $me->_build_group;
-    $sql .= ' ORDER BY '.$_ if $_ = $me->_build_order;
-    $sql .= ' '.$_ if $_ = $me->_build_sql_suffix;
-    $me->{sql} = $sql;
+    $me->{sql} = $me->_build_sql_select($me->{build_data});
 }
 
 sub _build_sql_prefix {
@@ -532,103 +530,11 @@ sub _build_sql_prefix {
     $me->{sql_prefix} //= '';
 }
 
-sub _build_show {
-    my $me = shift;
-    undef @{$me->{Show_Bind}};
-    return $me->{show} = '*' unless @{$me->{Showing}};
-    my @flds;
-    for my $fld (@{$me->{Showing}}) {
-        push @flds, (blessed $fld and $fld->isa('DBIx::DBO::Table'))
-            ? $me->_qi($me->_table_alias($fld) || $fld->{Name}).'.*'
-            : $me->_build_val($me->{Show_Bind}, @$fld);
-    }
-    $me->{show} = join ', ', @flds;
-}
-
-sub _build_from {
-    my $me = shift;
-    undef @{$me->{From_Bind}};
-    $me->{from} = $me->_build_table($me->{Tables}[0]);
-    for (my $i = 1; $i < @{$me->{Tables}}; $i++) {
-        $me->{from} .= $me->{Join}[$i].$me->_build_table($me->{Tables}[$i]);
-        if ($me->{JoinOn}[$i]) {
-            $me->{from} .= ' ON '.join(' AND ', $me->_build_complex_chunk($me->{From_Bind}, 'OR', $me->{JoinOn}[$i]));
-        }
-    }
-    $me->{from};
-}
-
-sub _build_table {
-    my $me = shift;
-    my $t = shift;
-    my $alias = $me->_table_alias($t);
-    $alias = $alias ? ' AS '.$me->_qi($alias) : '';
-    $t->_quoted_name.$alias;
-}
-
-sub _build_complex_where {
-    my $me = shift;
-    undef @{$me->{Where_Bind}};
-    my @chunks = $me->_build_complex_chunk($me->{Where_Bind}, 'OR', $me->{Where_Logic});
-    $me->{where} = join ' AND ', @chunks;
-}
-
-sub _build_complex_chunk {
-    my ($me, $bind, $ag, $lims) = @_;
-    my @str;
-    # Make a copy so we can hack at it
-    my @lims = @$lims;
-    while (my $lim = shift @lims) {
-        my @ary;
-        if (ref $lim->[0]) {
-            @ary = $me->_build_complex_chunk($bind, $ag eq 'OR' ? 'AND' : 'OR', $lim);
-        } else {
-            @ary = $me->_build_complex_piece($bind, @$lim);
-            my ($op, $fld_func, $fld, $val_func, $val, $force) = @$lim;
-            # Group AND/OR'ed for same fld if $force or $op requires it
-            if ($ag eq ($force || _op_ag($op))) {
-                for (my $i = $#lims; $i >= 0; $i--) {
-                    # Right now this starts with the last @lims and works backward
-                    # It splices when the ag is the correct AND/OR and the funcs match and all flds match
-                    next if (ref $lims[$i]->[0] or $ag ne ($lims[$i]->[5] || _op_ag($lims[$i]->[0])));
-                    no warnings 'uninitialized';
-                    next if $lims[$i]->[1] ne $fld_func;
-                    use warnings 'uninitialized';
-                    my $l = $lims[$i]->[2];
-                    next if ((ref $l eq 'ARRAY' ? "@$l" : $l) ne (ref $fld eq 'ARRAY' ? "@$fld" : $fld));
-                    push @ary, $me->_build_complex_piece($bind, @{splice @lims, $i, 1});
-                }
-            }
-        }
-        push @str, @ary == 1 ? $ary[0] : '('.join(' '.$ag.' ', @ary).')';
-    }
-    return @str;
-}
-
-sub _build_complex_piece {
-    my ($me, $bind, $op, $fld, $fld_func, $fld_opt, $val, $val_func, $val_opt) = @_;
-    $me->_build_val($bind, $fld, $fld_func, $fld_opt)." $op ".$me->_build_val($bind, $val, $val_func, $val_opt);
-}
-
-sub _build_group {
-    my $me = shift;
-    undef @{$me->{Group_Bind}};
-    my @str = map $me->_build_val($me->{Group_Bind}, @$_), @{$me->{GroupBy}};
-    $me->{group} = join ', ', @str;
-}
-
-sub _build_order {
-    my $me = shift;
-    undef @{$me->{Order_Bind}};
-    my @str = map $me->_build_val($me->{Order_Bind}, @$_), @{$me->{OrderBy}};
-    $me->{order} = join ', ', @str;
-}
-
 sub _build_sql_suffix {
     my $me = shift;
-    return $me->{sql_suffix} = '' unless defined $me->{Limit};
-    $me->{sql_suffix} = 'LIMIT '.$me->{Limit}[0];
-    $me->{sql_suffix} .= ' OFFSET '.$me->{Limit}[1] if $me->{Limit}[1];
+    return $me->{sql_suffix} = '' unless defined $me->{build_data}{LimitOffset};
+    $me->{sql_suffix} = 'LIMIT '.$me->{build_data}{LimitOffset}[0];
+    $me->{sql_suffix} .= ' OFFSET '.$me->{build_data}{LimitOffset}[1] if $me->{build_data}{LimitOffset}[1];
     $me->{sql_suffix};
 }
 

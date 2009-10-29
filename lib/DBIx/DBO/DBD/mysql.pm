@@ -7,7 +7,7 @@ use DBIx::DBO::Common;
 sub _build_show {
     my $me = shift;
     my $extra = $me->config('CalcFoundRows') ? 'SQL_CALC_FOUND_ROWS ' : '';
-    $extra.$me->SUPER::_build_show;
+    $extra.$me->SUPER::_build_show($me->{build_data});
 }
 
 =head2 found_rows

@@ -298,7 +298,7 @@ sub join_methods {
     $q->join_on($t2, $t1 ** 'id', '=', { FUNC => '?/2.0', VAL => $t2 ** 'id' });
     $q->order_by({ COL => $t1 ** 'name', ORDER => 'DESC' });
     $q->limit(3);
-    my $r = $q->fetch;
+    my $r = $q->fetch or diag sql_err($q);;
     is_deeply \@$r, [ 1, 'John Doe', 2, 'Jane Smith' ], 'JOIN ON';
 
     $r->load($t1 ** id => 2) or $DBI::errstr && diag sql_err($r);
@@ -311,7 +311,7 @@ sub join_methods {
     $q->join_on($t2, $t1 ** 'id', '=', { FUNC => '?/2', COL => $t2 ** 'id' });
     $q->order_by({ COL => $t1 ** 'name', ORDER => 'DESC' });
     $q->limit(3);
-    $r = $q->fetch;
+    $r = $q->fetch or diag sql_err($q);;
     is_deeply \@$r, [ 5, 'Vernon Lyon', undef, undef ], 'LEFT JOIN';
 
 Dump([$r->_showing], 'showing');

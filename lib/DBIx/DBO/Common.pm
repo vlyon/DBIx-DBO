@@ -1,5 +1,6 @@
 package DBIx::DBO::Common;
 
+use 5.010;
 use strict;
 use warnings;
 use Carp;
@@ -93,6 +94,54 @@ sub do {
     my ($me, $sql, $attr, @bind) = @_;
     $me->_sql($sql, @bind);
     $me->dbh->do($sql, $attr, @bind);
+}
+
+sub _build_sql_select {
+    my $me = shift;
+    my $h = shift;
+    my $sql = 'SELECT '.$me->_build_show($h);
+    $sql .= ' FROM '.$me->_build_from($h);
+    $sql .= ' WHERE '.$_ if $_ = $me->_build_where($h);
+    $sql .= ' GROUP BY '.$_ if $_ = $me->_build_group($h);
+    $sql .= ' ORDER BY '.$_ if $_ = $me->_build_order($h);
+    $sql .= ' '.$_ if $_ = $me->_build_limit($h);
+    $sql;
+}
+
+sub _build_table {
+    my $me = shift;
+    my $t = shift;
+    my $alias = $me->_table_alias($t);
+    $alias = $alias ? ' AS '.$me->_qi($alias) : '';
+    $t->_quoted_name.$alias;
+}
+
+sub _build_show {
+    my $me = shift;
+    my $h = shift;
+    undef @{$h->{Show_Bind}};
+    return $h->{show} = '*' unless @{$h->{Showing}};
+    my @flds;
+    for my $fld (@{$h->{Showing}}) {
+        push @flds, (blessed $fld and $fld->isa('DBIx::DBO::Table'))
+            ? $me->_qi($me->_table_alias($fld) || $fld->{Name}).'.*'
+            : $me->_build_val($h->{Show_Bind}, @$fld);
+    }
+    $h->{show} = join ', ', @flds;
+}
+
+sub _build_from {
+    my $me = shift;
+    my $h = shift;
+    undef @{$h->{From_Bind}};
+    $h->{from} = $me->_build_table(($me->_tables)[0]);
+    for (my $i = 1; $i < $me->_tables; $i++) {
+        $h->{from} .= $h->{Join}[$i].$me->_build_table(($me->_tables)[$i]);
+        if ($h->{JoinOn}[$i]) {
+            $h->{from} .= ' ON '.join(' AND ', $me->_build_where_chunk($h->{From_Bind}, 'OR', $h->{JoinOn}[$i]));
+        }
+    }
+    $h->{from};
 }
 
 sub _parse_col {
@@ -195,6 +244,57 @@ sub _build_val {
 }
 
 sub _build_where {
+    my $me = shift;
+    my $h = shift;
+    undef @{$h->{Where_Bind}};
+    my @chunks = $me->_build_where_chunk($h->{Where_Bind}, 'OR', $h->{Where_Data});
+    $h->{where} = join ' AND ', @chunks;
+}
+
+sub _build_where_chunk {
+    my $me = shift;
+    my ($bind, $ag, $whs) = @_;
+    my @str;
+    # Make a copy so we can hack at it
+    my @whs = @$whs;
+    while (my $wh = shift @whs) {
+        my @ary;
+        if (ref $wh->[0]) {
+            @ary = $me->_build_where_chunk($bind, $ag eq 'OR' ? 'AND' : 'OR', $wh);
+        } else {
+            @ary = $me->_build_where_piece($bind, @$wh);
+            my ($op, $fld_func, $fld, $val_func, $val, $force) = @$wh;
+            # Group AND/OR'ed for same fld if $force or $op requires it
+            if ($ag eq ($force || _op_ag($op))) {
+                for (my $i = $#whs; $i >= 0; $i--) {
+                    # Right now this starts with the last @whs and works backward
+                    # It splices when the ag is the correct AND/OR and the funcs match and all flds match
+                    next if (ref $whs[$i]->[0] or $ag ne ($whs[$i]->[5] || _op_ag($whs[$i]->[0])));
+                    no warnings 'uninitialized';
+                    next if $whs[$i]->[1] ne $fld_func;
+                    use warnings 'uninitialized';
+                    my $l = $whs[$i]->[2];
+                    next if ((ref $l eq 'ARRAY' ? "@$l" : $l) ne (ref $fld eq 'ARRAY' ? "@$fld" : $fld));
+                    push @ary, $me->_build_where_piece($bind, @{splice @whs, $i, 1});
+                }
+            }
+        }
+        push @str, @ary == 1 ? $ary[0] : '('.join(' '.$ag.' ', @ary).')';
+    }
+    return @str;
+}
+
+sub _op_ag {
+    return 'OR' if $_[0] eq '=' or $_[0] eq 'IS' or $_[0] eq '<=>' or $_[0] eq 'IN' or $_[0] eq 'BETWEEN';
+    return 'AND' if $_[0] eq '!=' or $_[0] eq 'IS NOT' or $_[0] eq '<>' or $_[0] eq 'NOT IN' or $_[0] eq 'NOT BETWEEN';
+}
+
+sub _build_where_piece {
+    my ($me, $bind, $op, $fld, $fld_func, $fld_opt, $val, $val_func, $val_opt) = @_;
+    $me->_build_val($bind, $fld, $fld_func, $fld_opt)." $op ".$me->_build_val($bind, $val, $val_func, $val_opt);
+}
+
+sub _build_quick_where {
     ouch 'Wrong number of arguments' if @_ & 1;
     my ($me, $bind) = splice @_, 0, 2;
     my @where;
@@ -217,6 +317,31 @@ sub _build_set {
         push @set, $me->_build_col($me->_parse_col($col)).'='.$me->_build_val($bind, $me->_parse_val($val));
     }
     join ', ', @set;
+}
+
+sub _build_group {
+    my $me = shift;
+    my $h = shift;
+    undef @{$h->{Group_Bind}};
+    my @str = map $me->_build_val($h->{Group_Bind}, @$_), @{$h->{GroupBy}};
+    $h->{group} = join ', ', @str;
+}
+
+sub _build_order {
+    my $me = shift;
+    my $h = shift;
+    undef @{$h->{Order_Bind}};
+    my @str = map $me->_build_val($h->{Order_Bind}, @$_), @{$h->{OrderBy}};
+    $h->{order} = join ', ', @str;
+}
+
+sub _build_limit {
+    my $me = shift;
+    my $h = shift;
+    return $h->{limit} = '' unless defined $h->{LimitOffset};
+    $h->{limit} = 'LIMIT '.$h->{LimitOffset}[0];
+    $h->{limit} .= ' OFFSET '.$h->{LimitOffset}[1] if $h->{LimitOffset}[1];
+    $h->{limit};
 }
 
 1;
