@@ -119,6 +119,7 @@ sub _build_table {
 sub _build_show {
     my $me = shift;
     my $h = shift;
+    return $h->{show} if defined $h->{show};
     undef @{$h->{Show_Bind}};
     return $h->{show} = '*' unless @{$h->{Showing}};
     my @flds;
@@ -133,6 +134,7 @@ sub _build_show {
 sub _build_from {
     my $me = shift;
     my $h = shift;
+    return $h->{from} if defined $h->{from};
     undef @{$h->{From_Bind}};
     $h->{from} = $me->_build_table(($me->_tables)[0]);
     for (my $i = 1; $i < $me->_tables; $i++) {
@@ -246,6 +248,7 @@ sub _build_val {
 sub _build_where {
     my $me = shift;
     my $h = shift;
+    return $h->{where} if defined $h->{where};
     undef @{$h->{Where_Bind}};
     my @chunks = $me->_build_where_chunk($h->{Where_Bind}, 'OR', $h->{Where_Data});
     $h->{where} = join ' AND ', @chunks;
@@ -322,6 +325,7 @@ sub _build_set {
 sub _build_group {
     my $me = shift;
     my $h = shift;
+    return $h->{group} if defined $h->{group};
     undef @{$h->{Group_Bind}};
     my @str = map $me->_build_val($h->{Group_Bind}, @$_), @{$h->{GroupBy}};
     $h->{group} = join ', ', @str;
@@ -330,6 +334,7 @@ sub _build_group {
 sub _build_order {
     my $me = shift;
     my $h = shift;
+    return $h->{order} if defined $h->{order};
     undef @{$h->{Order_Bind}};
     my @str = map $me->_build_val($h->{Order_Bind}, @$_), @{$h->{OrderBy}};
     $h->{order} = join ', ', @str;
@@ -338,6 +343,7 @@ sub _build_order {
 sub _build_limit {
     my $me = shift;
     my $h = shift;
+    return $h->{limit} if defined $h->{limit};
     return $h->{limit} = '' unless defined $h->{LimitOffset};
     $h->{limit} = 'LIMIT '.$h->{LimitOffset}[0];
     $h->{limit} .= ' OFFSET '.$h->{LimitOffset}[1] if $h->{LimitOffset}[1];
