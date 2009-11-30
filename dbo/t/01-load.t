@@ -5,10 +5,20 @@ use warnings;
 use Test::More tests => 4;
 
 BEGIN {
-    $Test::More::VERSION >= 0.82
-        or BAIL_OUT "Test::More 0.82 required, this is only $Test::More::VERSION!";
-	use_ok 'DBIx::DBO'
-        or BAIL_OUT 'DBIx::DBO failed!';
+    if ($Test::More::VERSION < 0.84) {
+        diag "Test::More 0.84 is recommended, this is only $Test::More::VERSION!";
+        unless (exists $::{note}) {
+            eval q#
+                sub Test::More::note {
+                    local $Test::Builder::{_print_diag} = $Test::Builder::{_print};
+                    Test::More->builder->diag(@_);
+                }
+                *note = \&Test::More::note;
+            #;
+            die $@ if $@;
+        }
+    }
+	use_ok 'DBIx::DBO' or BAIL_OUT 'DBIx::DBO failed!';
 }
 
 diag "DBIx::DBO $DBIx::DBO::VERSION, Perl $], $^X";
