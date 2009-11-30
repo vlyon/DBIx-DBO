@@ -8,7 +8,7 @@ my $builder = Module::Build->new(
     dist_author         => 'Vernon Lyon <vlyon@cpan.org>',
     dist_version_from   => 'lib/DBIx/DBO.pm',
     build_requires => {
-        'Test::More' => 0.82,
+        'Test::More' => 0.72,
         'File::Temp' => 0,
     },
     requires => {

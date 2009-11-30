@@ -5,7 +5,7 @@ use warnings;
 
 # Create the DBO (3 tests)
 my $dbo;
-use Test::DBO mysql => 'MySQL', tests => 52, connect_ok => [\$dbo];
+use Test::DBO mysql => 'MySQL', tests => 55, connect_ok => [\$dbo];
 ok $dbo->do('SET NAMES utf8'), 'SET NAMES utf8' or diag sql_err($dbo);
 
 my $test_db = $ENV{DBO_TEST_MYSQL_DB} || $Test::DBO::prefix.'_db';

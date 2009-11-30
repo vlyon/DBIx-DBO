@@ -1,4 +1,4 @@
-use Test::More 0.82;
+use Test::More;
 
 package Test::DBO;
 
@@ -9,6 +9,20 @@ use warnings;
 use Scalar::Util qw(blessed reftype);
 use Test::More;
 BEGIN {
+    # If we are using a version of Test::More older than 0.82 ...
+    unless (exists $Test::More::{note}) {
+        eval q#
+            sub Test::More::note {
+                local $Test::Builder::{_print_diag} = $Test::Builder::{_print};
+                Test::More->builder->diag(@_);
+            }
+            *note = \&Test::More::note;
+            no strict 'refs';
+            *{caller(2).'::note'} = \&note;
+        #;
+        die $@ if $@;
+    }
+
     # Set up _Debug_SQL if requested
     require DBIx::DBO::Common;
 
@@ -314,9 +328,8 @@ sub join_methods {
     $r = $q->fetch or diag sql_err($q);;
     is_deeply \@$r, [ 5, 'Vernon Lyon', undef, undef ], 'LEFT JOIN';
 
-Dump([$r->_showing], 'showing');
-    is $r->_column_idx($t2 ** 'id'), 2, 'Check idx';
-    is $r ** $t2 ** 'id', undef, 'Check val';
+    is $r->_column_idx($t2 ** 'id'), 2, 'Method DBIx::DBO::Row->_column_idx';
+    is $r->value($t2 ** 'id'), undef, 'Method DBIx::DBO::Row->value';
     # Update the LEFT JOINed row
     ok $r->update($t1 ** 'name' => 'Vernon Wayne Lyon'), 'Method DBIx::DBO::Row->update' or diag sql_err($r);
 
