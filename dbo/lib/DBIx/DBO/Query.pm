@@ -73,6 +73,7 @@ sub join_table {
     push @{$me->{build_data}{Join}}, $type;
     push @{$me->{build_data}{JoinOn}}, undef;
     undef $me->{sql};
+    undef $me->{build_data}{from};
     return $tbl;
 }
 
@@ -123,6 +124,7 @@ Specify which columns to show as an array. If the array is empty all columns wil
 sub show {
     my $me = shift;
     undef $me->{sql};
+    undef $me->{build_data}{show};
     undef @{$me->{build_data}{Showing}};
     for my $fld (@_) {
         if (blessed $fld and $fld->isa('DBIx::DBO::Table')) {
@@ -163,6 +165,10 @@ sub join_on {
         }
     }
 
+    # Force a new search
+    undef $me->{sql};
+    undef $me->{build_data}{from};
+
     $me->{build_data}{Join}[$i] = ' JOIN ' if $me->{build_data}{Join}[$i] eq ', ';
     $me->_add_where($me->{build_data}{JoinOn}[$i] //= [], $op,
         $col1, $col1_func, $col1_opt, $col2, $col2_func, $col2_opt, @_);
@@ -193,6 +199,10 @@ sub where {
             ouch 'Invalid value type: '.$type;
         }
     }
+
+    # Force a new search
+    undef $me->{sql};
+    undef $me->{build_data}{where};
 
     # Find the current Where_Data reference
     my $ref = $me->{build_data}{Where_Data};
@@ -234,6 +244,7 @@ sub unwhere {
     }
     # This forces a new search
     undef $me->{sql};
+    undef $me->{build_data}{where};
 }
 
 ##
@@ -251,7 +262,6 @@ sub _add_where {
     my $me = shift;
     my ($ref, $op, $fld, $fld_func, $fld_opt, $val, $val_func, $val_opt, %opt) = @_;
 
-    undef $me->{sql}; # Force a new search
     if (defined $opt{FORCE}) {
         ouch 'Invalid option, FORCE must be AND or OR' if $opt{FORCE} ne 'AND' and $opt{FORCE} ne 'OR';
     }
@@ -317,6 +327,7 @@ sub _parse_col_val {
 sub group_by {
     my $me = shift;
     undef $me->{sql};
+    undef $me->{build_data}{group};
     undef @{$me->{build_data}{GroupBy}};
     for my $col (@_) {
         my @group = $me->_parse_col_val($col);
@@ -327,6 +338,7 @@ sub group_by {
 sub order_by {
     my $me = shift;
     undef $me->{sql};
+    undef $me->{build_data}{order};
     undef @{$me->{build_data}{OrderBy}};
     for my $col (@_) {
         my @order = $me->_parse_col_val($col);
@@ -336,6 +348,8 @@ sub order_by {
 
 sub limit {
     my ($me, $rows, $offset) = @_;
+    undef $me->{sql};
+    undef $me->{build_data}{limit};
     return undef $me->{build_data}{LimitOffset} unless defined $rows;
     eval { use warnings FATAL => 'numeric'; $rows+=0; $offset+=0 };
     ouch 'Non-numeric arguments in limit' if $@;
