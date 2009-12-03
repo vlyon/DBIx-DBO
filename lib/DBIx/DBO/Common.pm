@@ -275,18 +275,20 @@ sub _build_where_chunk {
             @ary = $me->_build_where_chunk($bind, $ag eq 'OR' ? 'AND' : 'OR', $wh);
         } else {
             @ary = $me->_build_where_piece($bind, @$wh);
-            my ($op, $fld_func, $fld, $val_func, $val, $force) = @$wh;
+            my ($op, $fld, $fld_func, $fld_opt, $val, $val_func, $val_opt, $force) = @$wh;
             # Group AND/OR'ed for same fld if $force or $op requires it
             if ($ag eq ($force || _op_ag($op))) {
                 for (my $i = $#whs; $i >= 0; $i--) {
-                    # Right now this starts with the last @whs and works backward
+                    # Right now this starts with the last @whs and works backwards
                     # It splices when the ag is the correct AND/OR and the funcs match and all flds match
-                    next if (ref $whs[$i]->[0] or $ag ne ($whs[$i]->[5] || _op_ag($whs[$i]->[0])));
-                    no warnings 'uninitialized';
-                    next if $whs[$i]->[1] ne $fld_func;
-                    use warnings 'uninitialized';
-                    my $l = $whs[$i]->[2];
-                    next if ((ref $l eq 'ARRAY' ? "@$l" : $l) ne (ref $fld eq 'ARRAY' ? "@$fld" : $fld));
+                    next if (ref $whs[$i][0] or $ag ne ($whs[$i][7] || _op_ag($whs[$i][0])));
+#                    no warnings 'uninitialized';
+#                    next if $whs[$i][2] ne $fld_func;
+#                    use warnings 'uninitialized';
+                    next unless $fld_func ~~ $whs[$i][2];
+#                    my $l = $whs[$i][1];
+#                    next if ((ref $l eq 'ARRAY' ? "@$l" : $l) ne (ref $fld eq 'ARRAY' ? "@$fld" : $fld));
+                    next unless $fld ~~ $whs[$i][1];
                     push @ary, $me->_build_where_piece($bind, @{splice @whs, $i, 1});
                 }
             }
