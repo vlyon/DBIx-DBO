@@ -429,7 +429,7 @@ sub fetch {
 
     # Detach the old record if there is still another reference to it
     my $row;
-    if (defined $me->{Row} and SvREFCNT($me->{Row}) > 1) {
+    if (defined $me->{Row} and SvREFCNT(${$me->{Row}}) > 1) {
         $me->{Row}->_detach;
         $row = $me->row;
     } else {
@@ -518,7 +518,7 @@ sub _build_sql {
     undef $me->{Row_Count};
     undef $me->{Found_Rows};
     if (defined $me->{Row}) {
-        if (SvREFCNT($me->{Row}) > 1) {
+        if (SvREFCNT(${$me->{Row}}) > 1) {
             $me->{Row}->_detach;
         } else {
             undef ${$me->{Row}}{array};

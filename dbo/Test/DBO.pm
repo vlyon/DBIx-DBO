@@ -247,14 +247,26 @@ sub query_methods {
     # Get a Row object
     my $r = $q->row;
     isa_ok $r, 'DBIx::DBO::Row', '$q->row';
+    my $r_str = "$r";
+
+    # Remove the reference so that the row wont detach
+    undef $r;
 
     # Fetch the first row
-    is $q->fetch, $r, 'Method DBIx::DBO::Query->fetch';
+    $r = $q->fetch;
+    ok $r->isa('DBIx::DBO::Row'), 'Method DBIx::DBO::Query->fetch';
+    is $r_str, "$r", 'Re-use the same row object';
 
     # Access methods
     is $r->{name}, 'John Doe', 'Access row as a hashref';
     is $r->[0], 1, 'Access row as an arrayref';
+
+    # Fetch another row
+    $r_str = "$r";
     $r = $q->fetch;
+    isnt $r_str, "$r", 'Row detaches during fetch when a ref still exists';
+
+    # More access methods
     is $r->value($t->column('name')), 'Jane Smith', 'Access row via method DBIx::DBO::Row::value';
     is $r ** $t ** 'name', 'Jane Smith', 'Access row via shortcut method **';
 
@@ -269,14 +281,12 @@ sub advanced_query_methods {
 
     # Show specific columns only
     $q->show({ FUNC => 'UPPER(?)', COL => 'name', AS => 'name' }, 'id', 'name');
-    my $r = $q->fetch;
-    is $r->{name}, 'JOHN DOE', 'Method DBIx::DBO::Query->show';
-    is $r ** $t ** 'name', 'John Doe', 'Access specific column';
+    is $q->fetch->{name}, 'JOHN DOE', 'Method DBIx::DBO::Query->show';
+    is $q->row ** $t ** 'name', 'John Doe', 'Access specific column';
 
     # Show whole tables
     $q->show({ FUNC => "'who?'", AS => 'name' }, $t);
-    $r = $q->fetch;
-    is $r ** $t ** 'name', 'John Doe', 'Access specific column from a shown table';
+    is $q->fetch ** $t ** 'name', 'John Doe', 'Access specific column from a shown table';
 
     # Check case sensitivity of LIKE
     my $case_sensitive = $dbo->selectrow_arrayref('SELECT ? LIKE ?', undef, 'a', 'A') or diag sql_err($dbo);
