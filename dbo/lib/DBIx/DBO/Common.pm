@@ -108,6 +108,15 @@ sub _build_sql_select {
     $sql;
 }
 
+sub _build_sql_update {
+    my $me = shift;
+    my $h = shift;
+    my $sql = 'UPDATE '.$me->_build_from($h);
+    $sql .= ' SET '.$me->_build_set($h->{Set_Bind}, @_);
+    $sql .= ' WHERE '.$_ if $_ = $me->_build_where($h);
+    $sql;
+}
+
 sub _build_table {
     my $me = shift;
     my $t = shift;
@@ -327,8 +336,7 @@ sub _build_group {
     my $h = shift;
     return $h->{group} if defined $h->{group};
     undef @{$h->{Group_Bind}};
-    my @str = map $me->_build_val($h->{Group_Bind}, @$_), @{$h->{GroupBy}};
-    $h->{group} = join ', ', @str;
+    $h->{group} = join ', ', map $me->_build_val($h->{Group_Bind}, @$_), @{$h->{GroupBy}};
 }
 
 sub _build_order {
@@ -336,8 +344,7 @@ sub _build_order {
     my $h = shift;
     return $h->{order} if defined $h->{order};
     undef @{$h->{Order_Bind}};
-    my @str = map $me->_build_val($h->{Order_Bind}, @$_), @{$h->{OrderBy}};
-    $h->{order} = join ', ', @str;
+    $h->{order} = join ', ', map $me->_build_val($h->{Order_Bind}, @$_), @{$h->{OrderBy}};
 }
 
 sub _build_limit {
