@@ -262,9 +262,8 @@ sub _add_where {
     my $me = shift;
     my ($ref, $op, $fld, $fld_func, $fld_opt, $val, $val_func, $val_opt, %opt) = @_;
 
-    if (defined $opt{FORCE}) {
-        ouch 'Invalid option, FORCE must be AND or OR' if $opt{FORCE} ne 'AND' and $opt{FORCE} ne 'OR';
-    }
+    ouch 'Invalid option, FORCE must be AND or OR'
+        if defined $opt{FORCE} and $opt{FORCE} ne 'AND' and $opt{FORCE} ne 'OR';
 
     # Deal with NULL values
     if (@$val == 1 and !defined $val->[0] and !defined $val_func) {

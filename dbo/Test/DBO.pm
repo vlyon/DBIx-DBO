@@ -322,6 +322,8 @@ sub join_methods {
     $q->join_on($t2, $t1 ** 'id', '=', { FUNC => '?/2.0', VAL => $t2 ** 'id' });
     $q->order_by({ COL => $t1 ** 'name', ORDER => 'DESC' });
     $q->limit(3);
+    $q->where($t1 ** 'name', '<', $t2 ** 'name', FORCE => 'OR');
+    $q->where($t1 ** 'name', '>', $t2 ** 'name', FORCE => 'OR');
     my $r = $q->fetch or diag sql_err($q);;
     is_deeply \@$r, [ 1, 'John Doe', 2, 'Jane Smith' ], 'JOIN ON';
 
