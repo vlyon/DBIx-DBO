@@ -1,8 +1,6 @@
-#!perl -T
-
 use strict;
 use warnings;
-use Test::DBO DBM => 'DBM', tests => 33, tempdir => 1;
+use Test::DBO DBM => 'DBM', tests => 35, tempdir => 1;
 
 # Create the DBO (2 tests)
 my $dbo = Test::DBO::connect_ok();
@@ -22,7 +20,7 @@ Test::DBO::skip_advanced_table_methods($dbo, $t);
 # Row methods: (10 tests)
 Test::DBO::row_methods($dbo, $t);
 
-# Query methods: (11 tests)
+# Query methods: (13 tests)
 my $q = Test::DBO::query_methods($dbo, $t);
 
 # Skip... (No tests)

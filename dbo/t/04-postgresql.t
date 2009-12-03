@@ -1,5 +1,3 @@
-#!perl -T
-
 use strict;
 use warnings;
 
@@ -49,7 +47,7 @@ if ($ENV{DBO_TEST_PG_DB}) {
     plan skip_all => "Can't connect to newly created test database: $DBI::errstr" unless $dbo;
 }
 
-plan tests => 52;
+plan tests => 54;
 pass "Connect to PostgreSQL $quoted_db database";
 isa_ok $dbo, 'DBIx::DBO::DBD::Pg', '$dbo';
 
@@ -70,7 +68,7 @@ Test::DBO::advanced_table_methods($dbo, $t);
 # Row methods: (10 tests)
 Test::DBO::row_methods($dbo, $t);
 
-# Query methods: (11 tests)
+# Query methods: (13 tests)
 my $q = Test::DBO::query_methods($dbo, $t);
 
 # Advanced query methods: (9 tests)
