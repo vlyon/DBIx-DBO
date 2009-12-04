@@ -370,9 +370,9 @@ You can specify a slice by including a 'Slice' or 'Columns' attribute in \%attr 
 sub arrayref {
     my $me = shift;
     my $attr = shift;
-    $me->_sql($me->sql, $me->_bind_params_select);
+    $me->_sql($me->sql, $me->_bind_params_select($me->{build_data}));
     my $sql_or_sth = $me->sth->{Active} ? 'sql' : 'sth';
-    $me->rdbh->selectall_arrayref($me->{$sql_or_sth}, $attr, $me->_bind_params_select);
+    $me->rdbh->selectall_arrayref($me->{$sql_or_sth}, $attr, $me->_bind_params_select($me->{build_data}));
 }
 
 =head2 hashref
@@ -389,9 +389,9 @@ sub hashref {
     my $me = shift;
     my $key = shift;
     my $attr = shift;
-    $me->_sql($me->sql, $me->_bind_params_select);
+    $me->_sql($me->sql, $me->_bind_params_select($me->{build_data}));
     my $sql_or_sth = $me->sth->{Active} ? 'sql' : 'sth';
-    $me->rdbh->selectall_hashref($me->{$sql_or_sth}, $key, $attr, $me->_bind_params_select);
+    $me->rdbh->selectall_hashref($me->{$sql_or_sth}, $key, $attr, $me->_bind_params_select($me->{build_data}));
 }
 
 =head2 col_arrayref
@@ -406,9 +406,9 @@ Run the query using L<DBI-E<gt>selectcol_arrayref|DBI/"selectcol_arrayref"> whic
 sub col_arrayref {
     my $me = shift;
     my $attr = shift;
-    $me->_sql($me->sql, $me->_bind_params_select);
+    $me->_sql($me->sql, $me->_bind_params_select($me->{build_data}));
     my $sth = $me->sth->{Active} ? $me->rdbh->prepare($me->{sql}) : $me->{sth};
-    return unless $sth and $sth->execute($me->_bind_params_select);
+    return unless $sth and $sth->execute($me->_bind_params_select($me->{build_data}));
     my @columns = ($attr->{Columns}) ? @{$attr->{Columns}} : (1 .. $sth->{NUM_OF_FIELDS});
     my @ary;
     while (my $ref = $sth->fetch) {
@@ -457,8 +457,8 @@ sub run {
 
 sub _execute {
     my $me = shift;
-    $me->_sql($me->sql, $me->_bind_params_select);
-    $me->sth->execute($me->_bind_params_select);
+    $me->_sql($me->sql, $me->_bind_params_select($me->{build_data}));
+    $me->sth->execute($me->_bind_params_select($me->{build_data}));
 }
 
 sub _bind_cols_to_hash {
@@ -484,7 +484,7 @@ sub rows {
         if ($me->{Row_Count} == -1) {
             # TODO: Handle DISTINCT and GROUP BY
             (my $sql = $me->sql) =~ s/\Q $me->{build_data}{show} FROM / COUNT(*) FROM /;
-            $me->{Row_Count} = ( $me->rdbh->selectrow_array($sql, undef, $me->_bind_params_select) )[0];
+            $me->{Row_Count} = ( $me->rdbh->selectrow_array($sql, undef, $me->_bind_params_select($me->{build_data})) )[0];
         }
     }
     $me->{Row_Count};
