@@ -205,7 +205,7 @@ sub where {
     undef $me->{build_data}{where};
 
     # Find the current Where_Data reference
-    my $ref = $me->{build_data}{Where_Data};
+    my $ref = $me->{build_data}{Where_Data} //= [];
     $ref = $ref->[$_] for (@{$me->{Bracket_Refs}});
 
     $me->_add_where($ref, $op, $fld, $fld_func, $fld_opt, $val, $val_func, $val_opt, @_);
@@ -228,17 +228,19 @@ sub unwhere {
     # TODO: Remove a condition by specifying the whole condition
     if ($col) {
         ouch 'Invalid column' unless blessed $col and $col->isa('DBIx::DBO::Column');
-        # Find the current Where_Data reference
-        my $ref = $me->{build_data}{Where_Data};
-        $ref = $ref->[$_] for (@{$me->{Bracket_Refs}});
+        if (exists $me->{build_data}{Where_Data}) {
+            # Find the current Where_Data reference
+            my $ref = $me->{build_data}{Where_Data};
+            $ref = $ref->[$_] for (@{$me->{Bracket_Refs}});
 
-        for (my $i = $#$ref; $i >= 0; $i--) {
-            # Remove this Where piece if there is no FUNC and it refers to this column only
-            splice @{$ref}, $i, 1
-                if !defined $ref->[$i][2] and @{$ref->[$i][1]} == 1 and $ref->[$i][1][0] == $col;
+            for (my $i = $#$ref; $i >= 0; $i--) {
+                # Remove this Where piece if there is no FUNC and it refers to this column only
+                splice @{$ref}, $i, 1
+                    if !defined $ref->[$i][2] and @{$ref->[$i][1]} == 1 and $ref->[$i][1][0] == $col;
+            }
         }
     } else {
-        $me->{build_data}{Where_Data} = [];
+        delete $me->{build_data}{Where_Data};
         $me->{Bracket_Refs} = [];
         $me->{Brackets} = [];
     }
