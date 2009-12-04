@@ -108,13 +108,26 @@ sub _build_sql_select {
     $sql;
 }
 
+sub _bind_params_select {
+    my $me = shift;
+    @{$me->{build_data}{Show_Bind}}, @{$me->{build_data}{From_Bind}}, @{$me->{build_data}{Where_Bind}}, @{$me->{build_data}{Group_Bind}}, @{$me->{build_data}{Order_Bind}};
+}
+
+# TODO: Should we die if GROUP BY is set?
 sub _build_sql_update {
     my $me = shift;
     my $h = shift;
     my $sql = 'UPDATE '.$me->_build_from($h);
     $sql .= ' SET '.$me->_build_set($h->{Set_Bind}, @_);
     $sql .= ' WHERE '.$_ if $_ = $me->_build_where($h);
+    $sql .= ' ORDER BY '.$_ if $_ = $me->_build_order($h);
+    $sql .= ' '.$_ if $_ = $me->_build_limit($h);
     $sql;
+}
+
+sub _bind_params_update {
+    my $me = shift;
+    @{$me->{build_data}{From_Bind}}, @{$me->{build_data}{Where_Bind}}, @{$me->{build_data}{Order_Bind}};
 }
 
 sub _build_table {
