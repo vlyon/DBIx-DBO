@@ -110,7 +110,8 @@ sub _build_sql_select {
 
 sub _bind_params_select {
     my $me = shift;
-    @{$me->{build_data}{Show_Bind}}, @{$me->{build_data}{From_Bind}}, @{$me->{build_data}{Where_Bind}}, @{$me->{build_data}{Group_Bind}}, @{$me->{build_data}{Order_Bind}};
+    my $h = shift;
+    @{$h->{Show_Bind}}, @{$h->{From_Bind}}, @{$h->{Where_Bind}}, @{$h->{Group_Bind}}, @{$h->{Order_Bind}};
 }
 
 # TODO: Should we die if GROUP BY is set?
@@ -127,7 +128,8 @@ sub _build_sql_update {
 
 sub _bind_params_update {
     my $me = shift;
-    @{$me->{build_data}{From_Bind}}, @{$me->{build_data}{Where_Bind}}, @{$me->{build_data}{Order_Bind}};
+    my $h = shift;
+    @{$h->{From_Bind}}, @{$h->{Where_Bind}}, @{$h->{Order_Bind}};
 }
 
 sub _build_table {
