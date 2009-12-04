@@ -259,8 +259,10 @@ sub _build_where {
     my $h = shift;
     return $h->{where} if defined $h->{where};
     undef @{$h->{Where_Bind}};
-    my @chunks = $me->_build_where_chunk($h->{Where_Bind}, 'OR', $h->{Where_Data});
-    $h->{where} = join ' AND ', @chunks;
+    my @where;
+    push @where, $me->_build_quick_where($h->{Where_Bind}, @{$h->{Quick_Where}}) if exists $h->{Quick_Where};
+    push @where, $me->_build_where_chunk($h->{Where_Bind}, 'OR', $h->{Where_Data}) if exists $h->{Where_Data};
+    $h->{where} = join ' AND ', @where;
 }
 
 sub _build_where_chunk {
@@ -319,7 +321,6 @@ sub _build_quick_where {
                 ' IS '.$$val :
                 ' IS NULL' );
     }
-#    return @where ? ' WHERE '.join(' AND ', @where) : '';
     join ' AND ', @where;
 }
 
