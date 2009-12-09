@@ -140,7 +140,8 @@ sub connect_readonly {
 sub _require_dbd_class {
     my $me = shift;
     my $dbh = shift;
-    my $class = $me.'::DBD::'.$dbh->{Driver}{Name};
+    my $dbd = $dbh->{Driver}{Name};
+    my $class = $me.'::DBD::'.$dbd;
 
     # Set inheritance for all dbd classes
     {
@@ -164,7 +165,7 @@ sub _require_dbd_class {
         (my $err = $@) =~ s/\n.*$//; # Remove the last line
         chomp @warn;
         chomp $err;
-        $dbh->set_err('', join("\n", "Can't load driver $class", @warn, $err));
+        $dbh->set_err('', join("\n", "Can't load $dbd driver", @warn, $err));
         return;
     }
 
