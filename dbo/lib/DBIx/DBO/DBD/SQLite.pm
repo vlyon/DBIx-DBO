@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use DBD::SQLite '1.26_04';
+use DBD::SQLite 1.27;
 
 package DBIx::DBO::DBD::SQLite;
 use DBIx::DBO::Common;
