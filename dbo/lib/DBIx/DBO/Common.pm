@@ -136,6 +136,24 @@ sub _bind_params_update {
     } qw(From_Bind Set_Bind Where_Bind Order_Bind);
 }
 
+sub _build_sql_delete {
+    my $me = shift;
+    my $h = shift;
+    my $sql = 'DELETE FROM '.$me->_build_from($h);
+    $sql .= ' WHERE '.$_ if $_ = $me->_build_where($h);
+    $sql .= ' ORDER BY '.$_ if $_ = $me->_build_order($h);
+    $sql .= ' '.$_ if $_ = $me->_build_limit($h);
+    $sql;
+}
+
+sub _bind_params_delete {
+    my $me = shift;
+    my $h = shift;
+    map {
+        exists $h->{$_} ? @{$h->{$_}} : ()
+    } qw(From_Bind Where_Bind Order_Bind);
+}
+
 sub _build_table {
     my $me = shift;
     my $t = shift;
