@@ -490,6 +490,22 @@ sub rows {
     $me->{Row_Count};
 }
 
+sub count_rows {
+    my $me = shift;
+    my $old_sb = delete $me->{build_data}{Show_Bind};
+    $me->{build_data}{show} = 'COUNT(*)';
+    $me->{build_data}{limit} = '';
+
+    my $sql = $me->_build_sql_select($me->{build_data});
+    $me->_sql($sql, $me->_bind_params_select($me->{build_data}));
+    my $count = ( $me->rdbh->selectrow_array($sql, undef, $me->_bind_params_select($me->{build_data})) )[0];
+
+    $me->{build_data}{Show_Bind} = $old_sb if $old_sb;
+    undef $me->{build_data}{show};
+    undef $me->{build_data}{limit};
+    return $count;
+}
+
 sub sth {
     my $me = shift;
     # Ensure the sql is rebuilt if needed
