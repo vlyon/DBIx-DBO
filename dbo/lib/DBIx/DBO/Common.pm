@@ -121,7 +121,7 @@ sub _build_sql_update {
     my $me = shift;
     my $h = shift;
     my $sql = 'UPDATE '.$me->_build_from($h);
-    $sql .= ' SET '.$me->_build_set($h->{Set_Bind}, @_);
+    $sql .= ' SET '.$me->_build_set($h, @_);
     $sql .= ' WHERE '.$_ if $_ = $me->_build_where($h);
     $sql .= ' ORDER BY '.$_ if $_ = $me->_build_order($h);
     $sql .= ' '.$_ if $_ = $me->_build_limit($h);
@@ -133,7 +133,7 @@ sub _bind_params_update {
     my $h = shift;
     map {
         exists $h->{$_} ? @{$h->{$_}} : ()
-    } qw(From_Bind Where_Bind Order_Bind);
+    } qw(From_Bind Set_Bind Where_Bind Order_Bind);
 }
 
 sub _build_table {
@@ -345,10 +345,12 @@ sub _build_quick_where {
 
 sub _build_set {
     ouch 'Wrong number of arguments' if @_ & 1;
-    my ($me, $bind) = splice @_, 0, 2;
+    my $me = shift;
+    my $h = shift;
+    undef @{$h->{Set_Bind}};
     my @set;
     while (my ($col, $val) = splice @_, 0, 2) {
-        push @set, $me->_build_col($me->_parse_col($col)).'='.$me->_build_val($bind, $me->_parse_val($val));
+        push @set, $me->_build_col($me->_parse_col($col)).' = '.$me->_build_val($h->{Set_Bind}, $me->_parse_val($val));
     }
     join ', ', @set;
 }
