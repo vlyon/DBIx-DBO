@@ -19,4 +19,22 @@ sub _get_table_schema {
     return $info->[0][1];
 }
 
+package DBIx::DBO::DBD::SQLite::Query;
+use DBIx::DBO::Common;
+
+sub fetch {
+    my $me = shift;
+    my $row = $me->SUPER::fetch;
+    unless (defined $row or $me->{sth}->err) {
+        $me->{Row_Count} = $me->{sth}->rows;
+    }
+    return $row;
+}
+
+sub rows {
+    my $me = shift;
+    $me->sql; # Ensure the Row_Count is cleared if needed
+    defined $me->{Row_Count} ? $me->{Row_Count} : -1;
+}
+
 1;
