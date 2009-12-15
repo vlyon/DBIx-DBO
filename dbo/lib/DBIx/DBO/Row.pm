@@ -34,22 +34,36 @@ sub _new {
     if (defined $$me->{Parent}) {
         $$me->{Parent} = $$me->{DBO}->table($$me->{Parent}) unless blessed $$me->{Parent};
         if ($$me->{Parent}->isa('DBIx::DBO::Query')) {
-            $$me->{Tables} = $$me->{Parent}{Tables};
-            $$me->{Showing} = $$me->{Parent}{build_data}{Showing};
+            $$me->{Tables} = [ @{$$me->{Parent}{Tables}} ];
+            _copy_build_data($me);
+# Um ???
+$$me->{build_data}{LimitOffset} = [1];
             # We must weaken this to avoid a circular reference
             weaken $$me->{Parent};
         } elsif ($$me->{Parent}->isa('DBIx::DBO::Table')) {
-            $$me->{show} = [ '*' ];
-            $$me->{from} = [ $$me->{Parent}->_quoted_name ];
-            $$me->{group_order} = [ '' ];
+            $$me->{build_data} = {
+                show => '*',
+                Showing => [],
+                from => $$me->{Parent}->_quoted_name,
+                group => '',
+                order => '',
+                LimitOffset => [1],
+            };
             $$me->{Tables} = [ delete $$me->{Parent} ];
-            $$me->{Showing} = [];
         } else {
             ouch 'Invalid Parent Object';
         }
     }
     bless $me, $class;
     return wantarray ? ($me, $me->_tables) : $me;
+}
+
+sub _copy_build_data {
+    my $me = shift;
+    # Store needed build_data
+    for (qw(Showing from From_Bind Quick_Where Where_Data Where_Bind group Group_Bind order Order_Bind)) {
+        $$me->{build_data}{$_} = $$me->{Parent}{build_data}{$_} if exists $$me->{Parent}{build_data}{$_};
+    }
 }
 
 sub _tables {
@@ -74,7 +88,7 @@ sub _table_alias {
 
 sub _showing {
     my $me = shift;
-    @{$$me->{@{$$me->{Showing}} ? 'Showing' : 'Tables'}};
+    @{$$me->{build_data}{Showing}} ? @{$$me->{build_data}{Showing}} : @{$$me->{Tables}};
 }
 
 sub _column_idx {
@@ -130,16 +144,21 @@ Returns an empty list if there is no row or an error occurs.
 
 sub load {
     my $me = shift;
-    my @bind;
-    my $sql = 'SELECT '.$me->_build_show(\@bind);
-    $sql .= ' FROM '.$me->_build_from(\@bind);
-    $sql .= ' WHERE '.$_ if $_ = $me->_build_quick_where(\@bind, @_);
-    $sql .= $me->_build_group_order(\@bind);
+
+    $me->_detach;
+
+    # TODO: Shouldn't this replace the Quick_Where?
+    my $old_qw = $#{$$me->{build_data}{Quick_Where}};
+    push @{$$me->{build_data}{Quick_Where}}, @_;
+    undef $$me->{build_data}{where};
+    my $sql = $me->_build_sql_select($$me->{build_data});
+    $old_qw < 0 ? delete $$me->{build_data}{Quick_Where} : ($#{$$me->{build_data}{Quick_Where}} = $old_qw);
+
     undef $$me->{array};
     undef %$me;
-    $me->_sql($sql, @bind);
+    $me->_sql($sql, $me->_bind_params_select($$me->{build_data}));
     my $sth = $me->rdbh->prepare($sql);
-    return unless $sth and $sth->execute(@bind);
+    return unless $sth and $sth->execute($me->_bind_params_select($$me->{build_data}));
     my $i = 1;
     for (@{$sth->{NAME}}) {
         $sth->bind_col($i, \$$me->{hash}{$_}) unless exists $$me->{hash}{$_};
@@ -150,60 +169,14 @@ sub load {
     $me;
 }
 
-sub _build_show {
-    my $me = shift;
-    my $bind = shift;
-    if ($$me->{show}) {
-        push @$bind, @{$$me->{show}[1 .. $#{$$me->{show}}]} if $#{$$me->{show}} > 0;
-        return $$me->{show}[0];
-    }
-    my $q = $$me->{Parent};
-    $q->sql;
-    push @$bind, @{$q->{build_data}{Show_Bind}};
-    $q->{build_data}{show};
-}
-
-sub _build_from {
-    my $me = shift;
-    my $bind = shift;
-    if ($$me->{from}) {
-        push @$bind, @{$$me->{from}[1 .. $#{$$me->{from}}]} if $#{$$me->{from}} > 0;
-        return $$me->{from}[0];
-    }
-    my $q = $$me->{Parent};
-    $q->sql;
-    push @$bind, @{$q->{build_data}{From_Bind}};
-    $q->{build_data}{from};
-}
-
-sub _build_group_order {
-    my $me = shift;
-    my $bind = shift;
-    if ($$me->{group_order}) {
-        push @$bind, @{$$me->{group_order}[1 .. $#{$$me->{group_order}}]} if $#{$$me->{group_order}} > 0;
-        return $$me->{group_order}[0];
-    }
-    my $q = $$me->{Parent};
-    my $sql = '';
-    $sql .= " GROUP BY $q->{build_data}{group}" if $q->{build_data}{group};
-    $sql .= " ORDER BY $q->{build_data}{order}" if $q->{build_data}{order};
-    push @$bind, @{$q->{build_data}{Group_Bind}}, @{$q->{build_data}{Order_Bind}};
-    return $sql;
-}
-
 sub _detach {
     my $me = shift;
     if ($$me->{Parent}) {
         $$me->{array} = [ @$me ];
         $$me->{hash} = { %$me };
-        unshift @{$$me->{show}}, $me->_build_show($$me->{show});
-        unshift @{$$me->{from}}, $me->_build_from($$me->{from});
-        unshift @{$$me->{group_order}}, $me->_build_group_order($$me->{group_order});
-        $$me->{Tables} = [ @{$$me->{Tables}} ];
-        $$me->{Showing} = [ @{$$me->{Showing}} ];
+        undef $$me->{Parent}{Row};
         # TODO: Save configs from Parent
     }
-    undef $$me->{Parent}{Row};
     undef $$me->{Parent};
 }
 
@@ -213,7 +186,7 @@ sub _detach {
   $row->update(name => 'Bob', status => 'Employed');
 
 Updates the current row with the new values specified.
-Returns the number of rows updated or '0E0' for no rows to unsure the value is true,
+Returns the number of rows updated or '0E0' for no rows to ensure the value is true,
 and returns false if there was an error.
 
 Note: If LIMIT is supported on UPDATEs then only the first matching row will be updated
@@ -224,15 +197,16 @@ otherwise ALL rows matching the current row will be updated.
 sub update {
     my $me = shift;
     ouch 'No current record to update!' unless $$me->{array};
-    my @bind;
-    my $sql = 'UPDATE '.$me->_build_from(\@bind);
-    $sql .= ' SET '.$me->_build_set(\@bind, @_);
-    $sql .= ' WHERE '.$me->_build_where_matching_this_row(\@bind);
+    my $build_data = $me->_build_data_matching_this_row;
+    # TODO: LimitOffset
+#    $h{LimitOffset} = [1] if ???
+    my $sql = $me->_build_sql_update($build_data, @_);
+
     # TODO: Reload/update instead of leaving the row empty?
-    # To update the row is difficult because columns may have been aliased
+    # To update the Row object is difficult because columns may have been aliased
     undef $$me->{array};
     undef %$me;
-    $me->do($sql, undef, @bind);
+    $me->do($sql, undef, $me->_bind_params_update($build_data));
 }
 
 =head2 delete
@@ -240,7 +214,7 @@ sub update {
   $row->delete;
 
 Deletes the current row.
-Returns the number of rows deleted or '0E0' for no rows to unsure the value is true,
+Returns the number of rows deleted or '0E0' for no rows to ensure the value is true,
 and returns false if there was an error.
 
 Note: If LIMIT is supported on DELETEs then only the first matching row will be deleted
@@ -251,24 +225,29 @@ otherwise ALL rows matching the current row will be deleted.
 sub delete {
     my $me = shift;
     ouch 'No current record to delete!' unless $$me->{array};
-    my @bind;
-    my $sql = 'DELETE FROM '.$me->_build_from(\@bind);
-    $sql .= ' WHERE '.$me->_build_where_matching_this_row(\@bind);
+    my $build_data = $me->_build_data_matching_this_row;
+    # TODO: LimitOffset
+#    $h{LimitOffset} = [1] if ???
+    my $sql = $me->_build_sql_delete($build_data, @_);
+
     undef $$me->{array};
     undef %$me;
-    $me->do($sql, undef, @bind);
+    $me->do($sql, undef, $me->_bind_params_delete($build_data));
 }
 
-sub _build_where_matching_this_row {
+sub _build_data_matching_this_row {
     my $me = shift;
-    my $bind = shift;
-    # TODO: Try to use any UNIQUE key, but this will mean storing them in TableInfo
+    # Identify the row by the PrimaryKeys if any, otherwise by all Columns
     my @cols;
     for my $tbl (@{$$me->{Tables}}) {
-        # Identify the row by the PrimaryKeys if any, otherwise by all Columns
         push @cols, map $tbl ** $_, @{$tbl->{ @{$tbl->{PrimaryKeys}} ? 'PrimaryKeys' : 'Columns' }};
     }
-    $me->_build_quick_where($bind, map {$_ => $me->value($_)} @cols);
+    my %h = (
+        from => $$me->{build_data}{from},
+        Quick_Where => [ map {$_ => $me->value($_)} @cols ]
+    );
+    $h{From_Bind} = $$me->{build_data}{From_Bind} if exists $$me->{build_data}{From_Bind};
+    return \%h;
 }
 
 sub DESTROY {
