@@ -241,9 +241,6 @@ sub query_methods {
     # Get a valid sth
     isa_ok $q->sth, 'DBI::st', '$q->sth';
 
-    # Count the number of rows
-    is $q->rows, 6, 'Row count is 6';
-
     # Get a Row object
     my $r = $q->row;
     isa_ok $r, 'DBIx::DBO::Row', '$q->row';
@@ -269,6 +266,10 @@ sub query_methods {
     # More access methods
     is $r->value($t->column('name')), 'Jane Smith', 'Access row via method DBIx::DBO::Row::value';
     is $r ** $t ** 'name', 'Jane Smith', 'Access row via shortcut method **';
+
+    # Count the number of rows
+    1 while $q->fetch;
+    is $q->rows, 6, 'Row count is 6';
 
     $q->finish;
     return $q;
@@ -315,13 +316,16 @@ sub skip_advanced_query_methods {
 sub join_methods {
     my $dbo = shift;
     my $table = shift;
+    my $skip_multi = shift;
 
     my ($q, $t1, $t2) = $dbo->query($table, $table);
-    is $q->rows, 36, 'Comma JOIN';
+    is $q->count_rows, 36, 'Comma JOIN';
+
+    $q->limit(3);
+    is $q->count_rows, 36, 'Method DBIx::DBO::Query->count_rows';
 
     $q->join_on($t2, $t1 ** 'id', '=', { FUNC => '?/2.0', VAL => $t2 ** 'id' });
     $q->order_by({ COL => $t1 ** 'name', ORDER => 'DESC' });
-    $q->limit(3);
     $q->where($t1 ** 'name', '<', $t2 ** 'name', FORCE => 'OR');
     $q->where($t1 ** 'name', '>', $t2 ** 'name', FORCE => 'OR');
     my $r = $q->fetch or diag sql_err($q);;
@@ -342,12 +346,17 @@ sub join_methods {
 
     is $r->_column_idx($t2 ** 'id'), 2, 'Method DBIx::DBO::Row->_column_idx';
     is $r->value($t2 ** 'id'), undef, 'Method DBIx::DBO::Row->value';
+
     # Update the LEFT JOINed row
-    ok $r->update($t1 ** 'name' => 'Vernon Wayne Lyon'), 'Method DBIx::DBO::Row->update' or diag sql_err($r);
+    SKIP: {
+        skip "Mutli-table UPDATE is not supported by $dbd_name", 1 if $skip_multi;
+        ok $r->update($t1 ** 'name' => 'Vernon Wayne Lyon'), 'Method DBIx::DBO::Row->update' or diag sql_err($r);
+    }
 
 #my $a = $q->arrayref or diag sql_err($q);
 #warn $q->sql;
 #Dump($a, 'arrayref');
+#Dump($$r->{build_data}, 'build_data');
 
     $q->finish;
 }
