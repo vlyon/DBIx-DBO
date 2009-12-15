@@ -535,6 +535,10 @@ sub _build_sql {
         } else {
             undef ${$me->{Row}}{array};
             undef %{$me->{Row}};
+
+            $me->{sql} = $me->_build_sql_select($me->{build_data});
+            $me->{Row}->_copy_build_data;
+            return $me->{sql};
         }
     }
 
