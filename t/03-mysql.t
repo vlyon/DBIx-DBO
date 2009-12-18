@@ -3,7 +3,7 @@ use warnings;
 
 # Create the DBO (3 tests)
 my $dbo;
-use Test::DBO mysql => 'MySQL', tests => 58, connect_ok => [\$dbo];
+use Test::DBO mysql => 'MySQL', tests => 62, connect_ok => [\$dbo];
 ok $dbo->do('SET NAMES utf8'), 'SET NAMES utf8' or diag sql_err($dbo);
 
 my $test_db = $ENV{DBO_TEST_MYSQL_DB} || $Test::DBO::prefix.'_db';
@@ -16,7 +16,7 @@ my $drop_db = 1;
 ok $dbo->do("USE $quoted_db"), "USE $quoted_db" or diag sql_err($dbo);
 is $dbo->selectrow_array('SELECT DATABASE()'), $test_db, 'Correct DB selected' or die sql_err($dbo);
 
-# Table methods: do, select* (9 tests)
+# Table methods: do, select* (13 tests)
 my $t = Test::DBO::basic_methods($dbo, $test_db, $test_tbl);
 
 # Advanced table methods: insert, update, delete (2 tests)

@@ -66,15 +66,15 @@ sub column {
     $me->{Column}{$col} //= bless [ $me, $col ], 'DBIx::DBO::Column';
 }
 
-=head2 fetch_val
+=head2 fetch_value
 
-  $t->fetch_val($column, %where)
+  $t->fetch_value($column, %where)
 
 Fetch the first matching row from the table returning the value in one column.
 
 =cut
 
-sub fetch_val {
+sub fetch_value {
     my ($me, $col) = splice @_, 0, 2;
     $col = $me->_parse_col($col);
     my $sql = 'SELECT '.$me->_qi($col->[1]).' FROM '.$me->_quoted_name;
@@ -85,32 +85,45 @@ sub fetch_val {
     return $ref && $ref->[0];
 }
 
-=head2 fetch_row
+=head2 fetch_hash
 
-  $t->fetch_row(%where)
+  $t->fetch_hash(%where)
 
 Fetch the first matching row from the table returning it as a hashref.
 
 =cut
 
-sub fetch_row {
+sub fetch_hash {
     my $me = shift;
     my $sql = 'SELECT * FROM '.$me->_quoted_name;
     my @bind;
     $sql .= ' WHERE '.$_ if $_ = $me->_build_quick_where(\@bind, @_);
     $me->_sql($sql, @bind);
-    return $me->rdbh->selectrow_hashref($sql, undef, @bind);
+    $me->rdbh->selectrow_hashref($sql, undef, @bind);
 }
 
-=head2 fetch_col
+=head2 fetch_row
 
-  $t->fetch_col($column, %where)
+  $t->fetch_row(%where)
+
+Fetch the first matching row from the table returning it as a Row object.
+
+=cut
+
+sub fetch_row {
+    my $me = shift;
+    $me->{DBO}->row($me)->load(@_);
+}
+
+=head2 fetch_column
+
+  $t->fetch_column($column, %where)
 
 Fetch all matching rows from the table returning an arrayref of the values in one column.
 
 =cut
 
-sub fetch_col {
+sub fetch_column {
     my ($me, $col) = splice @_, 0, 2;
     $col = $me->_parse_col($col);
     my $sql = 'SELECT '.$me->_qi($col->[1]).' FROM '.$me->_quoted_name;
