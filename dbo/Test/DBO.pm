@@ -157,6 +157,19 @@ sub basic_methods {
         $rv = $t->insert($c => {FUNC => '4'}, name => \"'James Bond'") or diag sql_err($t);
         ok $rv, 'Method DBIx::DBO::Table->insert';
 
+        # Fetch one value from the Table
+        is $t->fetch_value($t ** 'name', id => 3), 'Uncle Arnie', 'Method DBIx::DBO::Table->fetch_value';
+
+        # Fetch one value from the Table
+        is_deeply $t->fetch_hash(id => 3), {id=>3,name=>'Uncle Arnie'}, 'Method DBIx::DBO::Table->fetch_hash';
+
+        # Fetch one value from the Table
+        my $r = $t->fetch_row(id => 3);
+        is $r->{name}, 'Uncle Arnie', 'Method DBIx::DBO::Table->fetch_row';
+
+        # Fetch a column arrayref from the Table
+        is_deeply $t->fetch_column($t ** 'name', id => 3), ['Uncle Arnie'], 'Method DBIx::DBO::Table->fetch_column';
+
         # Delete via table object
         $rv = $t->delete(id => 3) or diag sql_err($t);
         is $rv, 1, 'Method DBIx::DBO::Table->delete';
