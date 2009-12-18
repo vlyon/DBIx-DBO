@@ -31,31 +31,33 @@ sub _new {
     my $class = ref($proto) || $proto;
     my $me = \{ DBO => shift, Parent => shift, array => undef, hash => {} };
     blessed $$me->{DBO} and $$me->{DBO}->isa('DBIx::DBO') or ouch 'Invalid DBO Object';
-    if (defined $$me->{Parent}) {
-        $$me->{Parent} = $$me->{DBO}->table($$me->{Parent}) unless blessed $$me->{Parent};
-        if ($$me->{Parent}->isa('DBIx::DBO::Query')) {
-            $$me->{Tables} = [ @{$$me->{Parent}{Tables}} ];
-            _copy_build_data($me);
-# Um ???
-$$me->{build_data}{LimitOffset} = [1];
-            # We must weaken this to avoid a circular reference
-            weaken $$me->{Parent};
-        } elsif ($$me->{Parent}->isa('DBIx::DBO::Table')) {
-            $$me->{build_data} = {
-                show => '*',
-                Showing => [],
-                from => $$me->{Parent}->_quoted_name,
-                group => '',
-                order => '',
-                LimitOffset => [1],
-            };
-            $$me->{Tables} = [ delete $$me->{Parent} ];
-        } else {
-            ouch 'Invalid Parent Object';
-        }
-    }
+    ouch 'Invalid Parent Object' unless defined $$me->{Parent};
+    $$me->{Parent} = $$me->{DBO}->table($$me->{Parent}) unless blessed $$me->{Parent};
+    _init($me);
     bless $me, $class;
     return wantarray ? ($me, $me->_tables) : $me;
+}
+
+sub _init {
+    my $me = shift;
+    $$me->{build_data}{LimitOffset} = [1];
+    if ($$me->{Parent}->isa('DBIx::DBO::Query')) {
+        $$me->{Tables} = [ @{$$me->{Parent}{Tables}} ];
+        _copy_build_data($me);
+        # We must weaken this to avoid a circular reference
+        weaken $$me->{Parent};
+    } elsif ($$me->{Parent}->isa('DBIx::DBO::Table')) {
+        $$me->{build_data} = {
+            show => '*',
+            Showing => [],
+            from => $$me->{Parent}->_quoted_name,
+            group => '',
+            order => '',
+        };
+        $$me->{Tables} = [ delete $$me->{Parent} ];
+    } else {
+        ouch 'Invalid Parent Object';
+    }
 }
 
 sub _copy_build_data {
@@ -251,7 +253,7 @@ sub _build_data_matching_this_row {
 }
 
 sub DESTROY {
-    undef ${$_[0]};
+    undef %${$_[0]};
 }
 
 1;
