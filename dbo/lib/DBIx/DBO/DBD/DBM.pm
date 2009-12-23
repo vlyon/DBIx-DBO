@@ -1,5 +1,6 @@
 use strict;
 use warnings;
+use SQL::Statement;
 
 package DBIx::DBO::DBD::DBM;
 use DBIx::DBO::Common;
