@@ -1,17 +1,16 @@
 use strict;
 use warnings;
-use Test::DBO DBM => 'DBM', tests => 35, tempdir => 1;
 
 # Create the DBO (2 tests)
-my $dbo = Test::DBO::connect_ok();
-#my $dbo = Test::DBO::connect_ok("mldbm=Storable");
+my $dbo;
+use Test::DBO DBM => 'DBM', tests => 39, tempdir => 1, connect_ok => [\$dbo];
 
 my $test_tbl = $Test::DBO::prefix.'_tbl';
 
 # Make sure QuoteIdentifier is OFF for DBM (1 test)
 is $dbo->config('QuoteIdentifier'), 0, 'Method $dbo->config';
 
-# Table methods: do, select* (9 tests)
+# Table methods: do, select* (13 tests)
 my $t = Test::DBO::basic_methods($dbo, undef, $test_tbl);
 
 # Skip... (No tests)
