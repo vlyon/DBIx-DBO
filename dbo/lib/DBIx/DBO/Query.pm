@@ -481,29 +481,59 @@ sub rows {
             $me->run or return undef;
         }
         $me->{Row_Count} = $me->sth->rows;
-        if ($me->{Row_Count} == -1) {
-            # TODO: Handle DISTINCT and GROUP BY
-            (my $sql = $me->sql) =~ s/\Q $me->{build_data}{show} FROM / COUNT(*) FROM /;
-            $me->{Row_Count} = ( $me->rdbh->selectrow_array($sql, undef, $me->_bind_params_select($me->{build_data})) )[0];
-        }
+        $me->{Row_Count} = $me->count_rows if $me->{Row_Count} == -1;
     }
     $me->{Row_Count};
 }
 
+=head2 count_rows
+
+  my $row_count = $query->count_rows;
+
+Count the number of rows that would be returned.
+
+Returns undefined if there is an error.
+
+=cut
+
 sub count_rows {
     my $me = shift;
+    my $old_fr = $me->{Config}{CalcFoundRows};
+    $me->{Config}{CalcFoundRows} = 0;
     my $old_sb = delete $me->{build_data}{Show_Bind};
-    $me->{build_data}{show} = 'COUNT(*)';
-    $me->{build_data}{limit} = '';
+    $me->{build_data}{show} = '1';
 
-    my $sql = $me->_build_sql_select($me->{build_data});
+    my $sql = 'SELECT COUNT(*) FROM ('.$me->_build_sql_select($me->{build_data}).') t';
     $me->_sql($sql, $me->_bind_params_select($me->{build_data}));
-    my $count = ( $me->rdbh->selectrow_array($sql, undef, $me->_bind_params_select($me->{build_data})) )[0];
+    my ($count) = $me->rdbh->selectrow_array($sql, undef, $me->_bind_params_select($me->{build_data}));
 
+    $me->{Config}{CalcFoundRows} = $old_fr if defined $old_fr;
     $me->{build_data}{Show_Bind} = $old_sb if $old_sb;
     undef $me->{build_data}{show};
-    undef $me->{build_data}{limit};
     return $count;
+}
+
+=head2 found_rows
+
+  $query->config(CalcFoundRows => 1); # Only applicable to MySQL
+  my $total_rows = $query->found_rows;
+
+Return the number of rows that would have been returned if there was no limit clause.
+Before runnning the query the 'CalcFoundRows' config option can be enabled for improved
+performance on supported databases.
+
+Returns undefined if there is an error or is unable to determine the number of found rows.
+
+=cut
+
+sub found_rows {
+    my $me = shift;
+    if (not defined $me->{Found_Rows}) {
+        $me->{build_data}{limit} = '';
+        $me->{Found_Rows} = $me->count_rows;
+        undef $me->{build_data}{limit};
+    }
+    $me->{Found_Rows};
 }
 
 sub sth {
