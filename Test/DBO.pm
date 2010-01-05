@@ -332,10 +332,11 @@ sub join_methods {
     my $skip_multi = shift;
 
     my ($q, $t1, $t2) = $dbo->query($table, $table);
-    is $q->count_rows, 36, 'Comma JOIN';
-
     $q->limit(3);
-    is $q->count_rows, 36, 'Method DBIx::DBO::Query->count_rows';
+    $q->config(CalcFoundRows => 1);
+    ok $q, 'Comma JOIN';
+    is $q->count_rows, 3, 'Method DBIx::DBO::Query->count_rows' or diag sql_err($q);
+    is $q->found_rows, 36, 'Method DBIx::DBO::Query->found_rows' or diag sql_err($q);
 
     $q->join_on($t2, $t1 ** 'id', '=', { FUNC => '?/2.0', VAL => $t2 ** 'id' });
     $q->order_by({ COL => $t1 ** 'name', ORDER => 'DESC' });
