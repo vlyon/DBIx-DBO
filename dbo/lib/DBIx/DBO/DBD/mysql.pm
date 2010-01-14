@@ -1,7 +1,17 @@
 use strict;
 use warnings;
 
-package DBIx::DBO::DBD::mysql::Query;
+package DBIx::DBO::DBD::mysql;
+use DBIx::DBO::Common;
+
+sub config {
+    my $class = shift;
+    my $val = $class->SUPER::config(@_);
+    # MySQL supports LIMIT on UPDATE/DELETE by default
+    ($_[0] ne 'LimitRowUpdate' and $_[0] ne 'LimitRowDelete' or defined $val) ? $val : 1;
+}
+
+package DBIx::DBO::DBD::mysql::Common;
 use DBIx::DBO::Common;
 
 sub _build_sql_select {

@@ -200,8 +200,7 @@ sub update {
     my $me = shift;
     ouch 'No current record to update!' unless $$me->{array};
     my $build_data = $me->_build_data_matching_this_row;
-    # TODO: LimitOffset
-#    $h{LimitOffset} = [1] if ???
+    $build_data->{LimitOffset} = [1] if $me->config('LimitRowUpdate') and $me->_tables == 1;
     my $sql = $me->_build_sql_update($build_data, @_);
 
     # TODO: Reload/update instead of leaving the row empty?
@@ -228,8 +227,7 @@ sub delete {
     my $me = shift;
     ouch 'No current record to delete!' unless $$me->{array};
     my $build_data = $me->_build_data_matching_this_row;
-    # TODO: LimitOffset
-#    $h{LimitOffset} = [1] if ???
+    $build_data->{LimitOffset} = [1] if $me->config('LimitRowDelete') and $me->_tables == 1;
     my $sql = $me->_build_sql_delete($build_data, @_);
 
     undef $$me->{array};

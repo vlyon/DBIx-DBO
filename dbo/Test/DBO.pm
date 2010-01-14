@@ -223,9 +223,10 @@ sub row_methods {
     ok $r->load(id => 2), 'Method DBIx::DBO::Row->load' or $DBI::errstr && diag sql_err($r);
     is_deeply $$r->{array}, [ 2, 'Jane Smith' ], 'Row loaded correctly';
 
-    ok $r->update(name => 'Someone Else'), 'Method DBIx::DBO::Row->update' or diag sql_err($r);
+sleep 1;
+    is $r->update(name => 'Someone Else'), 1, 'Method DBIx::DBO::Row->update' or diag sql_err($r);
     is $$r->{array}, undef, 'Row is empty again';
-    is_deeply \@{$r->load(id => 2)}, [ 2, 'Someone Else' ], 'Row updated correctly';;
+    is_deeply \@{$r->load(id => 2)}, [ 2, 'Someone Else' ], 'Row updated correctly' or diag sql_err($r);
 
     ok $r->delete, 'Method DBIx::DBO::Row->delete' or diag sql_err($r);
     $t->insert(id => 2, name => 'Jane Smith');
@@ -347,8 +348,6 @@ sub join_methods {
 
     $r->load($t1 ** id => 2) or $DBI::errstr && diag sql_err($r);
     is_deeply \@$r, [ 2, 'Jane Smith', 4, 'James Bond' ], 'Method DBIx::DBO::Row->load';
-
-#$q->config(CalcFoundRows => 1);
 
     ($q, $t1) = $dbo->query($table);
     $t2 = $q->join_table($table, 'left');

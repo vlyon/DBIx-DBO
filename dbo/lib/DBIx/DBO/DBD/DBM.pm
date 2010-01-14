@@ -8,7 +8,7 @@ use DBIx::DBO::Common;
 sub _bless_dbo {
     my $class = shift;
     my $me = $class->SUPER::_bless_dbo(@_);
-    # DBM does not supported QuoteIdentifier correctly!
+    # DBM does not support QuoteIdentifier correctly!
     $me->config(QuoteIdentifier => 0);
     return $me;
 }
