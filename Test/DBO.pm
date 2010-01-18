@@ -220,10 +220,9 @@ sub row_methods {
 
     is $$r->{array}, undef, 'Row is empty';
 
-    ok $r->load(id => 2), 'Method DBIx::DBO::Row->load' or $DBI::errstr && diag sql_err($r);
+    ok $r->load(id => 2, name => 'Jane Smith'), 'Method DBIx::DBO::Row->load' or $DBI::errstr && diag sql_err($r);
     is_deeply $$r->{array}, [ 2, 'Jane Smith' ], 'Row loaded correctly';
 
-sleep 1;
     is $r->update(name => 'Someone Else'), 1, 'Method DBIx::DBO::Row->update' or diag sql_err($r);
     is $$r->{array}, undef, 'Row is empty again';
     is_deeply \@{$r->load(id => 2)}, [ 2, 'Someone Else' ], 'Row updated correctly' or diag sql_err($r);
