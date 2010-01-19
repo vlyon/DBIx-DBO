@@ -2,6 +2,8 @@ use strict;
 use warnings;
 use SQL::Statement;
 
+die "DBM is not yet supported!\n" unless $ENV{DBO_ALLOW_DBM};
+
 package DBIx::DBO::DBD::DBM;
 use DBIx::DBO::Common;
 

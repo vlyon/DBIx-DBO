@@ -19,3 +19,5 @@ t/99-dbm.t
 t/pod-coverage.t
 t/pod.t
 Test/DBO.pm
+Makefile.PL
+META.yml
