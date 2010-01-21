@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-package DBIx::DBO::DBD::Pg;
+package DBIx::DBO::DBD::Pg::Handle;
 use DBIx::DBO::Common;
 
 sub _get_table_schema {

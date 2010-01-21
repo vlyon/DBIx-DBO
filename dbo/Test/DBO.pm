@@ -82,7 +82,7 @@ sub import {
 
         plan tests => $opt{tests};
         pass "Connect to $dbd_name";
-        isa_ok $$dbo_ref, "DBIx::DBO::DBD::$dbd", '$dbo';
+        isa_ok $$dbo_ref, "DBIx::DBO::DBD::${dbd}::Handle", '$dbo';
     } else {
         plan tests => $opt{tests};
     }

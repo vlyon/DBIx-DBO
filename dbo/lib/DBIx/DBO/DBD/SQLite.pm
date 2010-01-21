@@ -2,7 +2,7 @@ use strict;
 use warnings;
 use DBD::SQLite 1.27;
 
-package DBIx::DBO::DBD::SQLite;
+package DBIx::DBO::DBD::SQLite::Handle;
 use DBIx::DBO::Common;
 
 sub _get_table_schema {

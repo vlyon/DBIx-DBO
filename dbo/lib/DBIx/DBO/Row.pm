@@ -30,7 +30,7 @@ sub _new {
     my $proto = shift;
     my $class = ref($proto) || $proto;
     my $me = \{ DBO => shift, Parent => shift, array => undef, hash => {} };
-    blessed $$me->{DBO} and $$me->{DBO}->isa('DBIx::DBO') or ouch 'Invalid DBO Object';
+    blessed $$me->{DBO} and $$me->{DBO}->isa('DBIx::DBO::Handle') or ouch 'Invalid DBO Object';
     ouch 'Invalid Parent Object' unless defined $$me->{Parent};
     $$me->{Parent} = $$me->{DBO}->table($$me->{Parent}) unless blessed $$me->{Parent};
     _init($me);

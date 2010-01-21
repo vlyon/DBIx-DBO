@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-package DBIx::DBO::DBD::mysql;
+package DBIx::DBO::DBD::mysql::Handle;
 use DBIx::DBO::Common;
 
 sub config {
