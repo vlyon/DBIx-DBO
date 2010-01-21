@@ -6,7 +6,7 @@ my $dbo;
 use Test::DBO mysql => 'MySQL', tests => 63, connect_ok => [\$dbo];
 ok $dbo->do('SET NAMES utf8'), 'SET NAMES utf8' or diag sql_err($dbo);
 
-my $test_db = $ENV{DBO_TEST_MYSQL_DB} || $Test::DBO::prefix.'_db';
+my $test_db = $Test::DBO::prefix.'_db';
 my $test_tbl = $Test::DBO::prefix.'_tbl';
 my $quoted_db = $dbo->_qi($test_db);
 
