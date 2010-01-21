@@ -103,7 +103,7 @@ sub sql_err {
 
 sub connect_ok {
     ok my $dbo = connect_dbo(@_), "Connect to $dbd_name" or die $DBI::errstr;
-    isa_ok $dbo, "DBIx::DBO::DBD::$dbd", '$dbo';
+    isa_ok $dbo, "DBIx::DBO::DBD::${dbd}::Handle", '$dbo';
     return $dbo;
 }
 
