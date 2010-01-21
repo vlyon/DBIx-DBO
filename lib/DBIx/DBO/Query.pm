@@ -27,7 +27,7 @@ sub _new {
     my $proto = shift;
     my $class = ref($proto) || $proto;
     my $me = { DBO => shift, sql => undef };
-    blessed $me->{DBO} and $me->{DBO}->isa('DBIx::DBO') or ouch 'Invalid DBO Object';
+    blessed $me->{DBO} and $me->{DBO}->isa('DBIx::DBO::Handle') or ouch 'Invalid DBO Object';
     ouch 'No table specified in new Query' unless @_;
     bless $me, $class;
 
