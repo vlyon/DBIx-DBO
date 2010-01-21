@@ -117,7 +117,7 @@ sub connect {
         $me->{dbh} = _connect($me->{ConnectArgs}, @_) or return;
         return $me;
     }
-    my $new = { rdbh => undef, ConnectArgs => [], ConnectReadOnlyArgs => [], TransactionDepth => 0 };
+    my $new = { rdbh => undef, ConnectArgs => [], ConnectReadOnlyArgs => [] };
     $new->{dbh} = _connect($new->{ConnectArgs}, @_) or return;
     my $class = $me->_require_dbd_class($new->{dbh}) or return;
     $class->_bless_dbo($new);
@@ -131,7 +131,7 @@ sub connect_readonly {
         $me->{rdbh} = _connect($me->{ConnectReadOnlyArgs}, @_) or return;
         return $me;
     }
-    my $new = { dbh => undef, ConnectArgs => [], ConnectReadOnlyArgs => [], TransactionDepth => 0 };
+    my $new = { dbh => undef, ConnectArgs => [], ConnectReadOnlyArgs => [] };
     $new->{rdbh} = _connect($new->{ConnectReadOnlyArgs}, @_) or return;
     my $class = $me->_require_dbd_class($new->{rdbh}) or return;
     $class->_bless_dbo($new);
