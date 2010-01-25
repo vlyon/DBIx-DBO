@@ -130,14 +130,8 @@ Both connect & connect_readonly can be called on a $dbo object without that resp
 
 sub connect {
     my $me = shift;
-    if (blessed $me and $me->isa('DBIx::DBO::Handle')) {
-        ouch 'DBO is already connected' if $me->{dbh};
-        $me->_check_driver($_[0]) if @_;
-        $me->{dbh} = _connect($me->{ConnectArgs}, @_) or return;
-        return $me;
-    }
     my $new = { rdbh => undef, ConnectArgs => [], ConnectReadOnlyArgs => [] };
-    $new->{dbh} = _connect($new->{ConnectArgs}, @_) or return;
+    $new->{dbh} = $me->_connect($new->{ConnectArgs}, @_) or return;
     my $class = $me->_require_dbd_class($new->{dbh}) or return;
     $class .= '::Handle';
     $class->_bless_dbo($new);
@@ -145,17 +139,36 @@ sub connect {
 
 sub connect_readonly {
     my $me = shift;
-    if (blessed $me and $me->isa('DBIx::DBO::Handle')) {
-        $me->{rdbh}->disconnect if $me->{rdbh};
-        $me->_check_driver($_[0]) if @_;
-        $me->{rdbh} = _connect($me->{ConnectReadOnlyArgs}, @_) or return;
-        return $me;
-    }
     my $new = { dbh => undef, ConnectArgs => [], ConnectReadOnlyArgs => [] };
-    $new->{rdbh} = _connect($new->{ConnectReadOnlyArgs}, @_) or return;
+    $new->{rdbh} = $me->_connect($new->{ConnectReadOnlyArgs}, @_) or return;
     my $class = $me->_require_dbd_class($new->{rdbh}) or return;
     $class .= '::Handle';
     $class->_bless_dbo($new);
+}
+
+sub _connect {
+    my $me = shift;
+    my $conn = shift;
+    if (@_) {
+        my ($dsn, $user, $auth, $attr) = @_;
+        my %attr = %$attr if ref($attr) eq 'HASH';
+
+### Add a stack trace to PrintError & RaiseError
+        $attr{HandleError} = sub {
+            if ($Config{_Debug_SQL} > 1) {
+                $_[0] = Carp::longmess($_[0]);
+                return 0;
+            }
+            oops $_[1]->errstr if $_[1]->{PrintError};
+            ouch $_[1]->errstr if $_[1]->{RaiseError};
+            return 1;
+        } unless exists $attr{HandleError};
+
+### AutoCommit is always on
+        %attr = (PrintError => 0, RaiseError => 1, %attr, AutoCommit => 1);
+        @$conn = ($dsn, $user, $auth, \%attr);
+    }
+    DBI->connect(@$conn);
 }
 
 sub _require_dbd_class {
@@ -204,42 +217,6 @@ sub _set_inheritance {
         eval "package ${me}::$_" for qw(Common Handle Table Query Row);
     }
 }
-
-sub _check_driver {
-    my $me = shift;
-    my $dsn = shift;
-    my $driver = DBI->parse_dsn($dsn) or
-        ouch "Can't connect to data source '$dsn' because I can't work out what driver to use " .
-            "(it doesn't seem to contain a 'dbi:driver:' prefix and the DBI_DRIVER env var is not set)";
-    ref $me eq 'DBIx::DBO::'.$driver or
-        ouch "Can't connect to the data source '$dsn'\n" .
-            "The read-write and read-only connections must use the same DBI driver";
-}
-
-sub _connect {
-    my $conn = shift;
-    if (@_) {
-        my ($dsn, $user, $auth, $attr) = @_;
-        my %attr = %$attr if ref($attr) eq 'HASH';
-
-### Add a stack trace to PrintError & RaiseError
-        $attr{HandleError} = sub {
-            if ($Config{_Debug_SQL} > 1) {
-                $_[0] = Carp::longmess($_[0]);
-                return 0;
-            }
-            oops $_[1]->errstr if $_[1]->{PrintError};
-            ouch $_[1]->errstr if $_[1]->{RaiseError};
-            return 1;
-        } unless exists $attr{HandleError};
-
-### AutoCommit is always on
-        %attr = (PrintError => 0, RaiseError => 1, %attr, AutoCommit => 1);
-        @$conn = ($dsn, $user, $auth, \%attr);
-    }
-    DBI->connect(@$conn);
-}
-
 
 1;
 

@@ -30,18 +30,51 @@ sub config {
     return $val;
 }
 
+sub connect {
+    my $me = shift;
+    ouch 'DBO is already connected' if $me->{dbh};
+    $me->_check_driver($_[0]) if @_;
+    $me->{dbh} = $me->_reconnect($me->{ConnectArgs}, @_) or return;
+    return $me;
+}
+
+sub connect_readonly {
+    my $me = shift;
+    $me->{rdbh}->disconnect if $me->{rdbh};
+    $me->_check_driver($_[0]) if @_;
+    $me->{rdbh} = $me->_reconnect($me->{ConnectReadOnlyArgs}, @_) or return;
+    return $me;
+}
+
+sub _check_driver {
+    my $me = shift;
+    my $dsn = shift;
+    my $driver = (DBI->parse_dsn($dsn))[1] or
+        ouch "Can't connect to data source '$dsn' because I can't work out what driver to use " .
+            "(it doesn't seem to contain a 'dbi:driver:' prefix and the DBI_DRIVER env var is not set)";
+    ref($me) =~ /::DBD::\Q$driver\E::Handle$/ or
+        ouch "Can't connect to the data source '$dsn'\n" .
+            "The read-write and read-only connections must use the same DBI driver";
+}
+
 sub dbh {
     my $me = shift;
     ouch 'Invalid action for a read-only connection' unless $me->{dbh};
     return $me->{dbh} if $me->{dbh}->ping;
-    $me->{dbh} = _connect($me->{ConnectArgs});
+    $me->{dbh} = $me->_reconnect($me->{ConnectArgs});
 }
 
 sub rdbh {
     my $me = shift;
     return $me->dbh unless $me->{rdbh};
     return $me->{rdbh} if $me->{rdbh}->ping;
-    $me->{rdbh} = _connect($me->{ConnectReadOnlyArgs});
+    $me->{rdbh} = $me->_reconnect($me->{ConnectReadOnlyArgs});
+}
+
+sub _reconnect {
+    my $class = ref(shift);
+    $class =~ s/::DBD::\w+::Handle$//;
+    $class->_connect(@_);
 }
 
 =head2 selectrow_array
@@ -159,7 +192,7 @@ Create a new table object for the table specified.
 
 sub table {
     my $class = ref($_[0]);
-    $class =~ s/\w+$/Table/;
+    $class =~ s/Handle$/Table/;
     $class->_new(@_);
 }
 
@@ -177,7 +210,7 @@ In list context table objects will also be returned for each table specified.
 
 sub query {
     my $class = ref($_[0]);
-    $class =~ s/\w+$/Query/;
+    $class =~ s/Handle$/Query/;
     $class->_new(@_);
 }
 
@@ -192,7 +225,7 @@ Create a new row object.
 
 sub row {
     my $class = ref($_[0]);
-    $class =~ s/\w+$/Row/;
+    $class =~ s/Handle$/Row/;
     $class->_new(@_);
 }
 
