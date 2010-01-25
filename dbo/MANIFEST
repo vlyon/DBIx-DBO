@@ -12,9 +12,10 @@ lib/DBIx/DBO/Table.pm
 MANIFEST
 README
 t/01-load.t
-t/02-sqlite.t
+t/02-subclass.t
 t/03-mysql.t
 t/04-postgresql.t
+t/05-sqlite.t
 t/99-dbm.t
 t/pod-coverage.t
 t/pod.t

@@ -132,8 +132,11 @@ sub connect {
     my $me = shift;
     my $new = { rdbh => undef, ConnectArgs => [], ConnectReadOnlyArgs => [] };
     $new->{dbh} = $me->_connect($new->{ConnectArgs}, @_) or return;
-    my $class = $me->_require_dbd_class($new->{dbh}) or return;
-    $class .= '::Handle';
+    my $class = $me->_require_dbd_class($new->{dbh}{Driver}{Name});
+    unless ($class) {
+        $new->{dbh}->set_err('', $@);
+        return;
+    }
     $class->_bless_dbo($new);
 }
 
@@ -141,8 +144,11 @@ sub connect_readonly {
     my $me = shift;
     my $new = { dbh => undef, ConnectArgs => [], ConnectReadOnlyArgs => [] };
     $new->{rdbh} = $me->_connect($new->{ConnectReadOnlyArgs}, @_) or return;
-    my $class = $me->_require_dbd_class($new->{rdbh}) or return;
-    $class .= '::Handle';
+    my $class = $me->_require_dbd_class($new->{rdbh}{Driver}{Name});
+    unless ($class) {
+        $new->{rdbh}->set_err('', $@);
+        return;
+    }
     $class->_bless_dbo($new);
 }
 
@@ -173,19 +179,15 @@ sub _connect {
 
 sub _require_dbd_class {
     my $me = shift;
-    my $dbh = shift;
-    my $dbd = $dbh->{Driver}{Name};
+    my $dbd = shift;
     my $class = $me.'::DBD::'.$dbd;
 
-    __PACKAGE__->_require_dbd_class($dbh) or return if $me ne __PACKAGE__;
+    __PACKAGE__->_require_dbd_class($dbd) or return if $me ne __PACKAGE__;
 
     my @warn;
     {
         local $SIG{__WARN__} = sub { push @warn, join '', @_ };
-        if (eval "require $class") {
-            $me->_set_inheritance($dbd);
-            return $class;
-        }
+        return $me->_set_inheritance($dbd) if eval "require $class";
     }
 
     (my $file = $class.'.pm') =~ s'::'/'g;
@@ -194,14 +196,13 @@ sub _require_dbd_class {
         (my $err = $@) =~ s/\n.*$//; # Remove the last line
         chomp @warn;
         chomp $err;
-        $dbh->set_err('', join("\n", "Can't load $dbd driver", @warn, $err));
+        $@ = join "\n", "Can't load $dbd driver", @warn, $err;
         return;
     }
 
     delete $INC{$file};
     $INC{$file} = 1;
-    $me->_set_inheritance($dbd);
-    return $class;
+    return $me->_set_inheritance($dbd);
 }
 
 sub _set_inheritance {
@@ -216,6 +217,7 @@ sub _set_inheritance {
         push @{$class.'::'.$_.'::ISA'}, __PACKAGE__.'::DBD::'.$dbd.'::'.$_ for qw(Handle Table Query Row);
         eval "package ${me}::$_" for qw(Common Handle Table Query Row);
     }
+    return $class.'::Handle';
 }
 
 1;
