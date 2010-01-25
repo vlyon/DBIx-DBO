@@ -164,17 +164,15 @@ sub _require_dbd_class {
     my $dbd = $dbh->{Driver}{Name};
     my $class = $me.'::DBD::'.$dbd;
 
-    # Set inheritance for all dbd classes
-    {
-        no strict 'refs';
-        @{$class.'::Common::ISA'} = ($me.'::Common');
-        @{$class.'::'.$_.'::ISA'} = ($me.'::'.$_, $class.'::Common') for qw(Handle Table Query Row);
-    }
+    __PACKAGE__->_require_dbd_class($dbh) or return if $me ne __PACKAGE__;
 
     my @warn;
     {
         local $SIG{__WARN__} = sub { push @warn, join '', @_ };
-        return $class if eval "require $class";
+        if (eval "require $class") {
+            $me->_set_inheritance($dbd);
+            return $class;
+        }
     }
 
     (my $file = $class.'.pm') =~ s'::'/'g;
@@ -189,7 +187,22 @@ sub _require_dbd_class {
 
     delete $INC{$file};
     $INC{$file} = 1;
+    $me->_set_inheritance($dbd);
     return $class;
+}
+
+sub _set_inheritance {
+    my $me = shift;
+    my $dbd = shift;
+    my $class = $me.'::DBD::'.$dbd;
+
+    no strict 'refs';
+    @{$class.'::Common::ISA'} = ($me.'::Common');
+    @{$class.'::'.$_.'::ISA'} = ($me.'::'.$_, $class.'::Common') for qw(Handle Table Query Row);
+    if ($me ne __PACKAGE__) {
+        push @{$class.'::'.$_.'::ISA'}, __PACKAGE__.'::DBD::'.$dbd.'::'.$_ for qw(Handle Table Query Row);
+        eval "package ${me}::$_" for qw(Common Handle Table Query Row);
+    }
 }
 
 sub _check_driver {
