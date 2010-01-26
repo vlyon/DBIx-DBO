@@ -91,7 +91,7 @@ sub import {
 sub sql_err {
     my $obj = shift;
 
-    my $errstr = $DBI::errstr;
+    my $errstr = $DBI::errstr or return;
     my ($cmd, $sql, @bind) = @{$obj->_last_sql};
     $sql =~ s/^/  /mg;
     my @err = ('SQL command failed:', $sql.';');
@@ -244,7 +244,7 @@ sub row_methods {
 
     is $$r->{array}, undef, 'Row is empty';
 
-    ok $r->load(id => 2, name => 'Jane Smith'), 'Method DBIx::DBO::Row->load' or $DBI::errstr && diag sql_err($r);
+    ok $r->load(id => 2, name => 'Jane Smith'), 'Method DBIx::DBO::Row->load' or diag sql_err($r);
     is_deeply $$r->{array}, [ 2, 'Jane Smith' ], 'Row loaded correctly';
 
 $r->config(DEBUG_SQL => 1);
@@ -367,33 +367,34 @@ sub join_methods {
     $q->order_by({ COL => $t1 ** 'name', ORDER => 'DESC' });
     $q->where($t1 ** 'name', '<', $t2 ** 'name', FORCE => 'OR');
     $q->where($t1 ** 'name', '>', $t2 ** 'name', FORCE => 'OR');
-    my $r = $q->fetch or diag sql_err($q);;
-    is_deeply \@$r, [ 1, 'John Doe', 2, 'Jane Smith' ], 'JOIN ON';
+    my $r;
+    SKIP: {
+        $r = $q->fetch or diag sql_err($q) or fail 'JOIN ON' or skip 'No Left Join', 1;
 
-    $r->load($t1 ** id => 2) or $DBI::errstr && diag sql_err($r);
-    is_deeply \@$r, [ 2, 'Jane Smith', 4, 'James Bond' ], 'Method DBIx::DBO::Row->load';
+        is_deeply \@$r, [ 1, 'John Doe', 2, 'Jane Smith' ], 'JOIN ON';
+        $r->load($t1 ** id => 2) or diag sql_err($r);
+        is_deeply \@$r, [ 2, 'Jane Smith', 4, 'James Bond' ], 'Method DBIx::DBO::Row->load';
+    }
 
     ($q, $t1) = $dbo->query($table);
     $t2 = $q->join_table($table, 'left');
-    $q->join_on($t2, $t1 ** 'id', '=', { FUNC => '?/2', COL => $t2 ** 'id' });
+    $q->join_on($t2, $t1 ** 'id', '=', { FUNC => '?/2.0', COL => $t2 ** 'id' });
     $q->order_by({ COL => $t1 ** 'name', ORDER => 'DESC' });
-    $q->limit(3);
-    $r = $q->fetch or diag sql_err($q);;
-    is_deeply \@$r, [ 5, 'Vernon Lyon', undef, undef ], 'LEFT JOIN';
+    $q->limit(1, 3);
 
-    is $r->_column_idx($t2 ** 'id'), 2, 'Method DBIx::DBO::Row->_column_idx';
-    is $r->value($t2 ** 'id'), undef, 'Method DBIx::DBO::Row->value';
-
-    # Update the LEFT JOINed row
     SKIP: {
-        skip "Mutli-table UPDATE is not supported by $dbd_name", 1 if $skip_multi;
-        ok $r->update($t1 ** 'name' => 'Vernon Wayne Lyon'), 'Method DBIx::DBO::Row->update' or diag sql_err($r);
-    }
+        $r = $q->fetch or diag sql_err($q) or fail 'LEFT JOIN' or skip 'No Left Join', 3;
 
-#my $a = $q->arrayref or diag sql_err($q);
-#warn $q->sql;
-#Dump($a, 'arrayref');
-#Dump($$r->{build_data}, 'build_data');
+        is_deeply \@$r, [ 4, 'James Bond', undef, undef ], 'LEFT JOIN';
+        is $r->_column_idx($t2 ** 'id'), 2, 'Method DBIx::DBO::Row->_column_idx';
+        is $r->value($t2 ** 'id'), undef, 'Method DBIx::DBO::Row->value';
+
+        # Update the LEFT JOINed row
+        SKIP: {
+            skip "Mutli-table UPDATE is not supported by $dbd_name", 1 if $skip_multi;
+            ok $r->update($t1 ** 'name' => 'Vernon Wayne Lyon'), 'Method DBIx::DBO::Row->update' or diag sql_err($r);
+        }
+    }
 
     $q->finish;
 }
