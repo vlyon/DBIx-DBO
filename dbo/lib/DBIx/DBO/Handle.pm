@@ -135,7 +135,11 @@ sub _get_table_schema {
     $q_schema =~ s/([\\_%])/\\$1/g if defined $q_schema;
     $q_table =~ s/([\\_%])/\\$1/g;
 
-    my $info = $me->rdbh->table_info(undef, $q_schema, $q_table)->fetchall_arrayref;
+    # First try just these types
+    my $info = $me->rdbh->table_info(undef, $q_schema, $q_table,
+        'TABLE,VIEW,GLOBAL TEMPORARY,LOCAL TEMPORARY,SYSTEM TABLE')->fetchall_arrayref;
+    # Then if we found nothing, try any type
+    $info = $me->rdbh->table_info(undef, $q_schema, $q_table)->fetchall_arrayref if $info and @$info == 0;
     ouch 'Invalid table: '.$me->_qi($table) unless $info and @$info == 1 and $info->[0][2] eq $table;
     return $info->[0][1];
 }
@@ -152,10 +156,9 @@ sub _get_table_info {
     my %h;
     $h{Column_Idx}{$_->{COLUMN_NAME}} = $_->{ORDINAL_POSITION} for @$cols;
     $h{Columns} = [ sort { $h{Column_Idx}{$a} cmp $h{Column_Idx}{$b} } keys %{$h{Column_Idx}} ];
+    $h{PrimaryKeys} = [];
     if (my $keys = $me->rdbh->primary_key_info(undef, $schema, $table)) {
-        $h{PrimaryKeys} = [ map $cols->[$_->{KEY_SEQ} - 1]{COLUMN_NAME}, @{$keys->fetchall_arrayref({})} ];
-    } else {
-        $h{PrimaryKeys} = [];
+        $h{PrimaryKeys}[$_->{KEY_SEQ} - 1] = $_->{COLUMN_NAME} for @{$keys->fetchall_arrayref({})};
     }
     $me->{TableInfo}{$schema // ''}{$table} = \%h;
 }

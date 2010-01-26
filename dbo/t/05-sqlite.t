@@ -3,11 +3,11 @@ use warnings;
 
 # Create the DBO (2 tests)
 my $dbo;
-use Test::DBO SQLite => 'SQLite', tests => 58, tempdir => 1, connect_ok => [\$dbo];
+use Test::DBO SQLite => 'SQLite', tests => 60, tempdir => 1, connect_ok => [\$dbo];
 
 my $test_tbl = $Test::DBO::prefix.'_tbl';
 
-# Table methods: do, select* (13 tests)
+# Table methods: do, select* (15 tests)
 my $t = Test::DBO::basic_methods($dbo, undef, $test_tbl);
 
 # Advanced table methods: insert, update, delete (2 tests)
