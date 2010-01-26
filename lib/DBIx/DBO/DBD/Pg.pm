@@ -13,7 +13,11 @@ sub _get_table_schema {
     $q_schema =~ s/([\\_%])/\\$1/g if defined $q_schema;
     $q_table =~ s/([\\_%])/\\$1/g;
 
-    my $info = $me->rdbh->table_info(undef, $q_schema, $q_table)->fetchall_arrayref({});
+    # First try just these types
+    my $info = $me->rdbh->table_info(undef, $q_schema, $q_table,
+        'TABLE,VIEW,GLOBAL TEMPORARY,LOCAL TEMPORARY,SYSTEM TABLE')->fetchall_arrayref({});
+    # Then if we found nothing, try any type
+    $info = $me->rdbh->table_info(undef, $q_schema, $q_table)->fetchall_arrayref if $info and @$info == 0;
     ouch 'Invalid table: '.$me->_qi($table) unless $info and @$info == 1 and $info->[0]{pg_table} eq $table;
     return $info->[0]{pg_schema};
 }
@@ -34,6 +38,8 @@ sub _get_table_info {
     $h{Column_Idx}{$_->{pg_column}} = $_->{ORDINAL_POSITION} for @$cols;
     $h{Columns} = [ sort { $h{Column_Idx}{$a} cmp $h{Column_Idx}{$b} } keys %{$h{Column_Idx}} ];
     if (my $keys = $me->rdbh->primary_key_info(undef, $schema, $table)) {
+        # In Pg the KEY_SEQ is actually the column index! Rows returned are in key seq order
+        # And the column names are quoted so we use the pg_column names instead
         $h{PrimaryKeys} = [ map $cols->[$_->{KEY_SEQ} - 1]{pg_column}, @{$keys->fetchall_arrayref({})} ];
     } else {
         $h{PrimaryKeys} = [];

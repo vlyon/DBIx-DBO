@@ -120,65 +120,89 @@ sub basic_methods {
     my $schema = shift;
     my $table = shift;
     my $quoted_table = $dbo->_qi($schema, $table);
+    my $t;
 
-    SKIP: {
-        # Create a test table
-        ok $dbo->do("CREATE TABLE $quoted_table (id INT, name TEXT)"), 'Method DBIx::DBO->do'
-            or diag sql_err($dbo) or skip "Can't create test table $quoted_table", 8;
-
-        # Insert data
-        $dbo->do("INSERT INTO $quoted_table VALUES (1, 'John Doe')") or diag sql_err($dbo);
-        $dbo->do("INSERT INTO $quoted_table VALUES (?, ?)", undef, 2, 'Jane Smith') or diag sql_err($dbo);
-
-        # Check the DBO select* methods
-        my $rv = [];
-        @$rv = $dbo->selectrow_array("SELECT * FROM $quoted_table") or diag sql_err($dbo);
-        is_deeply $rv, [1,'John Doe'], 'Method DBIx::DBO->selectrow_array';
-
-        $rv = $dbo->selectrow_arrayref("SELECT * FROM $quoted_table") or diag sql_err($dbo);
-        is_deeply $rv, [1,'John Doe'], 'Method DBIx::DBO->selectrow_arrayref';
-
-        $rv = $dbo->selectall_arrayref("SELECT * FROM $quoted_table") or diag sql_err($dbo);
-        is_deeply $rv, [[1,'John Doe'],[2,'Jane Smith']], 'Method DBIx::DBO->selectall_arrayref';
+    # Create a test table with a multi-column primary key
+    if ($dbo->do("CREATE TABLE $quoted_table (name TEXT, id INT, type VARCHAR(8), PRIMARY KEY (type, id))")) {
+        pass 'Create a test table';
 
         # Create a table object
-        my $t = $dbo->table([$schema, $table]);
+        $t = $dbo->table([$schema, $table]);
         isa_ok $t, 'DBIx::DBO::Table', '$t';
 
-        # Insert via table object
-        $rv = $t->insert(id => 3, name => 'Uncle Arnie') or diag sql_err($t);
-        ok $rv, 'Method DBIx::DBO::Table->insert';
+        # Check the Primary Keys
+        is_deeply $t->{PrimaryKeys}, ['type', 'id'], 'Check PrimaryKeys';
 
-        # Create a column object
-        my $c = $t->column('id');
-        isa_ok $c, 'DBIx::DBO::Column', '$c';
-
-        # Advanced insert using a column object
-        $rv = $t->insert($c => {FUNC => '4'}, name => \"'James Bond'") or diag sql_err($t);
-        ok $rv, 'Method DBIx::DBO::Table->insert';
-
-        # Fetch one value from the Table
-        is $t->fetch_value($t ** 'name', id => 3), 'Uncle Arnie', 'Method DBIx::DBO::Table->fetch_value';
-
-        # Fetch one value from the Table
-        is_deeply $t->fetch_hash(id => 3), {id=>3,name=>'Uncle Arnie'}, 'Method DBIx::DBO::Table->fetch_hash';
-
-        # Fetch one value from the Table
-        my $r = $t->fetch_row(id => 3);
-        is $r->{name}, 'Uncle Arnie', 'Method DBIx::DBO::Table->fetch_row';
-
-        # Fetch a column arrayref from the Table
-        is_deeply $t->fetch_column($t ** 'name', id => 3), ['Uncle Arnie'], 'Method DBIx::DBO::Table->fetch_column';
-
-        # Delete via table object
-        $rv = $t->delete(id => 3) or diag sql_err($t);
-        is $rv, 1, 'Method DBIx::DBO::Table->delete';
-
-        # Remove the created table during cleanup
-        push @_cleanup_sql, "DROP TABLE $quoted_table";
-
-        return $t;
+        # Recreate our test table
+        $dbo->do("DROP TABLE $quoted_table") && $dbo->do("CREATE TABLE $quoted_table (id INT, name TEXT)")
+            or diag sql_err($dbo) or die "Can't recreate the test table!\n";
+        $dbo->_get_table_info($t->{Schema}, $t->{Name});
+        $t = $dbo->table([$schema, $table]);
     }
+    else {
+        diag sql_err($dbo);
+        SKIP: {
+            skip "Can't create a multi-column primary key", 1;
+        }
+
+        # Create our test table
+        ok $dbo->do("CREATE TABLE $quoted_table (id INT, name TEXT)"), 'Create our test table'
+            or diag sql_err($dbo) or die "Can't create the test table!\n";
+
+        # Create our table object
+        $t = $dbo->table([$schema, $table]);
+        isa_ok $t, 'DBIx::DBO::Table', '$t';
+    }
+    pass 'Method DBIx::DBO->do';
+
+    # Insert data
+    $dbo->do("INSERT INTO $quoted_table VALUES (1, 'John Doe')") or diag sql_err($dbo);
+    $dbo->do("INSERT INTO $quoted_table VALUES (?, ?)", undef, 2, 'Jane Smith') or diag sql_err($dbo);
+
+    # Check the DBO select* methods
+    my $rv = [];
+    @$rv = $dbo->selectrow_array("SELECT * FROM $quoted_table") or diag sql_err($dbo);
+    is_deeply $rv, [1,'John Doe'], 'Method DBIx::DBO->selectrow_array';
+
+    $rv = $dbo->selectrow_arrayref("SELECT * FROM $quoted_table") or diag sql_err($dbo);
+    is_deeply $rv, [1,'John Doe'], 'Method DBIx::DBO->selectrow_arrayref';
+
+    $rv = $dbo->selectall_arrayref("SELECT * FROM $quoted_table") or diag sql_err($dbo);
+    is_deeply $rv, [[1,'John Doe'],[2,'Jane Smith']], 'Method DBIx::DBO->selectall_arrayref';
+
+    # Insert via table object
+    $rv = $t->insert(id => 3, name => 'Uncle Arnie') or diag sql_err($t);
+    ok $rv, 'Method DBIx::DBO::Table->insert';
+
+    # Create a column object
+    my $c = $t->column('id');
+    isa_ok $c, 'DBIx::DBO::Column', '$c';
+
+    # Advanced insert using a column object
+    $rv = $t->insert($c => {FUNC => '4'}, name => \"'James Bond'") or diag sql_err($t);
+    ok $rv, 'Method DBIx::DBO::Table->insert';
+
+    # Fetch one value from the Table
+    is $t->fetch_value($t ** 'name', id => 3), 'Uncle Arnie', 'Method DBIx::DBO::Table->fetch_value';
+
+    # Fetch one value from the Table
+    is_deeply $t->fetch_hash(id => 3), {id=>3,name=>'Uncle Arnie'}, 'Method DBIx::DBO::Table->fetch_hash';
+
+    # Fetch one value from the Table
+    my $r = $t->fetch_row(id => 3);
+    is $r->{name}, 'Uncle Arnie', 'Method DBIx::DBO::Table->fetch_row';
+
+    # Fetch a column arrayref from the Table
+    is_deeply $t->fetch_column($t ** 'name', id => 3), ['Uncle Arnie'], 'Method DBIx::DBO::Table->fetch_column';
+
+    # Delete via table object
+    $rv = $t->delete(id => 3) or diag sql_err($t);
+    is $rv, 1, 'Method DBIx::DBO::Table->delete';
+
+    # Remove the created table during cleanup
+    push @_cleanup_sql, "DROP TABLE $quoted_table";
+
+    return $t;
 }
 
 sub advanced_table_methods {
@@ -223,6 +247,7 @@ sub row_methods {
     ok $r->load(id => 2, name => 'Jane Smith'), 'Method DBIx::DBO::Row->load' or $DBI::errstr && diag sql_err($r);
     is_deeply $$r->{array}, [ 2, 'Jane Smith' ], 'Row loaded correctly';
 
+$r->config(DEBUG_SQL => 1);
     is $r->update(name => 'Someone Else'), 1, 'Method DBIx::DBO::Row->update' or diag sql_err($r);
     is $$r->{array}, undef, 'Row is empty again';
     is_deeply \@{$r->load(id => 2)}, [ 2, 'Someone Else' ], 'Row updated correctly' or diag sql_err($r);
