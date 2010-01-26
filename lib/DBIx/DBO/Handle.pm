@@ -170,15 +170,16 @@ sub table_info {
 
     if (blessed $table and $table->isa('DBIx::DBO::Table')) {
         ($schema, $table) = @$table{qw(Schema Name)};
-        return ($schema, $table, $me->{TableInfo}{$schema // ''}{$table});
-    }
-    if (ref $table eq 'ARRAY') {
-        ($schema, $table) = @$table;
-    }
-    $schema //= $me->_get_table_schema($schema, $table);
+    } else {
+        if (ref $table eq 'ARRAY') {
+            ($schema, $table) = @$table;
+        } elsif ($table =~ /\./) {
+            # TODO: Better splitting of: schema.table or `schema`.`table` or "schema"."table"@"catalog" or ...
+            ($schema, $table) = split /\./, $table, 2;
+        }
+        $schema //= $me->_get_table_schema($schema, $table);
 
-    unless (exists $me->{TableInfo}{$schema // ''}{$table}) {
-        $me->_get_table_info($schema, $table);
+        $me->_get_table_info($schema, $table) unless exists $me->{TableInfo}{$schema // ''}{$table};
     }
     return ($schema, $table, $me->{TableInfo}{$schema // ''}{$table});
 }
