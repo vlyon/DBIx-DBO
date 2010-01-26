@@ -347,13 +347,23 @@ sub order_by {
     }
 }
 
+=head2 limit
+
+  $query->limit;
+  $query->limit($rows);
+  $query->limit($rows, $offset);
+
+Limit the maximum number of rows returned to $rows, optionally skipping the first $offset rows.
+When called without arguments or if $rows is undefined, the limit is removed.
+
+=cut
+
 sub limit {
     my ($me, $rows, $offset) = @_;
     undef $me->{sql};
     undef $me->{build_data}{limit};
     return undef $me->{build_data}{LimitOffset} unless defined $rows;
-    eval { use warnings FATAL => 'numeric'; $rows+=0; $offset+=0 };
-    ouch 'Non-numeric arguments in limit' if $@;
+    /^\d+$/ or ouch "Invalid argument '$_' in limit" for grep defined, $rows, $offset;
     @{$me->{build_data}{LimitOffset}} = ($rows, $offset);
 }
 
