@@ -2,7 +2,8 @@ use strict;
 use warnings;
 use DBD::SQLite 1.27;
 
-package DBIx::DBO::DBD::SQLite::Handle;
+package # hide from PAUSE
+    DBIx::DBO::DBD::SQLite::Handle;
 use DBIx::DBO::Common;
 
 sub _get_table_schema {
@@ -21,7 +22,8 @@ sub _get_table_schema {
     return $info->[0][1];
 }
 
-package DBIx::DBO::DBD::SQLite::Query;
+package # hide from PAUSE
+    DBIx::DBO::DBD::SQLite::Query;
 use DBIx::DBO::Common;
 
 sub fetch {

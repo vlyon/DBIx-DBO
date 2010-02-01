@@ -13,6 +13,22 @@ use warnings;
 Get or set the global or dbo config settings.
 When setting an option, the previous value is returned.
 
+=head2 dbh
+
+The read-write DBI handle.
+
+=head2 rdbh
+
+The read-only DBI handle, or if there is no read-only connection, the read-write DBI handle.
+
+=head2 do
+
+  $dbo->do($statement)         or die $dbo->dbh->errstr;
+  $dbo->do($statement, \%attr) or die $dbo->dbh->errstr;
+  $dbo->do($statement, \%attr, @bind_values) or die ...
+
+This provides access to DBI C<do> method. It defaults to using the read-write DBI handle.
+
 =cut
 
 sub config {
@@ -348,6 +364,16 @@ sub _parse_col_val {
     ouch 'No such column: '.$col;
 }
 
+=head2 group_by
+
+  $query->group_by('column');
+  $query->group_by($table ** 'column');
+  $query->group_by({ COL => $table ** 'column', ORDER => 'DESC' });
+
+Group the results by the column(s) listed.
+
+=cut
+
 sub group_by {
     my $me = shift;
     undef $me->{sql};
@@ -358,6 +384,16 @@ sub group_by {
         push @{$me->{build_data}{GroupBy}}, \@group;
     }
 }
+
+=head2 order_by
+
+  $query->order_by('column');
+  $query->order_by($table ** 'column');
+  $query->order_by({ COL => $table ** 'column', ORDER => 'DESC' });
+
+Order the results by the column(s) listed.
+
+=cut
 
 sub order_by {
     my $me = shift;

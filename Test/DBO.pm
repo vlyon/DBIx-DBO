@@ -1,6 +1,7 @@
 use Test::More;
 
-package Test::DBO;
+package # Hide from PAUSE
+    Test::DBO;
 
 use 5.010_000;
 use strict;

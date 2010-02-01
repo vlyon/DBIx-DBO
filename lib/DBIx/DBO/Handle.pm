@@ -12,12 +12,10 @@ sub _bless_dbo {
 
 =head2 config
 
-  $global_setting = DBIx::DBO->config($option)
-  DBIx::DBO->config($option => $global_setting)
-  $dbo_setting = $dbo->config($option)
-  $dbo->config($option => $dbo_setting)
+  $dbo_setting = $dbo->config($option);
+  $dbo->config($option => $dbo_setting);
 
-Get or set the global or dbo config settings.
+Get or set the C<DBIx::DBO::Handle> settings.
 When setting an option, the previous value is returned.
 
 =cut
@@ -29,6 +27,20 @@ sub config {
     $me->{Config}{$opt} = shift if @_;
     return $val;
 }
+
+=head2 connect
+
+  $dbo->connect($data_source, $username, $password, \%attr) or die $DBI::errstr;
+
+Takes the same arguments as L<DBI-E<gt>connect|DBI/"connect"> to add a read-write connection to a database. It will fail if the read-write handle is already connected. It returns the DBIx::DBO object if the connection succeeds or undefined on failure.
+
+=head2 connect_readonly
+
+  $dbo->connect_readonly($data_source, $username, $password, \%attr) or die $DBI::errstr;
+
+Takes the same arguments as C<connect> for a read-only connection to a database. It will replace the read-only handle if it is already connected. It returns the C<DBIx::DBO> object if the connection succeeds or undefined on failure.
+
+=cut
 
 sub connect {
     my $me = shift;
@@ -56,6 +68,24 @@ sub _check_driver {
         ouch "Can't connect to the data source '$dsn'\n" .
             "The read-write and read-only connections must use the same DBI driver";
 }
+
+=head2 dbh
+
+The read-write DBI handle.
+
+=head2 rdbh
+
+The read-only DBI handle, or if there is no read-only connection, the read-write DBI handle.
+
+=head2 do
+
+  $dbo->do($statement)         or die $dbo->dbh->errstr;
+  $dbo->do($statement, \%attr) or die $dbo->dbh->errstr;
+  $dbo->do($statement, \%attr, @bind_values) or die ...
+
+This provides access to DBI C<do> method. It defaults to using the read-write DBI handle.
+
+=cut
 
 sub dbh {
     my $me = shift;

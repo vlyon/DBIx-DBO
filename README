@@ -1,6 +1,6 @@
 DBIx-DBO
 
-An OO interface to SQL queries and results.
+An OO interface to SQL queries and results.  Easily constructs SQL queries, and simplifies processing of the returned data.
 
 
 INSTALLATION

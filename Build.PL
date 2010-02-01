@@ -16,7 +16,6 @@ my $builder = Module::Build->new(
         'DBI' => 1.53,
     },
     add_to_cleanup      => [ 'DBIx-DBO-*' ],
-    create_makefile_pl  => 'traditional',
     meta_add => {
         bugtracker => 'http://rt.cpan.org/NoAuth/Bugs.html?Dist=DBIx-DBO',
         repository => 'http://vlyon.svn.beanstalkapp.com/src/dbo',
