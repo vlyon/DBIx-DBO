@@ -14,6 +14,22 @@ use overload '**' => \&column, fallback => 1;
 Get or set the global or dbo config settings.
 When setting an option, the previous value is returned.
 
+=head2 dbh
+
+The read-write DBI handle.
+
+=head2 rdbh
+
+The read-only DBI handle, or if there is no read-only connection, the read-write DBI handle.
+
+=head2 do
+
+  $dbo->do($statement)         or die $dbo->dbh->errstr;
+  $dbo->do($statement, \%attr) or die $dbo->dbh->errstr;
+  $dbo->do($statement, \%attr, @bind_values) or die ...
+
+This provides access to DBI C<do> method. It defaults to using the read-write DBI handle.
+
 =cut
 
 sub config {

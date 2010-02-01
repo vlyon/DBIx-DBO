@@ -1,4 +1,5 @@
-package DBIx::DBO::Common;
+package # hide from PAUSE
+    DBIx::DBO::Common;
 
 use 5.010;
 use strict;
@@ -7,31 +8,8 @@ use Carp;
 use Scalar::Util 'blessed';
 use constant PLACEHOLDER => "\x{b1}\x{a4}\x{221e}";
 
-=head1 NAME
-
-DBIx::DBO::Common - Common routines and variables exported to all DBO classes.
-
-=head1 DESCRIPTION
-
-This module automatically exports ALL the methods and variables for use in the other DBO modules.
-
-=head2 do
-
-  $dbo->do($statement)         or die $dbo->dbh->errstr;
-  $dbo->do($statement, \%attr) or die $dbo->dbh->errstr;
-  $dbo->do($statement, \%attr, @bind_values) or die ...
-
-This provides access to DBI C<do> method.
-
-=head2 dbh
-
-The read-write DBI handle.
-
-=head2 rdbh
-
-The read-only DBI handle, or if there is no read-only connection, the read-write DBI handle.
-
-=cut
+# Common routines and variables exported to all DBO classes.
+# This module automatically exports ALL the methods and variables for use in the other DBO modules.
 
 use subs qw(ouch oops);
 *oops = \&Carp::carp;

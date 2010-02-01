@@ -12,15 +12,11 @@ use DBIx::DBO::Row;
 
 =head1 NAME
 
-DBIx::DBO - An OO interface to SQL queries and results.
-
-=head1 VERSION
-
-Version 0.01
+DBIx::DBO - An OO interface to SQL queries and results.  Easily constructs SQL queries, and simplifies processing of the returned data.
 
 =cut
 
-our $VERSION = '0.01';
+our $VERSION = '0.01_01';
 
 =head1 SYNOPSIS
 
@@ -72,9 +68,9 @@ our $VERSION = '0.01';
 
 =head1 DESCRIPTION
 
-This module provides a convenient and efficient way to access a database. It can construct queries for you and returns the results in an easy to use method.
+This module provides a convenient and efficient way to access a database. It can construct queries for you and returns the results in easy to use methods.
 
-=head1 FUNCTIONS
+=head1 METHODS
 
 =cut
 
@@ -95,8 +91,8 @@ sub import {
 
 =head2 config
 
-  $global_setting = DBIx::DBO->config($option)
-  DBIx::DBO->config($option => $global_setting)
+  $global_setting = DBIx::DBO->config($option);
+  DBIx::DBO->config($option => $global_setting);
 
 Get or set the global config settings.
 When setting an option, the previous value is returned.
@@ -120,9 +116,9 @@ Takes the same arguments as L<DBI-E<gt>connect|DBI/"connect"> for a read-write c
 
 =head2 connect_readonly
 
-Takes the same arguments as C<connect> for a read-only connection to a database. It returns the DBIx::DBO object if the connection succeeds or undefined on failure.
+Takes the same arguments as C<connect> for a read-only connection to a database. It returns the C<DBIx::DBO> object if the connection succeeds or undefined on failure.
 
-Both connect & connect_readonly can be called on a $dbo object without that respective connection to have a DBO with both read-write and read-only connections.
+Both C<connect> & C<connect_readonly> can be called on a C<DBIx::DBO> object to add that respective connection to create a C<DBIx::DBO> with both read-write and read-only connections.
 
   my $dbo = DBIx::DBO->connect($master_dsn, $username, $password, \%attr)
       or die $DBI::errstr;

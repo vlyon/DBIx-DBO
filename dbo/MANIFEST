@@ -6,6 +6,7 @@ lib/DBIx/DBO/DBD/DBM.pm
 lib/DBIx/DBO/DBD/Pg.pm
 lib/DBIx/DBO/DBD/mysql.pm
 lib/DBIx/DBO/DBD/SQLite.pm
+lib/DBIx/DBO/Handle.pm
 lib/DBIx/DBO/Query.pm
 lib/DBIx/DBO/Row.pm
 lib/DBIx/DBO/Table.pm
