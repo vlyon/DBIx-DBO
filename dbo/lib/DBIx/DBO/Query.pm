@@ -181,6 +181,29 @@ sub join_on {
 
 Restrict the query with the condition specified (WHERE clause).
 
+$operator is one of: '=', '<', '>', 'IN', 'NOT IN', 'BETWEEN', 'NOT BETWEEN', ...
+
+$expression can be any of the following:
+    A SCALAR value: 5 or 'hello'
+    A SCALAR reference: \"22 * 3"  (These are passed unqouted in the SQL statement!)
+    An ARRAY reference: [1, 3, 5]  (Used with IN and BETWEEN etc)
+    A Table Column: $table ** 'id' or $table->column('id')
+    A Hash reference: (Described below)
+
+For a more complex where clause the expression can be passed as a hash reference.
+Possibly containing SCALARs, ARRAYs or Table Columns.
+
+  $query->where('name', '=', { FUNC => 'COALESCE(?,?)', VAL => [$name, 'Unknown'] });
+  $query->where('string', '=', { FUNC => "CONCAT('Mr. ',?)", COL => 'name' });
+
+The keys to the hash in a complex expression are:
+
+  VAL       A scalar, scalar reference or an array reference.
+  COL       The name of a column or a Column object.
+  AS        An alias name.
+  FUNC      A string to be inseted into the SQL, possibly containing "?" placeholders.
+  ORDER     To order by a column.
+
 =cut
 
 sub where {
@@ -427,6 +450,15 @@ sub col_arrayref {
     \@ary;
 }
 
+=head2 fetch
+
+  my $row = $query->fetch;
+
+Fetch the next row from the query. This will run/rerun the query if needed.
+Returns a DBIx::DBO::Row object or undefined if there are no more rows.
+
+=cut
+
 sub fetch {
     my $me = shift;
     unless ($me->sth->{Active}) {
@@ -448,11 +480,29 @@ sub fetch {
     ($$row->{array} = $me->{sth}->fetch) ? $me->{Row} : undef %$row;
 }
 
+=head2 row
+
+  my $row = $query->row;
+
+Returns the DBIx::DBO::Row object for the current row from the query
+or an empty DBIx::DBO::Row object if there is no current row.
+
+=cut
+
 sub row {
     my $me = shift;
     $me->sql; # Detach if needed
     $me->{Row} //= $me->{DBO}->row($me);
 }
+
+=head2 run
+
+  $query->run;
+
+Run/rerun the query.
+This is called automatically before fetching the first row.
+
+=cut
 
 sub run {
     my $me = shift;
@@ -483,6 +533,15 @@ sub _bind_cols_to_hash {
     }
 }
 
+=head2 rows
+
+  my $row_count = $query->rows;
+
+Count the number of rows returned.
+Returns undefined if there is an error or the number is unknown.
+
+=cut
+
 sub rows {
     my $me = shift;
     $me->sql; # Ensure the Row_Count is cleared if needed
@@ -501,7 +560,6 @@ sub rows {
   my $row_count = $query->count_rows;
 
 Count the number of rows that would be returned.
-
 Returns undefined if there is an error.
 
 =cut
@@ -546,6 +604,15 @@ sub found_rows {
     $me->{Found_Rows};
 }
 
+=head2 sth
+
+  my $sth = $query->sth;
+
+Reutrns the DBI statement handle from the query.
+This will run/rerun the query if needed.
+
+=cut
+
 sub sth {
     my $me = shift;
     # Ensure the sql is rebuilt if needed
@@ -553,10 +620,26 @@ sub sth {
     $me->{sth} ||= $me->rdbh->prepare($sql);
 }
 
+=head2 finish
+
+  $query->finish;
+
+Calls DBI finish on the statement handle if it is active.
+
+=cut
+
 sub finish {
     my $me = shift;
     $me->{sth}->finish if $me->{sth} and $me->{sth}{Active};
 }
+
+=head2 sql
+
+  my $sql = $query->sql;
+
+Returns the SQL query statement string.
+
+=cut
 
 sub sql {
     my $me = shift;
