@@ -38,8 +38,11 @@ our $VERSION = '0.01';
   # Find records with an 'o' in the name
   $query->where('name', 'LIKE', '%o%');
 
-  # And with an id that is less than 50
-  $query->where('id', '<', 50);
+  # And with an id that is less than 500
+  $query->where('id', '<', 500);
+
+  # Exluding those with an age range from 20 to 29
+  $query->where('age', 'NOT BETWEEN', [20, 29]);
 
   # Return only the first 10 rows
   $query->limit(10);

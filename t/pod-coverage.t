@@ -21,6 +21,7 @@ plan skip_all => "Pod::Coverage $min_pc required for testing POD coverage" if $@
     our @ISA = ('Pod::Coverage');
     my %isa = (
         'DBIx::DBO' => [qw(DBIx::DBO::Common)],
+        'DBIx::DBO::Handle' => [qw(DBIx::DBO DBIx::DBO::Common)],
         'DBIx::DBO::Table' => [qw(DBIx::DBO::Common)],
         'DBIx::DBO::Query' => [qw(DBIx::DBO::Common)],
         'DBIx::DBO::Row' => [qw(DBIx::DBO::Common)],
