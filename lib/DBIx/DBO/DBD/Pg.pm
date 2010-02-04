@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 package # hide from PAUSE
-    DBIx::DBO::DBD::Pg::Handle;
+    DBIx::DBO::DBD::Pg;
 use DBIx::DBO::Common;
 
 sub _get_table_schema {

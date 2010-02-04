@@ -160,9 +160,9 @@ sub _build_from {
     my $h = shift;
     return $h->{from} if defined $h->{from};
     undef @{$h->{From_Bind}};
-    $h->{from} = $me->_build_table(($me->_tables)[0]);
-    for (my $i = 1; $i < $me->_tables; $i++) {
-        $h->{from} .= $h->{Join}[$i].$me->_build_table(($me->_tables)[$i]);
+    $h->{from} = $me->_build_table(($me->tables)[0]);
+    for (my $i = 1; $i < $me->tables; $i++) {
+        $h->{from} .= $h->{Join}[$i].$me->_build_table(($me->tables)[$i]);
         if ($h->{JoinOn}[$i]) {
             $h->{from} .= ' ON '.join(' AND ', $me->_build_where_chunk($h->{From_Bind}, 'OR', $h->{JoinOn}[$i]));
         }
@@ -173,14 +173,14 @@ sub _build_from {
 sub _parse_col {
     my ($me, $col) = @_;
     if (blessed $col and $col->isa('DBIx::DBO::Column')) {
-        for my $tbl ($me->_tables) {
+        for my $tbl ($me->tables) {
             return $col if $col->[0] == $tbl;
         }
         # TODO: Flesh out this ouch a bit
         ouch 'Invalid table';
     }
     ouch 'Invalid column: '.$col if ref $col;
-    for my $tbl ($me->_tables) {
+    for my $tbl ($me->tables) {
         return $tbl->column($col) if exists $tbl->{Column_Idx}{$col};
     }
     ouch 'No such column: '.$col;

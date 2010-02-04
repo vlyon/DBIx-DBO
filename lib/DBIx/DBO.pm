@@ -5,7 +5,6 @@ use strict;
 use warnings;
 use DBI;
 use DBIx::DBO::Common;
-use DBIx::DBO::Handle;
 use DBIx::DBO::Table;
 use DBIx::DBO::Query;
 use DBIx::DBO::Row;
@@ -16,7 +15,7 @@ DBIx::DBO - An OO interface to SQL queries and results.  Easily constructs SQL q
 
 =cut
 
-our $VERSION = '0.01_01';
+our $VERSION = '0.01_03';
 
 =head1 SYNOPSIS
 
@@ -57,18 +56,15 @@ our $VERSION = '0.01_01';
       $row->delete if $record->{id} == 27;
   }
 
-  # Join tables (INNER JOIN)
-  my ($query, $table1, $table2, $table3) = $dbo->query('my_table', 't2', 'third');
-  $query->join_on($table2 ** 'parent_id', '=', $table3 ** 'child_id');
-
-  # Join tables (LEFT JOIN)
-  my ($query, $table1) = $dbo->query('my_table');
-  my $table2 = $query->join_table('another_table', 'LEFT');
-  $query->join_on($table2 ** 'parent_id', '=', $table1 ** 'child_id');
-
 =head1 DESCRIPTION
 
 This module provides a convenient and efficient way to access a database. It can construct queries for you and returns the results in easy to use methods.
+
+Once you've created a C<DBIx::DBO> object using one or both of C<connect> or C<connect_readonly>, you can begin creating C<DBIx::DBO::Query> objects. These are the "workhorse" objects, they encapsulate an entire query with JOINs, WHERE clauses, etc. You need not have to know about what created the Query to be able to use or modify it. This makes it valuable in environments like mod_perl or large projects that prefer an object oreinted approach to data.
+
+The Query is only automatically executed when the data is requested. This is to make it possible to minimise lookups that may not be needed or to delay them as late as possible.
+
+The C<DBIx::DBO::Row> object returned can be treated as both an arrayref or a hashref. The data is aliased for efficient use of memory. C<Row> objects can be updated or deleted, even when created by JOINs (If the DB supports it).
 
 =head1 METHODS
 
@@ -87,24 +83,6 @@ sub import {
             oops "Unknown import option '$opt'";
         }
     }
-}
-
-=head2 config
-
-  $global_setting = DBIx::DBO->config($option);
-  DBIx::DBO->config($option => $global_setting);
-
-Get or set the global config settings.
-When setting an option, the previous value is returned.
-
-=cut
-
-sub config {
-    my $me = shift;
-    my $opt = shift;
-    my $val = $Config{$opt};
-    $Config{$opt} = shift if @_;
-    return $val;
 }
 
 =head2 connect
@@ -129,6 +107,12 @@ Both C<connect> & C<connect_readonly> can be called on a C<DBIx::DBO> object to 
 
 sub connect {
     my $me = shift;
+    if (blessed $me) {
+        ouch 'DBO is already connected' if $me->{dbh};
+        $me->_check_driver($_[0]) if @_;
+        $me->{dbh} = $me->_connect($me->{ConnectArgs}, @_) or return;
+        return $me;
+    }
     my $new = { rdbh => undef, ConnectArgs => [], ConnectReadOnlyArgs => [] };
     $new->{dbh} = $me->_connect($new->{ConnectArgs}, @_) or return;
     my $class = $me->_require_dbd_class($new->{dbh}{Driver}{Name});
@@ -141,6 +125,12 @@ sub connect {
 
 sub connect_readonly {
     my $me = shift;
+    if (blessed $me) {
+        $me->{rdbh}->disconnect if $me->{rdbh};
+        $me->_check_driver($_[0]) if @_;
+        $me->{rdbh} = $me->_connect($me->{ConnectReadOnlyArgs}, @_) or return;
+        return $me;
+    }
     my $new = { dbh => undef, ConnectArgs => [], ConnectReadOnlyArgs => [] };
     $new->{rdbh} = $me->_connect($new->{ConnectReadOnlyArgs}, @_) or return;
     my $class = $me->_require_dbd_class($new->{rdbh}{Driver}{Name});
@@ -149,6 +139,17 @@ sub connect_readonly {
         return;
     }
     $class->_bless_dbo($new);
+}
+
+sub _check_driver {
+    my $me = shift;
+    my $dsn = shift;
+    my $driver = (DBI->parse_dsn($dsn))[1] or
+        ouch "Can't connect to data source '$dsn' because I can't work out what driver to use " .
+            "(it doesn't seem to contain a 'dbi:driver:' prefix and the DBI_DRIVER env var is not set)";
+    ref($me) =~ /::DBD::\Q$driver\E$/ or
+        ouch "Can't connect to the data source '$dsn'\n" .
+            "The read-write and read-only connections must use the same DBI driver";
 }
 
 sub _connect {
@@ -211,12 +212,272 @@ sub _set_inheritance {
 
     no strict 'refs';
     @{$class.'::Common::ISA'} = ($me.'::Common');
-    @{$class.'::'.$_.'::ISA'} = ($me.'::'.$_, $class.'::Common') for qw(Handle Table Query Row);
+    @{$class.'::ISA'} = ($me, $class.'::Common');
+    @{$class.'::'.$_.'::ISA'} = ($me.'::'.$_, $class.'::Common') for qw(Table Query Row);
     if ($me ne __PACKAGE__) {
-        push @{$class.'::'.$_.'::ISA'}, __PACKAGE__.'::DBD::'.$dbd.'::'.$_ for qw(Handle Table Query Row);
-        eval "package ${me}::$_" for qw(Common Handle Table Query Row);
+        push @{$class.'::ISA'}, __PACKAGE__.'::DBD::'.$dbd;
+        push @{$class.'::'.$_.'::ISA'}, __PACKAGE__.'::DBD::'.$dbd.'::'.$_ for qw(Table Query Row);
+        eval "package ${me}";
+        eval "package ${me}::$_" for qw(Common Table Query Row);
     }
-    return $class.'::Handle';
+    return $class;
+}
+
+sub _bless_dbo {
+    my $class = shift;
+    my $new = shift;
+    bless $new, $class;
+}
+
+=head2 dbh
+
+The read-write C<DBI> handle.
+
+=head2 rdbh
+
+The read-only C<DBI> handle, or if there is no read-only connection, the read-write C<DBI> handle.
+
+=head2 do
+
+  $dbo->do($statement)         or die $dbo->dbh->errstr;
+  $dbo->do($statement, \%attr) or die $dbo->dbh->errstr;
+  $dbo->do($statement, \%attr, @bind_values) or die ...
+
+This provides access to L<DBI-E<gt>do|DBI/"do"> method. It defaults to using the read-write C<DBI> handle.
+
+=cut
+
+sub dbh {
+    my $me = shift;
+    ouch 'Invalid action for a read-only connection' unless $me->{dbh};
+    return $me->{dbh} if $me->{dbh}->ping;
+    $me->{dbh} = $me->_connect($me->{ConnectArgs});
+}
+
+sub rdbh {
+    my $me = shift;
+    return $me->dbh unless $me->{rdbh};
+    return $me->{rdbh} if $me->{rdbh}->ping;
+    $me->{rdbh} = $me->_connect($me->{ConnectReadOnlyArgs});
+}
+
+=head2 selectrow_array
+
+  $dbo->selectrow_array($statement, \%attr, @bind_values);
+
+This provides access to L<DBI-E<gt>selectrow_array|DBI/"selectrow_array"> method.
+
+=head2 selectrow_arrayref
+
+  $dbo->selectrow_arrayref($statement, \%attr, @bind_values);
+
+This provides access to L<DBI-E<gt>selectrow_arrayref|DBI/"selectrow_arrayref"> method.
+
+=head2 selectall_arrayref
+
+  $dbo->selectall_arrayref($statement, \%attr, @bind_values);
+
+This provides access to L<DBI-E<gt>selectall_arrayref|DBI/"selectall_arrayref"> method.
+
+=cut
+
+sub selectrow_array {
+    my ($me, $sql, $attr) = splice @_, 0, 3;
+    $me->_sql($sql, @_);
+    $me->rdbh->selectrow_array($sql, $attr, @_);
+}
+
+sub selectrow_arrayref {
+    my ($me, $sql, $attr) = splice @_, 0, 3;
+    $me->_sql($sql, @_);
+    $me->rdbh->selectrow_arrayref($sql, $attr, @_);
+}
+
+sub selectall_arrayref {
+    my ($me, $sql, $attr) = splice @_, 0, 3;
+    $me->_sql($sql, @_);
+    $me->rdbh->selectall_arrayref($sql, $attr, @_);
+}
+
+=head2 table_info
+
+  $dbo->table_info($table);
+  $dbo->table_info([$schema, $table]);
+  $dbo->table_info($table_object);
+
+Returns a hashref of PrimaryKeys and Column_Idx for the table.
+Mainly for internal use.
+
+=cut
+
+sub _get_table_schema {
+    my $me = shift;
+    my $schema = my $q_schema = shift;
+    my $table = my $q_table = shift;
+    ouch 'No table name supplied' unless defined $table and length $table;
+
+    $q_schema =~ s/([\\_%])/\\$1/g if defined $q_schema;
+    $q_table =~ s/([\\_%])/\\$1/g;
+
+    # First try just these types
+    my $info = $me->rdbh->table_info(undef, $q_schema, $q_table,
+        'TABLE,VIEW,GLOBAL TEMPORARY,LOCAL TEMPORARY,SYSTEM TABLE')->fetchall_arrayref;
+    # Then if we found nothing, try any type
+    $info = $me->rdbh->table_info(undef, $q_schema, $q_table)->fetchall_arrayref if $info and @$info == 0;
+    ouch 'Invalid table: '.$me->_qi($table) unless $info and @$info == 1 and $info->[0][2] eq $table;
+    return $info->[0][1];
+}
+
+sub _get_table_info {
+    my $me = shift;
+    my $schema = shift;
+    my $table = shift;
+    ouch 'No table name supplied' unless defined $table and length $table;
+
+    my $cols = $me->rdbh->column_info(undef, $schema, $table, '%')->fetchall_arrayref({});
+    ouch 'Invalid table: '.$me->_qi($table) unless @$cols;
+
+    my %h;
+    $h{Column_Idx}{$_->{COLUMN_NAME}} = $_->{ORDINAL_POSITION} for @$cols;
+    $h{Columns} = [ sort { $h{Column_Idx}{$a} cmp $h{Column_Idx}{$b} } keys %{$h{Column_Idx}} ];
+    $h{PrimaryKeys} = [];
+    if (my $keys = $me->rdbh->primary_key_info(undef, $schema, $table)) {
+        $h{PrimaryKeys}[$_->{KEY_SEQ} - 1] = $_->{COLUMN_NAME} for @{$keys->fetchall_arrayref({})};
+    }
+    $me->{TableInfo}{$schema // ''}{$table} = \%h;
+}
+
+sub table_info {
+    my $me = shift;
+    my $table = shift;
+    my $schema;
+
+    if (blessed $table and $table->isa('DBIx::DBO::Table')) {
+        ($schema, $table) = @$table{qw(Schema Name)};
+    } else {
+        if (ref $table eq 'ARRAY') {
+            ($schema, $table) = @$table;
+        } elsif ($table =~ /\./) {
+            # TODO: Better splitting of: schema.table or `schema`.`table` or "schema"."table"@"catalog" or ...
+            ($schema, $table) = split /\./, $table, 2;
+        }
+        $schema //= $me->_get_table_schema($schema, $table);
+
+        $me->_get_table_info($schema, $table) unless exists $me->{TableInfo}{$schema // ''}{$table};
+    }
+    return ($schema, $table, $me->{TableInfo}{$schema // ''}{$table});
+}
+
+=head2 table
+
+  $dbo->table($table);
+  $dbo->table([$schema, $table]);
+  $dbo->table($table_object);
+
+Create and return a new L<DBIx::DBO::Table> object.
+Tables can be specified by their name or an arrayref of schema and table name or a L<DBIx::DBO::Table> object.
+
+=cut
+
+sub table {
+    my $class = ref($_[0]).'::Table';
+    $class->_new(@_);
+}
+
+=head2 query
+
+  $dbo->query($table, ...);
+  $dbo->query([$schema, $table], ...);
+  $dbo->query($table_object, ...);
+
+Create a new L<DBIx::DBO::Query> object from the tables specified.
+In scalar context, just the C<Query> object will be returned.
+In list context, the C<Query> object and L<DBIx::DBO::Table> objects will be returned for each table specified.
+
+  my ($query, $table1, $table2) = $dbo->query(['my_schema', 'my_table'], 'my_other_table');
+
+=cut
+
+sub query {
+    my $class = ref($_[0]).'::Query';
+    $class->_new(@_);
+}
+
+=head2 row
+
+  $dbo->row($table_object);
+  $dbo->row($query_object);
+
+Create and return a new L<DBIx::DBO::Row> object.
+
+=cut
+
+sub row {
+    my $class = ref($_[0]).'::Row';
+    $class->_new(@_);
+}
+
+=head2 disconnect
+
+Disconnect both the read-write & read-only connections to the database.
+
+=cut
+
+sub disconnect {
+    my $me = shift;
+    if ($me->{dbh}) {
+        $me->{dbh}->disconnect;
+        undef $me->{dbh};
+    }
+    if ($me->{rdbh}) {
+        $me->{rdbh}->disconnect;
+        undef $me->{rdbh};
+    }
+    delete $me->{TableInfo};
+    return;
+}
+
+=head2 config
+
+  $global_setting = DBIx::DBO->config($option);
+  DBIx::DBO->config($option => $global_setting);
+  $dbo_setting = $dbo->config($option);
+  $dbo->config($option => $dbo_setting);
+
+Get or set the global or C<DBIx::DBO> config settings.
+When setting an option, the previous value is returned.
+
+Options include:
+=over
+=item QuoteIdentifier
+Boolean setting to control quoting of SQL identifiers (schema, table and column names).
+Defaults to 1.
+=item _Debug_SQL
+Set to a number 0 - 2 to warn with varying levels of debugging for each SQL command executed.
+Defaults to 0.
+=back
+
+Global options can also be set when C<use>'ing the module:
+
+  use DBIx::DBO QuoteIdentifier => 0, _Debug_SQL => 1;
+
+=cut
+
+sub config {
+    my $me = shift;
+    my $opt = shift;
+    unless (blessed $me) {
+        my $val = $Config{$opt};
+        $Config{$opt} = shift if @_;
+        return $val;
+    }
+    my $val = $me->{Config}{$opt} // $Config{$opt};
+    $me->{Config}{$opt} = shift if @_;
+    return $val;
+}
+
+sub DESTROY {
+    undef %{$_[0]};
 }
 
 1;
@@ -225,48 +486,44 @@ __END__
 
 =head1 AUTHOR
 
-Vernon Lyon, C<< <vlyon at cpan.org> >>
-
-=head1 BUGS
-
-Please report any bugs or feature requests to C<bug-dbix-dbo at rt.cpan.org>, or through the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=DBIx-DBO>.  I will be notified, and then you'll automatically be notified of progress on your bug as I make changes.
-
+Vernon Lyon, C<< <vlyon AT cpan.org> >>
 
 =head1 SUPPORT
 
-You can find documentation for this module with the perldoc command.
-
-    perldoc DBIx::DBO
-
-
-You can also look for information at:
+You can find more information for this module at:
 
 =over 4
 
 =item * RT: CPAN's request tracker
-
 L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=DBIx-DBO>
 
 =item * AnnoCPAN: Annotated CPAN documentation
-
 L<http://annocpan.org/dist/DBIx-DBO>
 
 =item * CPAN Ratings
-
 L<http://cpanratings.perl.org/d/DBIx-DBO>
 
 =item * Search CPAN
-
 L<http://search.cpan.org/dist/DBIx-DBO>
 
 =back
+
+
+=head1 BUGS
+
+Please report any bugs or feature requests to C<bug-dbix-dbo AT rt.cpan.org>, or through the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=DBIx-DBO>.  I will be notified, and then you'll automatically be notified of progress on your bug as I make changes.
 
 
 =head1 COPYRIGHT & LICENSE
 
 Copyright 2009 Vernon Lyon, all rights reserved.
 
-This program is free software; you can redistribute it and/or modify it under the same terms as Perl itself.
+This package is free software; you can redistribute it and/or modify it under the same terms as Perl itself.
+
+
+=head1 SEE ALSO
+
+DBI, DBIx::SearchBuilder.
 
 
 =cut

@@ -3,7 +3,7 @@ use warnings;
 use DBD::SQLite 1.27;
 
 package # hide from PAUSE
-    DBIx::DBO::DBD::SQLite::Handle;
+    DBIx::DBO::DBD::SQLite;
 use DBIx::DBO::Common;
 
 sub _get_table_schema {

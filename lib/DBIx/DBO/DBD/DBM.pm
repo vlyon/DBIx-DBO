@@ -5,7 +5,7 @@ use SQL::Statement;
 die "DBM is not yet supported!\n" unless $ENV{DBO_ALLOW_DBM};
 
 package # hide from PAUSE
-    DBIx::DBO::DBD::DBM::Handle;
+    DBIx::DBO::DBD::DBM;
 use DBIx::DBO::Common;
 
 sub _bless_dbo {

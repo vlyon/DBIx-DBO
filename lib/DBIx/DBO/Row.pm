@@ -8,24 +8,36 @@ use warnings;
 use overload '@{}' => sub {${$_[0]}->{array} || []}, '%{}' => sub {${$_[0]}->{hash}};
 use overload '**' => \&value, fallback => 1;
 
-sub dbh { ${$_[0]}->{DBO}->dbh }
-sub rdbh { ${$_[0]}->{DBO}->rdbh }
+=head1 NAME
 
-=head2 config
+DBIx::DBO::Row - An OO interface to SQL queries and results.  Encapsulates a fetched row of data in an object.
 
-  $parent_setting = $dbo->config($option)
-  $dbo->config($option => $parent_setting)
+=head1 SYNOPSIS
 
-Get or set the parent (if it has one) or dbo or global config settings.
-When setting an option, the previous value is returned.
+  # Create a Row object for the `users` table
+  my $row = $dbo->row('users');
+
+  # Load my record
+  $row->load(login => 'vlyon') or die "Where am I?";
+
+  # Double my salary :)
+  $row->update(salary => {FUNC => '? * 2', COL => 'salary'});
+
+  # Print my email address
+  print $row ** 'email';  # Short for: $row->value('email')
+
+  # Delete my boss
+  $row->load(id => $row ** boss_id)->delete or die "Can't kill the boss";
+
+=head1 METHODS
 
 =head2 dbh
 
-The read-write DBI handle.
+The read-write C<DBI> handle.
 
 =head2 rdbh
 
-The read-only DBI handle, or if there is no read-only connection, the read-write DBI handle.
+The read-only C<DBI> handle, or if there is no read-only connection, the read-write C<DBI> handle.
 
 =head2 do
 
@@ -33,25 +45,23 @@ The read-only DBI handle, or if there is no read-only connection, the read-write
   $dbo->do($statement, \%attr) or die $dbo->dbh->errstr;
   $dbo->do($statement, \%attr, @bind_values) or die ...
 
-This provides access to DBI C<do> method. It defaults to using the read-write DBI handle.
+This provides access to L<DBI-E<gt>do|DBI/"do"> method. It defaults to using the read-write C<DBI> handle.
 
 =cut
 
-sub config {
-    my $me = shift;
-    ($$me->{Parent} // $$me->{DBO})->config(@_);
-}
+sub dbh { ${$_[0]}->{DBO}->dbh }
+sub rdbh { ${$_[0]}->{DBO}->rdbh }
 
 sub _new {
     my $proto = shift;
     my $class = ref($proto) || $proto;
     my $me = \{ DBO => shift, Parent => shift, array => undef, hash => {} };
-    blessed $$me->{DBO} and $$me->{DBO}->isa('DBIx::DBO::Handle') or ouch 'Invalid DBO Object';
+    blessed $$me->{DBO} and $$me->{DBO}->isa('DBIx::DBO') or ouch 'Invalid DBO Object';
     ouch 'Invalid Parent Object' unless defined $$me->{Parent};
     $$me->{Parent} = $$me->{DBO}->table($$me->{Parent}) unless blessed $$me->{Parent};
     _init($me);
     bless $me, $class;
-    return wantarray ? ($me, $me->_tables) : $me;
+    return wantarray ? ($me, $me->tables) : $me;
 }
 
 sub _init {
@@ -84,7 +94,13 @@ sub _copy_build_data {
     }
 }
 
-sub _tables {
+=head2 tables
+
+Return a list of L<DBIx::DBO::Table> objects for this row.
+
+=cut
+
+sub tables {
     my $me = shift;
     @{$$me->{Tables}};
 }
@@ -132,7 +148,7 @@ sub _column_idx {
   $row->value($column)
 
 Return the value in this field.
-$column can be a column name or a column object.
+C<$column> can be a column name or a C<Column> object.
 
 =cut
 
@@ -155,7 +171,7 @@ sub value {
   $row->load(name => 'Bob', status => 'Employed');
 
 Fetch a new row using the where definition specified.
-Returns the Row object if the row is found and loaded successfully.
+Returns the C<Row> object if the row is found and loaded successfully.
 Returns an empty list if there is no row or an error occurs.
 
 =cut
@@ -204,10 +220,10 @@ sub _detach {
   $row->update(name => 'Bob', status => 'Employed');
 
 Updates the current row with the new values specified.
-Returns the number of rows updated or '0E0' for no rows to ensure the value is true,
+Returns the number of rows updated or C<'0E0'> for no rows to ensure the value is true,
 and returns false if there was an error.
 
-Note: If LIMIT is supported on UPDATEs then only the first matching row will be updated
+Note: If C<LIMIT> is supported on C<UPDATE>s then only the first matching row will be updated
 otherwise ALL rows matching the current row will be updated.
 
 =cut
@@ -216,7 +232,7 @@ sub update {
     my $me = shift;
     ouch 'No current record to update!' unless $$me->{array};
     my $build_data = $me->_build_data_matching_this_row;
-    $build_data->{LimitOffset} = [1] if $me->config('LimitRowUpdate') and $me->_tables == 1;
+    $build_data->{LimitOffset} = [1] if $me->config('LimitRowUpdate') and $me->tables == 1;
     my $sql = $me->_build_sql_update($build_data, @_);
 
     # TODO: Reload/update instead of leaving the row empty?
@@ -231,10 +247,10 @@ sub update {
   $row->delete;
 
 Deletes the current row.
-Returns the number of rows deleted or '0E0' for no rows to ensure the value is true,
+Returns the number of rows deleted or C<'0E0'> for no rows to ensure the value is true,
 and returns false if there was an error.
 
-Note: If LIMIT is supported on DELETEs then only the first matching row will be deleted
+Note: If C<LIMIT> is supported on C<DELETE>s then only the first matching row will be deleted
 otherwise ALL rows matching the current row will be deleted.
 
 =cut
@@ -243,7 +259,7 @@ sub delete {
     my $me = shift;
     ouch 'No current record to delete!' unless $$me->{array};
     my $build_data = $me->_build_data_matching_this_row;
-    $build_data->{LimitOffset} = [1] if $me->config('LimitRowDelete') and $me->_tables == 1;
+    $build_data->{LimitOffset} = [1] if $me->config('LimitRowDelete') and $me->tables == 1;
     my $sql = $me->_build_sql_delete($build_data, @_);
 
     undef $$me->{array};
@@ -264,6 +280,21 @@ sub _build_data_matching_this_row {
     );
     $h{From_Bind} = $$me->{build_data}{From_Bind} if exists $$me->{build_data}{From_Bind};
     return \%h;
+}
+
+=head2 config
+
+  $parent_setting = $dbo->config($option)
+  $dbo->config($option => $parent_setting)
+
+Get or set the parent (if it has one) or L<DBO|DBIx::DBO> or global config settings.
+When setting an option, the previous value is returned.
+
+=cut
+
+sub config {
+    my $me = shift;
+    ($$me->{Parent} // $$me->{DBO})->config(@_);
 }
 
 sub DESTROY {
