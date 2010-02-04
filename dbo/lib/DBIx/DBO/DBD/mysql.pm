@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 package # hide from PAUSE
-    DBIx::DBO::DBD::mysql::Handle;
+    DBIx::DBO::DBD::mysql;
 use DBIx::DBO::Common;
 
 sub config {

@@ -5,21 +5,44 @@ use Devel::Peek 'SvREFCNT';
 use strict;
 use warnings;
 
-=head2 config
+=head1 NAME
 
-  $table_setting = $dbo->config($option)
-  $dbo->config($option => $table_setting)
+DBIx::DBO::Query - An OO interface to SQL queries and results.  Encapsulates an entire query in an object.
 
-Get or set the global or dbo config settings.
-When setting an option, the previous value is returned.
+=head1 SYNOPSIS
+
+  # Create a Query object by JOINing 2 tables
+  my $query = $dbo->query('my_table', 'my_other_table');
+
+  # Get the Table objects from the query
+  my ($table1, $table2) = $query->tables;
+
+  # Add a JOIN ON clause
+  $query->join_on($table1 ** 'login', '=', $table2 ** 'username');
+
+  # Find our ancestors, and order by age (oldest first)
+  $query->where('name', '=', 'Adam');
+  $query->where('name', '=', 'Eve');
+  $query->order_by({ COL => 'age', ORDER => 'DESC' });
+
+  # New Query using a LEFT JOIN
+  ($query, $table1) = $dbo->query('my_table');
+  $table2 = $query->join_table('another_table', 'LEFT');
+  $query->join_on($table1 ** 'parent_id', '=', $table2 ** 'child_id');
+
+  # Find those not aged between 20 and 30.
+  $query->where($table1 ** 'age', '<', 20, FORCE => 'OR'); # Force OR so that we get: (age < 20 OR age > 30)
+  $query->where($table1 ** 'age', '>', 30, FORCE => 'OR'); # instead of the default: (age < 20 AND age > 30)
+
+=head1 METHODS
 
 =head2 dbh
 
-The read-write DBI handle.
+The read-write C<DBI> handle.
 
 =head2 rdbh
 
-The read-only DBI handle, or if there is no read-only connection, the read-write DBI handle.
+The read-only C<DBI> handle, or if there is no read-only connection, the read-write C<DBI> handle.
 
 =head2 do
 
@@ -27,23 +50,15 @@ The read-only DBI handle, or if there is no read-only connection, the read-write
   $dbo->do($statement, \%attr) or die $dbo->dbh->errstr;
   $dbo->do($statement, \%attr, @bind_values) or die ...
 
-This provides access to DBI C<do> method. It defaults to using the read-write DBI handle.
+This provides access to L<DBI-E<gt>do|DBI/"do"> method. It defaults to using the read-write C<DBI> handle.
 
 =cut
-
-sub config {
-    my $me = shift;
-    my $opt = shift;
-    my $val = $me->{Config}{$opt} // $me->{DBO}->config($opt);
-    $me->{Config}{$opt} = shift if @_;
-    return $val;
-}
 
 sub _new {
     my $proto = shift;
     my $class = ref($proto) || $proto;
     my $me = { DBO => shift, sql => undef };
-    blessed $me->{DBO} and $me->{DBO}->isa('DBIx::DBO::Handle') or ouch 'Invalid DBO Object';
+    blessed $me->{DBO} and $me->{DBO}->isa('DBIx::DBO') or ouch 'Invalid DBO Object';
     ouch 'No table specified in new Query' unless @_;
     bless $me, $class;
 
@@ -51,7 +66,7 @@ sub _new {
         $me->join_table($table);
     }
     $me->_blank;
-    return wantarray ? ($me, $me->_tables) : $me;
+    return wantarray ? ($me, $me->tables) : $me;
 }
 
 =head2 join_table
@@ -93,7 +108,13 @@ sub join_table {
     return $tbl;
 }
 
-sub _tables {
+=head2 tables
+
+Return a list of L<Table|DBIx::DBO::Table> objects for this query.
+
+=cut
+
+sub tables {
     my $me = shift;
     @{$me->{Tables}};
 }
@@ -192,18 +213,19 @@ sub join_on {
 
 =head2 where
 
+Restrict the query with the condition specified (WHERE clause).
+
   $query->where($expression1, $operator, $expression2);
   $query->where($table1 ** 'id', '=', $table2 ** 'id');
 
-Restrict the query with the condition specified (WHERE clause).
-
-$operator is one of: '=', '<', '>', 'IN', 'NOT IN', 'BETWEEN', 'NOT BETWEEN', ...
+$operator is one of: C<'=', '<', '>', 'IN', 'NOT IN', 'BETWEEN', 'NOT BETWEEN', ...>
 
 $expression can be any of the following:
-    A SCALAR value: 5 or 'hello'
-    A SCALAR reference: \"22 * 3"  (These are passed unqouted in the SQL statement!)
-    An ARRAY reference: [1, 3, 5]  (Used with IN and BETWEEN etc)
-    A Table Column: $table ** 'id' or $table->column('id')
+
+    A SCALAR value: C<123> or C<'hello'>
+    A SCALAR reference: C<\"22 * 3">  (These are passed unqouted in the SQL statement!)
+    An ARRAY reference: C<[1, 3, 5]>  (Used with C<IN> and C<BETWEEN> etc)
+    A Table Column: C<$table ** 'id'> or C<$table->column('id')>
     A Hash reference: (Described below)
 
 For a more complex where clause the expression can be passed as a hash reference.
@@ -358,7 +380,7 @@ sub _parse_col_val {
     my $me = shift;
     my $col = shift;
     return $me->_parse_val($col, 'Column') if ref $col;
-    for my $tbl ($me->_tables) {
+    for my $tbl ($me->tables) {
         return [ $tbl->column($col) ] if exists $tbl->{Column_Idx}{$col};
     }
     ouch 'No such column: '.$col;
@@ -644,7 +666,7 @@ sub found_rows {
 
   my $sth = $query->sth;
 
-Reutrns the DBI statement handle from the query.
+Reutrns the C<DBI> statement handle from the query.
 This will run/rerun the query if needed.
 
 =cut
@@ -660,7 +682,7 @@ sub sth {
 
   $query->finish;
 
-Calls DBI finish on the statement handle if it is active.
+Calls L<DBI-E<gt>finish|DBI/"finish"> on the statement handle, if it's active.
 
 =cut
 
@@ -702,6 +724,24 @@ sub _build_sql {
     }
 
     $me->{sql} = $me->_build_sql_select($me->{build_data});
+}
+
+=head2 config
+
+  $table_setting = $dbo->config($option)
+  $dbo->config($option => $table_setting)
+
+Get or set the global or dbo config settings.
+When setting an option, the previous value is returned.
+
+=cut
+
+sub config {
+    my $me = shift;
+    my $opt = shift;
+    my $val = $me->{Config}{$opt} // $me->{DBO}->config($opt);
+    $me->{Config}{$opt} = shift if @_;
+    return $val;
 }
 
 sub DESTROY {

@@ -43,12 +43,18 @@ sub config {
 sub _new {
     my ($proto, $dbo, $table) = @_;
     my $class = ref($proto) || $proto;
-    blessed $dbo and $dbo->isa('DBIx::DBO::Handle') or ouch 'Invalid DBO Object';
+    blessed $dbo and $dbo->isa('DBIx::DBO') or ouch 'Invalid DBO Object';
     (my $schema, $table, $_) = $dbo->table_info($table) or ouch 'No such table: '.$table;
     bless { %$_, Schema => $schema, Name => $table, DBO => $dbo, LastInsertID => undef }, $class;
 }
 
-sub _tables {
+=head2 tables
+
+Return a list of L<DBIx::DBO::Table> objects, which will always be this C<Table> object.
+
+=cut
+
+sub tables {
     $_[0];
 }
 
