@@ -9,13 +9,16 @@ use DBIx::DBO::Table;
 use DBIx::DBO::Query;
 use DBIx::DBO::Row;
 
+# The C3 method resolution order is needed for optimal functioning when DBIx::DBO is being subclassed.
+my $mro_c3 = $] >= 5.009_005 or eval {require MRO::Compat};
+
 =head1 NAME
 
 DBIx::DBO - An OO interface to SQL queries and results.  Easily constructs SQL queries, and simplifies processing of the returned data.
 
 =cut
 
-our $VERSION = '0.01_03';
+our $VERSION = '0.01_04';
 
 =head1 SYNOPSIS
 
@@ -219,6 +222,10 @@ sub _set_inheritance {
         push @{$class.'::'.$_.'::ISA'}, __PACKAGE__.'::DBD::'.$dbd.'::'.$_ for qw(Table Query Row);
         eval "package ${me}";
         eval "package ${me}::$_" for qw(Common Table Query Row);
+    }
+    if ($mro_c3) {
+        mro::set_mro($class, 'c3');
+        mro::set_mro($class.'::'.$_, 'c3') for qw(Table Query Row);
     }
     return $class;
 }

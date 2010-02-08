@@ -15,6 +15,9 @@ my $builder = Module::Build->new(
         'perl' => 5.010,
         'DBI' => 1.53,
     },
+    recommends => {
+        'MRO::Compat' => 0,
+    },
     add_to_cleanup      => [ 'DBIx-DBO-*' ],
     meta_add => {
         bugtracker => 'http://rt.cpan.org/NoAuth/Bugs.html?Dist=DBIx-DBO',

@@ -19,9 +19,8 @@ sub _bless_dbo {
 sub _get_table_schema {
     my $me = shift;
     my $schema = shift; # Not used
-    my $table = my $q_table = shift;
+    my $table = shift;
     ouch 'No table name supplied' unless defined $table and length $table;
-
     return;
 }
 
