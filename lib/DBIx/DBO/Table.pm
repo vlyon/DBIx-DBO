@@ -6,13 +6,28 @@ use warnings;
 
 use overload '**' => \&column, fallback => 1;
 
-=head2 config
+=head1 NAME
 
-  $table_setting = $dbo->config($option)
-  $dbo->config($option => $table_setting)
+DBIx::DBO::Table - An OO interface to SQL queries and results.  Encapsulates a table in an object.
 
-Get or set the global or dbo config settings.
-When setting an option, the previous value is returned.
+=head1 SYNOPSIS
+
+  # Create a Table object
+  my $table = $dbo->table('my_table');
+
+  # Get a column reference
+  my $column = $table ** 'employee_id';
+
+  # Quickly display my employee id
+  print $table->fetch_value('employee_id', name => 'Vernon');
+
+  # Insert a new row into the table
+  $table->insert(employee_id => 007, name => 'James Bond');
+
+  # Remove rows from the table where the name IS NULL
+  $table->delete(name => undef);
+
+=head1 METHODS
 
 =head2 dbh
 
@@ -31,14 +46,6 @@ The read-only DBI handle, or if there is no read-only connection, the read-write
 This provides access to DBI C<do> method. It defaults to using the read-write DBI handle.
 
 =cut
-
-sub config {
-    my $me = shift;
-    my $opt = shift;
-    my $val = $me->{Config}{$opt} // $me->{DBO}->config($opt);
-    $me->{Config}{$opt} = shift if @_;
-    return $val;
-}
 
 sub _new {
     my ($proto, $dbo, $table) = @_;
@@ -196,6 +203,24 @@ sub delete {
     my @bind;
     $sql .= ' WHERE '.$_ if $_ = $me->_build_quick_where(\@bind, @_);
     $me->do($sql, undef, @bind);
+}
+
+=head2 config
+
+  $table_setting = $dbo->config($option)
+  $dbo->config($option => $table_setting)
+
+Get or set the C<DBIx::DBO::Table> config settings.
+When setting an option, the previous value is returned.
+
+=cut
+
+sub config {
+    my $me = shift;
+    my $opt = shift;
+    my $val = $me->{Config}{$opt} // $me->{DBO}->config($opt);
+    $me->{Config}{$opt} = shift if @_;
+    return $val;
 }
 
 sub DESTROY {

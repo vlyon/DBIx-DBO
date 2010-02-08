@@ -45,7 +45,7 @@ The read-only C<DBI> handle, or if there is no read-only connection, the read-wr
   $dbo->do($statement, \%attr) or die $dbo->dbh->errstr;
   $dbo->do($statement, \%attr, @bind_values) or die ...
 
-This provides access to L<DBI-E<gt>do|DBI/"do"> method. It defaults to using the read-write C<DBI> handle.
+This provides access to the L<DBI-E<gt>do|DBI/"do"> method. It defaults to using the read-write C<DBI> handle.
 
 =cut
 
@@ -284,17 +284,20 @@ sub _build_data_matching_this_row {
 
 =head2 config
 
-  $parent_setting = $dbo->config($option)
-  $dbo->config($option => $parent_setting)
+  $row_setting = $dbo->config($option)
+  $dbo->config($option => $row_setting)
 
-Get or set the parent (if it has one) or L<DBO|DBIx::DBO> or global config settings.
+Get or set the L<DBIx::DBO::Row|DBIx::DBO::Row> config settings.
 When setting an option, the previous value is returned.
 
 =cut
 
 sub config {
     my $me = shift;
-    ($$me->{Parent} // $$me->{DBO})->config(@_);
+    my $opt = shift;
+    my $val = $$me->{Config}{$opt} // $$me->{DBO}->config($opt);
+    $$me->{Config}{$opt} = shift if @_;
+    return $val;
 }
 
 sub DESTROY {

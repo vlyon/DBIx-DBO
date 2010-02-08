@@ -75,10 +75,10 @@ sub _new {
   $query->join_table([$schema, $table], $join_type);
   $query->join_table($table_object, $join_type);
 
-Join a new table object for the table specified to this query.
+Join a table onto the query, creating a L<DBIx::DBO::Table|DBIx::DBO::Table> object if needed.
 This will perform a comma (", ") join unless $join_type is specified.
 
-Returns the table object.
+Returns the C<Table> object.
 
 =cut
 
@@ -110,7 +110,7 @@ sub join_table {
 
 =head2 tables
 
-Return a list of L<Table|DBIx::DBO::Table> objects for this query.
+Return a list of L<DBIx::DBO::Table|DBIx::DBO::Table> objects for this query.
 
 =cut
 
@@ -180,7 +180,7 @@ sub show {
   $query->join_on($table2, $table1 ** 'id', '=', $table2 ** 'id');
 
 Join tables on a specific WHERE clause. The first argument is the table object being joined onto.
-Then a join on condition follows.
+Then a JOIN ON condition follows, which uses the same arguments as L</where>.
 
 =cut
 
@@ -218,9 +218,9 @@ Restrict the query with the condition specified (WHERE clause).
   $query->where($expression1, $operator, $expression2);
   $query->where($table1 ** 'id', '=', $table2 ** 'id');
 
-$operator is one of: C<'=', '<', '>', 'IN', 'NOT IN', 'BETWEEN', 'NOT BETWEEN', ...>
+C<$operator> is one of: C<'=', '<', 'E<gt>', 'IN', 'NOT IN', 'BETWEEN', 'NOT BETWEEN', ...>
 
-$expression can be any of the following:
+C<$expression> can be any of the following:
 
     A SCALAR value: C<123> or C<'hello'>
     A SCALAR reference: C<\"22 * 3">  (These are passed unqouted in the SQL statement!)
@@ -388,11 +388,12 @@ sub _parse_col_val {
 
 =head2 group_by
 
-  $query->group_by('column');
-  $query->group_by($table ** 'column');
-  $query->group_by({ COL => $table ** 'column', ORDER => 'DESC' });
+  $query->group_by('column', ...);
+  $query->group_by($table ** 'column', ...);
+  $query->group_by({ COL => $table ** 'column', ORDER => 'DESC' }, ...);
 
-Group the results by the column(s) listed.
+Group the results by the column(s) listed. This will replace the GROUP BY clause.
+To remove the GROUP BY clause simply call C<group_by> without any columns.
 
 =cut
 
@@ -409,11 +410,12 @@ sub group_by {
 
 =head2 order_by
 
-  $query->order_by('column');
-  $query->order_by($table ** 'column');
-  $query->order_by({ COL => $table ** 'column', ORDER => 'DESC' });
+  $query->order_by('column', ...);
+  $query->order_by($table ** 'column', ...);
+  $query->order_by({ COL => $table ** 'column', ORDER => 'DESC' }, ...);
 
-Order the results by the column(s) listed.
+Order the results by the column(s) listed. This will replace the ORDER BY clause.
+To remove the ORDER BY clause simply call C<order_by> without any columns.
 
 =cut
 
@@ -434,8 +436,8 @@ sub order_by {
   $query->limit($rows);
   $query->limit($rows, $offset);
 
-Limit the maximum number of rows returned to $rows, optionally skipping the first $offset rows.
-When called without arguments or if $rows is undefined, the limit is removed.
+Limit the maximum number of rows returned to C<$rows>, optionally skipping the first C<$offset> rows.
+When called without arguments or if C<$rows> is undefined, the limit is removed.
 
 =cut
 
@@ -454,7 +456,7 @@ sub limit {
   $query->arrayref(\%attr);
 
 Run the query using L<DBI-E<gt>selectall_arrayref|DBI/"selectall_arrayref"> which returns the result as an arrayref.
-You can specify a slice by including a 'Slice' or 'Columns' attribute in \%attr - See L<DBI-E<gt>selectall_arrayref|DBI/"selectall_arrayref">.
+You can specify a slice by including a 'Slice' or 'Columns' attribute in C<%attr> - See L<DBI-E<gt>selectall_arrayref|DBI/"selectall_arrayref">.
 
 =cut
 
@@ -490,7 +492,7 @@ sub hashref {
   $query->col_arrayref;
   $query->col_arrayref(\%attr);
 
-Run the query using L<DBI-E<gt>selectcol_arrayref|DBI/"selectcol_arrayref"> which returns the result as an arrayref of the values of each row in one array. By default it pushes all the columns requested by the L<show> method onto the result array (this differs from the DBI). To specify which columns to include in the result use the 'Columns' attribute in %attr - see L<DBI-E<gt>selectcol_arrayref|DBI/"selectcol_arrayref">.
+Run the query using L<DBI-E<gt>selectcol_arrayref|DBI/"selectcol_arrayref"> which returns the result as an arrayref of the values of each row in one array. By default it pushes all the columns requested by the L</show> method onto the result array (this differs from the C<DBI>). Or to specify which columns to include in the result use the 'Columns' attribute in C<%attr> - see L<DBI-E<gt>selectcol_arrayref|DBI/"selectcol_arrayref">.
 
 =cut
 
@@ -513,7 +515,8 @@ sub col_arrayref {
   my $row = $query->fetch;
 
 Fetch the next row from the query. This will run/rerun the query if needed.
-Returns a DBIx::DBO::Row object or undefined if there are no more rows.
+
+Returns a L<DBIx::DBO::Row|DBIx::DBO::Row> object or undefined if there are no more rows.
 
 =cut
 
@@ -542,8 +545,7 @@ sub fetch {
 
   my $row = $query->row;
 
-Returns the DBIx::DBO::Row object for the current row from the query
-or an empty DBIx::DBO::Row object if there is no current row.
+Returns the L<DBIx::DBO::Row|DBIx::DBO::Row> object for the current row from the query or an empty L<DBIx::DBO::Row|DBIx::DBO::Row> object if there is no current row.
 
 =cut
 
@@ -644,9 +646,7 @@ sub count_rows {
   $query->config(CalcFoundRows => 1); # Only applicable to MySQL
   my $total_rows = $query->found_rows;
 
-Return the number of rows that would have been returned if there was no limit clause.
-Before runnning the query the 'CalcFoundRows' config option can be enabled for improved
-performance on supported databases.
+Return the number of rows that would have been returned if there was no limit clause.  Before runnning the query the C<CalcFoundRows> config option can be enabled for improved performance on supported databases.
 
 Returns undefined if there is an error or is unable to determine the number of found rows.
 
@@ -728,10 +728,10 @@ sub _build_sql {
 
 =head2 config
 
-  $table_setting = $dbo->config($option)
-  $dbo->config($option => $table_setting)
+  $query_setting = $dbo->config($option)
+  $dbo->config($option => $query_setting)
 
-Get or set the global or dbo config settings.
+Get or set this C<DBIx::DBO::Query> config settings.
 When setting an option, the previous value is returned.
 
 =cut
