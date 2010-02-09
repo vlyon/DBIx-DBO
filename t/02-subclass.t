@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 # Create the DBO (2 tests)
-use Test::DBO mysql => 'Sponge', tests => 5;
+use Test::DBO Sponge => 'Sponge', tests => 5;
 
 # Empty Subclass
 @SubClass::ISA = ('DBIx::DBO');
@@ -16,6 +16,8 @@ my $test_tbl = $Test::DBO::prefix.'_tbl';
 my $quoted = $dbo->_qi($test_db, $test_tbl);
 is $quoted, qq{"$test_db"."$test_tbl"}, 'SubClass Method _qi';
 
+my $mro_c3 = ($] >= 5.009_005 or $INC{'MRO/Compat.pm'})
+    or note 'C3 Method Resolution Order is needed for optimal inheritance when subcalssing!';
 {
     package # hide from PAUSE
         DBIx::DBO::DBD::Sponge;
@@ -38,6 +40,11 @@ is $quoted, qq{"$test_db"."$test_tbl"}, 'SubClass Method _qi';
             Columns => [ 'id', 'name', 'age' ],
             Column_Idx => { id => 1, name => 2, age => 3 }
         };
+    }
+    # Hack for machines not using MRO::Compat
+    unless ($mro_c3) {
+        *SubClass::DBD::Sponge::_get_table_schema = \&_get_table_schema;
+        *SubClass::DBD::Sponge::_get_table_info = \&_get_table_info;
     }
 }
 
