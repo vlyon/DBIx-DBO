@@ -38,14 +38,23 @@ sub _get_table_info {
     my %h;
     $h{Column_Idx}{$_->{pg_column}} = $_->{ORDINAL_POSITION} for @$cols;
     $h{Columns} = [ sort { $h{Column_Idx}{$a} cmp $h{Column_Idx}{$b} } keys %{$h{Column_Idx}} ];
+
+    $h{PrimaryKeys} = [];
+    $me->_set_table_key_info($schema, $table, \%h);
+
+    $me->{TableInfo}{defined $schema ? $schema : ''}{$table} = \%h;
+}
+
+sub _set_table_key_info {
+    my $me = shift;
+    my $schema = shift;
+    my $table = shift;
+    my $h = shift;
     if (my $keys = $me->rdbh->primary_key_info(undef, $schema, $table)) {
         # In Pg the KEY_SEQ is actually the column index! Rows returned are in key seq order
         # And the column names are quoted so we use the pg_column names instead
-        $h{PrimaryKeys} = [ map $cols->[$_->{KEY_SEQ} - 1]{pg_column}, @{$keys->fetchall_arrayref({})} ];
-    } else {
-        $h{PrimaryKeys} = [];
+        $h->{PrimaryKeys} = [ map $cols->[$_->{KEY_SEQ} - 1]{pg_column}, @{$keys->fetchall_arrayref({})} ];
     }
-    $me->{TableInfo}{defined $schema ? $schema : ''}{$table} = \%h;
 }
 
 sub table_info {
