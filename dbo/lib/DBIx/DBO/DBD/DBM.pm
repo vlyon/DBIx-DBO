@@ -1,8 +1,9 @@
 use strict;
 use warnings;
+
+BEGIN { die "DBM is not yet supported!\n" unless $ENV{DBO_ALLOW_DBM} }
 use SQL::Statement;
 
-die "DBM is not yet supported!\n" unless $ENV{DBO_ALLOW_DBM};
 
 package # hide from PAUSE
     DBIx::DBO::DBD::DBM;
