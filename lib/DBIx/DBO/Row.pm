@@ -295,7 +295,8 @@ When setting an option, the previous value is returned.
 sub config {
     my $me = shift;
     my $opt = shift;
-    my $val = $$me->{Config}{$opt} // $$me->{DBO}->config($opt);
+    my $val = defined $$me->{Config}{$opt} ? $$me->{Config}{$opt} :
+        (defined $$me->{Parent} ? $$me->{Parent} : $$me->{DBO})->config($opt);
     $$me->{Config}{$opt} = shift if @_;
     return $val;
 }

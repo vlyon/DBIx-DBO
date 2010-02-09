@@ -48,7 +48,7 @@ sub _get_table_info {
     }
     $h{Columns} = [ sort { $h{Column_Idx}{$a} cmp $h{Column_Idx}{$b} } keys %{$h{Column_Idx}} ];
     $h{PrimaryKeys} = [];
-    $me->{TableInfo}{$schema // ''}{$table} = \%h;
+    $me->{TableInfo}{defined $schema ? $schema : ''}{$table} = \%h;
 }
 
 1;

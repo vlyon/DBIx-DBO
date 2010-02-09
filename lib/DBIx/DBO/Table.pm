@@ -76,7 +76,7 @@ sub _showing {
 
 sub _quoted_name {
     my $me = shift;
-    $me->{_quoted_name} //= $me->_qi(@$me{qw(Schema Name)});
+    defined $me->{_quoted_name} ? $me->{_quoted_name} : ($me->{_quoted_name} = $me->_qi(@$me{qw(Schema Name)}));
 }
 
 =head2 column
@@ -92,7 +92,7 @@ sub column {
     my ($me, $col) = @_;
     ouch 'Invalid column '.$me->_qi($col).' in table '.$me->_quoted_name
         unless exists $me->{Column_Idx}{$col};
-    $me->{Column}{$col} //= bless [ $me, $col ], 'DBIx::DBO::Column';
+    defined $me->{Column}{$col} ? $me->{Column}{$col} : ($me->{Column}{$col} = bless [$me, $col], 'DBIx::DBO::Column');
 }
 
 =head2 fetch_value
@@ -218,7 +218,7 @@ When setting an option, the previous value is returned.
 sub config {
     my $me = shift;
     my $opt = shift;
-    my $val = $me->{Config}{$opt} // $me->{DBO}->config($opt);
+    my $val = defined $me->{Config}{$opt} ? $me->{Config}{$opt} : $me->{DBO}->config($opt);
     $me->{Config}{$opt} = shift if @_;
     return $val;
 }

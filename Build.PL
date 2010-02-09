@@ -12,8 +12,8 @@ my $builder = Module::Build->new(
         'File::Temp' => 0,
     },
     requires => {
-        'perl' => 5.010,
-        'DBI' => 1.53,
+        'perl' => 5.008,
+        'DBI' => 1.50,
     },
     recommends => {
         'MRO::Compat' => 0,

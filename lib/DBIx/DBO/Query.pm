@@ -65,7 +65,7 @@ sub _new {
     for my $table (@_) {
         $me->join_table($table);
     }
-    $me->_blank;
+    $me->reset;
     return wantarray ? ($me, $me->tables) : $me;
 }
 
@@ -139,7 +139,15 @@ sub _showing {
     @{$me->{build_data}{Showing}} ? @{$me->{build_data}{Showing}} : @{$me->{Tables}};
 }
 
-sub _blank {
+=head2 reset
+
+  $query->reset;
+
+Reset the query, start over with a clean slate.
+
+=cut
+
+sub reset {
     my $me = shift;
     $me->unwhere;
 #    $me->{IsDistinct} = 0;
@@ -207,7 +215,7 @@ sub join_on {
     undef $me->{build_data}{from};
 
     $me->{build_data}{Join}[$i] = ' JOIN ' if $me->{build_data}{Join}[$i] eq ', ';
-    $me->_add_where($me->{build_data}{JoinOn}[$i] //= [], $op,
+    $me->_add_where($me->{build_data}{JoinOn}[$i] ||= [], $op,
         $col1, $col1_func, $col1_opt, $col2, $col2_func, $col2_opt, @_);
 }
 
@@ -266,7 +274,7 @@ sub where {
     undef $me->{build_data}{where};
 
     # Find the current Where_Data reference
-    my $ref = $me->{build_data}{Where_Data} //= [];
+    my $ref = $me->{build_data}{Where_Data} ||= [];
     $ref = $ref->[$_] for (@{$me->{Bracket_Refs}});
 
     $me->_add_where($ref, $op, $fld, $fld_func, $fld_opt, $val, $val_func, $val_opt, @_);
@@ -552,7 +560,7 @@ Returns the L<DBIx::DBO::Row|DBIx::DBO::Row> object for the current row from the
 sub row {
     my $me = shift;
     $me->sql; # Detach if needed
-    $me->{Row} //= $me->{DBO}->row($me);
+    $me->{Row} ||= $me->{DBO}->row($me);
 }
 
 =head2 run
@@ -739,7 +747,7 @@ When setting an option, the previous value is returned.
 sub config {
     my $me = shift;
     my $opt = shift;
-    my $val = $me->{Config}{$opt} // $me->{DBO}->config($opt);
+    my $val = defined $me->{Config}{$opt} ? $me->{Config}{$opt} : $me->{DBO}->config($opt);
     $me->{Config}{$opt} = shift if @_;
     return $val;
 }

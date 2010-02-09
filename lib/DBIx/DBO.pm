@@ -1,6 +1,6 @@
 package DBIx::DBO;
 
-use 5.010;
+use 5.008;
 use strict;
 use warnings;
 use DBI;
@@ -10,7 +10,8 @@ use DBIx::DBO::Query;
 use DBIx::DBO::Row;
 
 # The C3 method resolution order is needed for optimal functioning when DBIx::DBO is being subclassed.
-my $mro_c3 = $] >= 5.009_005 or eval {require MRO::Compat};
+my $mro_c3 = ($] >= 5.009_005 or eval {require MRO::Compat});
+my $need_c3_initialize;
 
 =head1 NAME
 
@@ -18,7 +19,7 @@ DBIx::DBO - An OO interface to SQL queries and results.  Easily constructs SQL q
 
 =cut
 
-our $VERSION = '0.02';
+our $VERSION = '0.02_02';
 
 =head1 SYNOPSIS
 
@@ -93,7 +94,7 @@ sub import {
   $dbo = DBIx::DBO->connect($data_source, $username, $password, \%attr)
       or die $DBI::errstr;
 
-Takes the same arguments as L<DBI-E<gt>connect|DBI/"connect"> for a read-write connection to a database. It returns the DBIx::DBO object if the connection succeeds or undefined on failure.
+Takes the same arguments as L<DBI-E<gt>connect|DBI/"connect"> for a read-write connection to a database. It returns the C<DBIx::DBO> object if the connection succeeds or undefined on failure.
 
 =head2 connect_readonly
 
@@ -123,6 +124,7 @@ sub connect {
         $new->{dbh}->set_err('', $@);
         return;
     }
+    Class::C3::initialize() if $need_c3_initialize;
     $class->_bless_dbo($new);
 }
 
@@ -141,6 +143,7 @@ sub connect_readonly {
         $new->{rdbh}->set_err('', $@);
         return;
     }
+    Class::C3::initialize() if $need_c3_initialize;
     $class->_bless_dbo($new);
 }
 
@@ -214,6 +217,8 @@ sub _set_inheritance {
     my $class = $me.'::DBD::'.$dbd;
 
     no strict 'refs';
+    return $class if "@{$class.'::Common::ISA'}" eq $me.'::Common';
+
     @{$class.'::Common::ISA'} = ($me.'::Common');
     @{$class.'::ISA'} = ($me, $class.'::Common');
     @{$class.'::'.$_.'::ISA'} = ($me.'::'.$_, $class.'::Common') for qw(Table Query Row);
@@ -226,6 +231,8 @@ sub _set_inheritance {
     if ($mro_c3) {
         mro::set_mro($class, 'c3');
         mro::set_mro($class.'::'.$_, 'c3') for qw(Table Query Row);
+        # If perl < 5.9.5 then we need to call Class::C3::initialize()
+        $need_c3_initialize = $] < 5.009_005;
     }
     return $class;
 }
@@ -351,7 +358,7 @@ sub _get_table_info {
     if (my $keys = $me->rdbh->primary_key_info(undef, $schema, $table)) {
         $h{PrimaryKeys}[$_->{KEY_SEQ} - 1] = $_->{COLUMN_NAME} for @{$keys->fetchall_arrayref({})};
     }
-    $me->{TableInfo}{$schema // ''}{$table} = \%h;
+    $me->{TableInfo}{defined $schema ? $schema : ''}{$table} = \%h;
 }
 
 sub table_info {
@@ -368,11 +375,11 @@ sub table_info {
             # TODO: Better splitting of: schema.table or `schema`.`table` or "schema"."table"@"catalog" or ...
             ($schema, $table) = split /\./, $table, 2;
         }
-        $schema //= $me->_get_table_schema($schema, $table);
+        defined $schema or $schema = $me->_get_table_schema($schema, $table);
 
-        $me->_get_table_info($schema, $table) unless exists $me->{TableInfo}{$schema // ''}{$table};
+        $me->_get_table_info($schema, $table) unless exists $me->{TableInfo}{defined $schema ? $schema : ''}{$table};
     }
-    return ($schema, $table, $me->{TableInfo}{$schema // ''}{$table});
+    return ($schema, $table, $me->{TableInfo}{defined $schema ? $schema : ''}{$table});
 }
 
 =head2 table
@@ -482,7 +489,7 @@ sub config {
         $Config{$opt} = shift if @_;
         return $val;
     }
-    my $val = $me->{Config}{$opt} // $Config{$opt};
+    my $val = defined $me->{Config}{$opt} ? $me->{Config}{$opt} : $Config{$opt};
     $me->{Config}{$opt} = shift if @_;
     return $val;
 }
