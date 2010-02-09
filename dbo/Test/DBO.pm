@@ -3,7 +3,7 @@ use Test::More;
 package # Hide from PAUSE
     Test::DBO;
 
-use 5.010_000;
+use 5.008;
 use strict;
 use warnings;
 
@@ -109,9 +109,13 @@ sub connect_ok {
 }
 
 sub connect_dbo {
-    my $dsn = shift // $ENV{'DBO_TEST_'.uc($dbd).'_DB'} // '';
-    my $user = shift // $ENV{'DBO_TEST_'.uc($dbd).'_USER'};
-    my $pass = shift // $ENV{'DBO_TEST_'.uc($dbd).'_PASS'};
+    my $dsn = shift;
+    defined $dsn or $dsn = $ENV{'DBO_TEST_'.uc($dbd).'_DB'};
+    defined $dsn or $dsn = '';
+    my $user = shift;
+    defined $user or $user = $ENV{'DBO_TEST_'.uc($dbd).'_USER'};
+    my $pass = shift;
+    defined $pass or $pass = $ENV{'DBO_TEST_'.uc($dbd).'_PASS'};
 
     DBIx::DBO->connect("DBI:$dbd:$dsn", $user, $pass, {RaiseError => 0});
 }
@@ -424,16 +428,14 @@ sub Dump {
             $var = 'r';
         }
     }
-    $var //= 'dump';
+    defined $var or $var = 'dump';
     require Data::Dumper;
     my $d = Data::Dumper->new([$val], [$var]);
     my %seen;
     @_no_recursion = ($val);
-    given (reftype $val) {
-        when ('ARRAY') { _Find_Seen(\%seen, $_) for @$val }
-        when ('HASH')  { _Find_Seen(\%seen, $_) for values %$val }
-        when ('REF')   { _Find_Seen(\%seen, $$val) }
-    }
+    if (reftype $val eq 'ARRAY')   { _Find_Seen(\%seen, $_) for @$val }
+    elsif (reftype $val eq 'HASH') { _Find_Seen(\%seen, $_) for values %$val }
+    elsif (reftype $val eq 'REF')  { _Find_Seen(\%seen, $$val) }
     $d->Seen(\%seen);
     warn $d->Dump;
 }
@@ -468,11 +470,9 @@ sub _Find_Seen {
             return;
         }
     }
-    given (reftype $val) {
-        when ('ARRAY') { _Find_Seen($seen, $_) for @$val }
-        when ('HASH')  { _Find_Seen($seen, $_) for values %$val }
-        when ('REF')   { _Find_Seen($seen, $$val) }
-    }
+    if (reftype $val eq 'ARRAY')   { _Find_Seen($seen, $_) for @$val }
+    elsif (reftype $val eq 'HASH') { _Find_Seen($seen, $_) for values %$val }
+    elsif (reftype $val eq 'REF')  { _Find_Seen($seen, $$val) }
 }
 
 1;

@@ -1,7 +1,7 @@
 package # hide from PAUSE
     DBIx::DBO::Common;
 
-use 5.010;
+use 5.008;
 use strict;
 use warnings;
 use Carp;
@@ -299,13 +299,13 @@ sub _build_where_chunk {
                     # Right now this starts with the last @whs and works backwards
                     # It splices when the ag is the correct AND/OR and the funcs match and all flds match
                     next if (ref $whs[$i][0] or $ag ne ($whs[$i][7] || _op_ag($whs[$i][0])));
-#                    no warnings 'uninitialized';
-#                    next if $whs[$i][2] ne $fld_func;
-#                    use warnings 'uninitialized';
-                    next unless $fld_func ~~ $whs[$i][2];
-#                    my $l = $whs[$i][1];
-#                    next if ((ref $l eq 'ARRAY' ? "@$l" : $l) ne (ref $fld eq 'ARRAY' ? "@$fld" : $fld));
-                    next unless $fld ~~ $whs[$i][1];
+                    no warnings 'uninitialized';
+                    next if $whs[$i][2] ne $fld_func;
+                    use warnings 'uninitialized';
+#                    next unless $fld_func ~~ $whs[$i][2];
+                    my $l = $whs[$i][1];
+                    next if ((ref $l eq 'ARRAY' ? "@$l" : $l) ne (ref $fld eq 'ARRAY' ? "@$fld" : $fld));
+#                    next unless $fld ~~ $whs[$i][1];
                     push @ary, $me->_build_where_piece($bind, @{splice @whs, $i, 1});
                 }
             }

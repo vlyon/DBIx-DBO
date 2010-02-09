@@ -45,7 +45,7 @@ sub _get_table_info {
     } else {
         $h{PrimaryKeys} = [];
     }
-    $me->{TableInfo}{$schema // ''}{$table} = \%h;
+    $me->{TableInfo}{defined $schema ? $schema : ''}{$table} = \%h;
 }
 
 sub table_info {
