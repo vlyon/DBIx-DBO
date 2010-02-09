@@ -5,6 +5,29 @@ package # hide from PAUSE
     DBIx::DBO::DBD::mysql;
 use DBIx::DBO::Common;
 
+sub _get_table_schema {
+    my $me = shift;
+    my $schema = shift;
+    my $table = shift;
+    ($schema) = $me->rdbh->selectrow_array('SELECT DATABASE()') unless defined $schema and length $schema;
+    $me->SUPER::_get_table_schema($schema, $table);
+}
+
+sub _set_table_key_info {
+    my $me = shift;
+    my $schema = shift;
+    my $table = shift;
+    my $h = shift;
+    if (my $keys = $me->rdbh->primary_key_info(undef, $schema, $table)) {
+        $h->{PrimaryKeys}[$_->{KEY_SEQ} - 1] = $_->{COLUMN_NAME} for @{$keys->fetchall_arrayref({})};
+    } else {
+        # Support for older DBD::mysql - Simulate primary_key_info()
+        local $me->rdbh->{FetchHashKeyName} = 'NAME_lc';
+        my $info = $me->rdbh->selectall_arrayref('SHOW KEYS FROM '.$me->_qi($schema, $table), {Columns => {}});
+        $_->{key_name} eq 'PRIMARY' and $h->{PrimaryKeys}[$_->{seq_in_index} - 1] = $_->{column_name} for @$info;
+    }
+}
+
 sub config {
     my $class = shift;
     my $val = $class->SUPER::config(@_);
