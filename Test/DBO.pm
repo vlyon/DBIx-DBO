@@ -56,8 +56,14 @@ sub import {
     $dbd_name = shift;
     my %opt = splice @_;
 
-    grep $_ eq $dbd, DBI->available_drivers or
-        plan skip_all => "No $dbd driver available!";
+    grep $_ eq $dbd, DBI->available_drivers
+        or plan skip_all => "No $dbd driver available!";
+
+    unless (eval { DBIx::DBO->_require_dbd_class($dbd) }) {
+        die $@ if $@ !~ /^Can't load \Q$dbd\E driver\nCan't locate ([\w\/]+)\.pm in \@INC /;
+        (my $mod = $1) =~ s'/'::'g;
+        plan skip_all => "Can't load $dbd driver\nThe $mod module is required to connect to $dbd_name";
+    }
 
     {
         no strict 'refs';

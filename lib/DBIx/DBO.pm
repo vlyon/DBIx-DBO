@@ -202,8 +202,7 @@ sub _require_dbd_class {
         (my $err = $@) =~ s/\n.*$//; # Remove the last line
         chomp @warn;
         chomp $err;
-        $@ = join "\n", "Can't load $dbd driver", @warn, $err;
-        return;
+        die join "\n", "Can't load $dbd driver", @warn, $err;
     }
 
     delete $INC{$file};
