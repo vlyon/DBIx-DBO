@@ -59,10 +59,21 @@ sub import {
     grep $_ eq $dbd, DBI->available_drivers
         or plan skip_all => "No $dbd driver available!";
 
+    # Skip tests with missing module requirements
     unless (eval { DBIx::DBO->_require_dbd_class($dbd) }) {
-        die $@ if $@ !~ /^Can't load \Q$dbd\E driver\nCan't locate ([\w\/]+)\.pm in \@INC /;
-        (my $mod = $1) =~ s'/'::'g;
-        plan skip_all => "Can't load $dbd driver\nThe $mod module is required to connect to $dbd_name";
+        if ($@ =~ /^Can't load \Q$dbd\E driver\nCan't locate ([\w\/]+)\.pm in \@INC /) {
+            # Module is not installed
+            ($_ = $1) =~ s'/'::'g;
+        } elsif ($@ =~ /^Can't load \Q$dbd\E driver\n([\w:]+ version [\d\.]+) required/) {
+            # Module is not correct version
+            ($_ = $1);
+        } elsif ($@ =~ /^Can't load \Q$dbd\E driver\n\Q$dbd_name\E is not yet supported/) {
+            # DBM is not yet supported
+            plan skip_all => "Can't load $dbd driver: $dbd_name is not yet supported";
+        } else {
+            die $@;
+        }
+        plan skip_all => "Can't load $dbd driver: $_ is required";
     }
 
     {

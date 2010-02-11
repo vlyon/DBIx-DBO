@@ -53,7 +53,7 @@ sub _set_table_key_info {
     if (my $keys = $me->rdbh->primary_key_info(undef, $schema, $table)) {
         # In Pg the KEY_SEQ is actually the column index! Rows returned are in key seq order
         # And the column names are quoted so we use the pg_column names instead
-        $h->{PrimaryKeys} = [ map $cols->[$_->{KEY_SEQ} - 1]{pg_column}, @{$keys->fetchall_arrayref({})} ];
+        $h->{PrimaryKeys} = [ map $h->{Columns}[$_->{KEY_SEQ} - 1], @{$keys->fetchall_arrayref({})} ];
     }
 }
 
