@@ -338,6 +338,10 @@ sub query_methods {
     $q->reset;
     is $q->sql, $dbo->query($t)->sql, 'Method DBIx::DBO::Query->reset';
 
+    # Group by the first initial
+    $q->show({FUNC => 'SUBSTRING(?, 1, 1)', COL => 'name', AS => 'initial'});
+    ok(($q->group_by('initial'), $q->run), 'Method DBIx::DBO::Query->group_by') or diag sql_err($q);
+
     $q->finish;
     return $q;
 }
@@ -346,6 +350,7 @@ sub advanced_query_methods {
     my $dbo = shift;
     my $t = shift;
     my $q = shift;
+    $q->reset;
 
     # Show specific columns only
     $q->show({ FUNC => 'UPPER(?)', COL => 'name', AS => 'name' }, 'id', 'name');
@@ -411,7 +416,6 @@ sub join_methods {
     $q->join_on($t2, $t1 ** 'id', '=', { FUNC => '?/2.0', COL => $t2 ** 'id' });
     $q->order_by({ COL => $t1 ** 'name', ORDER => 'DESC' });
     $q->limit(1, 3);
-Dump($q->arrayref);
 
     SKIP: {
         $r = $q->fetch or diag sql_err($q) or fail 'LEFT JOIN' or skip 'No Left Join', 3;

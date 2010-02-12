@@ -170,18 +170,28 @@ sub _build_from {
     $h->{from};
 }
 
-sub _parse_col {
+sub _valid_col {
     my ($me, $col) = @_;
-    if (blessed $col and $col->isa('DBIx::DBO::Column')) {
-        for my $tbl ($me->tables) {
-            return $col if $col->[0] == $tbl;
-        }
-        # TODO: Flesh out this ouch a bit
-        ouch 'Invalid table';
+    for my $tbl ($me->tables) {
+        return $col if $col->[0] == $tbl;
     }
-    ouch 'Invalid column: '.$col if ref $col;
+    ouch 'Invalid column, the column is from a table not included in this query';
+}
+
+sub _parse_col {
+    my ($me, $col, $_chk_aliases) = @_;
+    if (ref $col) {
+        return $me->_valid_col($col) if blessed $col and $col->isa('DBIx::DBO::Column');
+        ouch 'Invalid column: '.$col;
+    }
     for my $tbl ($me->tables) {
         return $tbl->column($col) if exists $tbl->{Column_Idx}{$col};
+    }
+    if ($_chk_aliases) {
+        for my $fld (@{$me->{build_data}{Showing}}) {
+            return \($me->_qi($col))
+                if !blessed $fld and exists $fld->[2]{AS} and $col eq $fld->[2]{AS};
+        }
     }
     ouch 'No such column: '.$col;
 }
@@ -194,12 +204,12 @@ sub _build_col {
 sub _parse_val {
     my $me = shift;
     my $fld = shift;
-    my $check_fld = shift || '';
+    my %c = (Check => '', @_);
 
     my $func;
     my %opt;
     if (ref $fld eq 'SCALAR') {
-        ouch 'Invalid '.($check_fld eq 'Column' ? 'column' : 'field').' reference (scalar ref to undef)'
+        ouch 'Invalid '.($c{Check} eq 'Column' ? 'column' : 'field').' reference (scalar ref to undef)'
             unless defined $$fld;
         $func = $$fld;
         $fld = [];
@@ -213,10 +223,12 @@ sub _parse_val {
         $opt{COLLATE} = $fld->{COLLATE} if exists $fld->{COLLATE};
         if (exists $fld->{COL}) {
             ouch 'Invalid HASH containing both COL and VAL' if exists $fld->{VAL};
-            $fld = $me->_parse_col($fld->{COL});
+            $fld = $me->_parse_col($fld->{COL}, $c{Aliases});
         } else {
             $fld = exists $fld->{VAL} ? $fld->{VAL} : [];
         }
+    } elsif (blessed $fld and $fld->isa('DBIx::DBO::Column')) {
+        return [ $me->_valid_col($fld) ];
     }
     $fld = [$fld] unless ref $fld eq 'ARRAY';
 
@@ -225,8 +237,8 @@ sub _parse_val {
     if (defined $func) {
         my $need = $me->_substitute_placeholders($func);
         ouch "The number of params ($with) does not match the number of placeholders ($need)" if $need != $with;
-    } elsif ($with != 1 and $check_fld ne 'Auto') {
-        ouch 'Invalid '.($check_fld eq 'Column' ? 'column' : 'field')." reference (passed $with params instead of 1)";
+    } elsif ($with != 1 and $c{Check} ne 'Auto') {
+        ouch 'Invalid '.($c{Check} eq 'Column' ? 'column' : 'field')." reference (passed $with params instead of 1)";
     }
     return ($fld, $func, \%opt);
 }
