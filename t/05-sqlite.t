@@ -3,7 +3,7 @@ use warnings;
 
 # Create the DBO (2 tests)
 my $dbo;
-use Test::DBO SQLite => 'SQLite', tests => 60, tempdir => 1, connect_ok => [\$dbo];
+use Test::DBO SQLite => 'SQLite', tests => 61, tempdir => 1, connect_ok => [\$dbo];
 
 my $test_tbl = $Test::DBO::prefix.'_tbl';
 
@@ -16,7 +16,7 @@ Test::DBO::advanced_table_methods($dbo, $t);
 # Row methods: (10 tests)
 Test::DBO::row_methods($dbo, $t);
 
-# Query methods: (13 tests)
+# Query methods: (14 tests)
 my $q = Test::DBO::query_methods($dbo, $t);
 
 # Advanced query methods: (9 tests)

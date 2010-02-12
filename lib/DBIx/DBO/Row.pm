@@ -120,16 +120,11 @@ sub _table_alias {
     @{$$me->{Tables}} > 1 ? 't'.($i + 1) : ();
 }
 
-sub _showing {
-    my $me = shift;
-    @{$$me->{build_data}{Showing}} ? @{$$me->{build_data}{Showing}} : @{$$me->{Tables}};
-}
-
 sub _column_idx {
     my $me = shift;
     my $col = shift;
     my $idx = -1;
-    for my $shown ($me->_showing) {
+    for my $shown (@{$$me->{build_data}{Showing}} ? @{$$me->{build_data}{Showing}} : @{$$me->{Tables}}) {
         if (blessed $shown and $shown->isa('DBIx::DBO::Table')) {
             if ($col->[0] == $shown and exists $shown->{Column_Idx}{$col->[1]}) {
                 return $idx + $shown->{Column_Idx}{$col->[1]};

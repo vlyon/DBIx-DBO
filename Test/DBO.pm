@@ -312,7 +312,10 @@ sub query_methods {
     # Fetch the first row
     $r = $q->fetch;
     ok $r->isa('DBIx::DBO::Row'), 'Method DBIx::DBO::Query->fetch';
-    is $r_str, "$r", 'Re-use the same row object';
+    SKIP: {
+        skip "Re-use row doesn't work with Devel::Cover", 1 if exists $INC{'Devel/Cover.pm'};
+        is $r_str, "$r", 'Re-use the same row object';
+    }
 
     # Access methods
     is $r->{name}, 'John Doe', 'Access row as a hashref';
@@ -331,6 +334,10 @@ sub query_methods {
     1 while $q->fetch;
     is $q->rows, 6, 'Row count is 6';
 
+    # Reset the Query
+    $q->reset;
+    is $q->sql, $dbo->query($t)->sql, 'Method DBIx::DBO::Query->reset';
+
     $q->finish;
     return $q;
 }
@@ -342,6 +349,7 @@ sub advanced_query_methods {
 
     # Show specific columns only
     $q->show({ FUNC => 'UPPER(?)', COL => 'name', AS => 'name' }, 'id', 'name');
+    $q->order_by('id');
     is $q->fetch->{name}, 'JOHN DOE', 'Method DBIx::DBO::Query->show';
     is $q->row ** $t ** 'name', 'John Doe', 'Access specific column';
 
@@ -403,6 +411,7 @@ sub join_methods {
     $q->join_on($t2, $t1 ** 'id', '=', { FUNC => '?/2.0', COL => $t2 ** 'id' });
     $q->order_by({ COL => $t1 ** 'name', ORDER => 'DESC' });
     $q->limit(1, 3);
+Dump($q->arrayref);
 
     SKIP: {
         $r = $q->fetch or diag sql_err($q) or fail 'LEFT JOIN' or skip 'No Left Join', 3;
@@ -449,11 +458,13 @@ sub Dump {
     require Data::Dumper;
     my $d = Data::Dumper->new([$val], [$var]);
     my %seen;
-    @_no_recursion = ($val);
-    if (reftype $val eq 'ARRAY')   { _Find_Seen(\%seen, $_) for @$val }
-    elsif (reftype $val eq 'HASH') { _Find_Seen(\%seen, $_) for values %$val }
-    elsif (reftype $val eq 'REF')  { _Find_Seen(\%seen, $$val) }
-    $d->Seen(\%seen);
+    if (defined $val) {
+        @_no_recursion = ($val);
+        if (reftype $val eq 'ARRAY')   { _Find_Seen(\%seen, $_) for @$val }
+        elsif (reftype $val eq 'HASH') { _Find_Seen(\%seen, $_) for values %$val }
+        elsif (reftype $val eq 'REF')  { _Find_Seen(\%seen, $$val) }
+        $d->Seen(\%seen);
+    }
     warn $d->Dump;
 }
 
