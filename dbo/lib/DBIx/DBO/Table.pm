@@ -70,10 +70,6 @@ sub _table_alias {
     ouch 'The table is not in this query';
 }
 
-sub _showing {
-    $_[0];
-}
-
 sub _quoted_name {
     my $me = shift;
     defined $me->{_quoted_name} ? $me->{_quoted_name} : ($me->{_quoted_name} = $me->_qi(@$me{qw(Schema Name)}));

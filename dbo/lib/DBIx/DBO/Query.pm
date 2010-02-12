@@ -134,11 +134,6 @@ sub _table_alias {
     @{$me->{Tables}} > 1 ? 't'.($i + 1) : ();
 }
 
-sub _showing {
-    my $me = shift;
-    @{$me->{build_data}{Showing}} ? @{$me->{build_data}{Showing}} : @{$me->{Tables}};
-}
-
 =head2 reset
 
   $query->reset;
@@ -151,10 +146,10 @@ sub reset {
     my $me = shift;
     $me->unwhere;
 #    $me->{IsDistinct} = 0;
-    undef @{$me->{build_data}{Showing}};
-    undef @{$me->{build_data}{GroupBy}};
-    undef @{$me->{build_data}{OrderBy}};
-    undef $me->{build_data}{LimitOffset};
+    $me->show;
+    $me->group_by;
+    $me->order_by;
+    $me->limit;
 }
 
 =head2 show
