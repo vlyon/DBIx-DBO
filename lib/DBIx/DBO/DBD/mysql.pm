@@ -47,6 +47,16 @@ sub _build_sql_select {
 }
 
 package # hide from PAUSE
+    DBIx::DBO::DBD::mysql::Table;
+use DBIx::DBO::Common;
+
+sub _last_insert_id {
+    my $me = shift;
+    my $sth = shift;
+    return $sth->{mysql_insertid};
+}
+
+package # hide from PAUSE
     DBIx::DBO::DBD::mysql::Query;
 use DBIx::DBO::Common;
 

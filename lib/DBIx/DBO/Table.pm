@@ -29,22 +29,6 @@ DBIx::DBO::Table - An OO interface to SQL queries and results.  Encapsulates a t
 
 =head1 METHODS
 
-=head2 dbh
-
-The read-write DBI handle.
-
-=head2 rdbh
-
-The read-only DBI handle, or if there is no read-only connection, the read-write DBI handle.
-
-=head2 do
-
-  $dbo->do($statement)         or die $dbo->dbh->errstr;
-  $dbo->do($statement, \%attr) or die $dbo->dbh->errstr;
-  $dbo->do($statement, \%attr, @bind_values) or die ...
-
-This provides access to DBI C<do> method. It defaults to using the read-write DBI handle.
-
 =cut
 
 sub _new {
@@ -57,7 +41,7 @@ sub _new {
 
 =head2 tables
 
-Return a list of L<DBIx::DBO::Table> objects, which will always be this C<Table> object.
+Return a list of L<DBIx::DBO::Table|DBIx::DBO::Table> objects, which will always be this C<Table> object.
 
 =cut
 
@@ -77,10 +61,11 @@ sub _quoted_name {
 
 =head2 column
 
-  $t->column($column_name)
-  $t ** $column_name
+  $table->column($column_name);
+  $table ** $column_name;
 
-Returns the DBO column object for this column.
+Returns a reference to a column for use with other methods.
+The C<**> method is a shortcut for the C<column> method.
 
 =cut
 
@@ -91,9 +76,26 @@ sub column {
     defined $me->{Column}{$col} ? $me->{Column}{$col} : ($me->{Column}{$col} = bless [$me, $col], 'DBIx::DBO::Column');
 }
 
+=head2 fetch_row
+
+  $table->fetch_row(%where);
+
+Fetch the first matching row from the table returning it as a L<DBIx::DBO::Row|DBIx::DBO::Row> object.
+
+The C<%where> is a hash of field/value pairs. The value can be a SCALAR ref, which will be used without quoting.
+
+  $someone = $table->fetch_row(name => \'NOT NULL', age => 21, join_date => \'CURDATE()', end_date => undef);
+
+=cut
+
+sub fetch_row {
+    my $me = shift;
+    $me->{DBO}->row($me)->load(@_);
+}
+
 =head2 fetch_value
 
-  $t->fetch_value($column, %where)
+  $table->fetch_value($column, %where);
 
 Fetch the first matching row from the table returning the value in one column.
 
@@ -112,7 +114,7 @@ sub fetch_value {
 
 =head2 fetch_hash
 
-  $t->fetch_hash(%where)
+  $table->fetch_hash(%where);
 
 Fetch the first matching row from the table returning it as a hashref.
 
@@ -127,22 +129,9 @@ sub fetch_hash {
     $me->rdbh->selectrow_hashref($sql, undef, @bind);
 }
 
-=head2 fetch_row
-
-  $t->fetch_row(%where)
-
-Fetch the first matching row from the table returning it as a Row object.
-
-=cut
-
-sub fetch_row {
-    my $me = shift;
-    $me->{DBO}->row($me)->load(@_);
-}
-
 =head2 fetch_column
 
-  $t->fetch_column($column, %where)
+  $table->fetch_column($column, %where);
 
 Fetch all matching rows from the table returning an arrayref of the values in one column.
 
@@ -158,17 +147,21 @@ sub fetch_column {
     return $me->rdbh->selectcol_arrayref($sql, undef, @bind);
 }
 
+sub _last_insert_id {
+    # Must be provided in a DBD specific method
+}
+
 =head2 insert
 
-  $t->insert(name => 'Richard', age => 103)
+  $table->insert(name => 'Richard', age => 103);
 
-Insert a row into the table.
+Insert a row into the table. Returns true on success or C<undef> on failure.
 
 =cut
 
 sub insert {
     my $me = shift;
-    ouch 'insert called without args on table '.$me->_quoted_name unless @_;
+    ouch 'Called insert() without args on table '.$me->_quoted_name unless @_;
     ouch 'Wrong number of arguments' if @_ & 1;
     my @cols;
     my @vals;
@@ -181,15 +174,15 @@ sub insert {
     $me->_sql($sql, @bind);
     my $sth = $me->dbh->prepare($sql) or return undef;
     my $rv = $sth->execute(@bind) or return undef;
-    $me->{LastInsertID} = $sth->{mysql_insertid};
+    $me->{LastInsertID} = $me->_last_insert_id($sth);
     return $rv;
 }
 
 =head2 delete
 
-  $t->delete(name => 'Richard', age => 103)
+  $table->delete(name => 'Richard', age => 103);
 
-Delete all rows from the table matching the criteria.
+Delete all rows from the table matching the criteria. Returns the number of rows deleted or C<undef> on failure.
 
 =cut
 
@@ -201,12 +194,28 @@ sub delete {
     $me->do($sql, undef, @bind);
 }
 
+=head2 dbh
+
+The read-write C<DBI> handle.
+
+=head2 rdbh
+
+The read-only C<DBI> handle, or if there is no read-only connection, the read-write C<DBI> handle.
+
+=head2 do
+
+  $dbo->do($statement)         or die $dbo->dbh->errstr;
+  $dbo->do($statement, \%attr) or die $dbo->dbh->errstr;
+  $dbo->do($statement, \%attr, @bind_values) or die ...
+
+This provides access to L<DBI-E<gt>do|DBI/"do"> method. It defaults to using the read-write C<DBI> handle.
+
 =head2 config
 
-  $table_setting = $dbo->config($option)
-  $dbo->config($option => $table_setting)
+  $table_setting = $table->config($option);
+  $table->config($option => $table_setting);
 
-Get or set the C<DBIx::DBO::Table> config settings.
+Get or set the C<Table> config settings.
 When setting an option, the previous value is returned.
 
 =cut
