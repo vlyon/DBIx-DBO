@@ -397,8 +397,8 @@ sub table_info {
   $dbo->table([$schema, $table]);
   $dbo->table($table_object);
 
-Create and return a new L<DBIx::DBO::Table> object.
-Tables can be specified by their name or an arrayref of schema and table name or a L<DBIx::DBO::Table> object.
+Create and return a new L<DBIx::DBO::Table|DBIx::DBO::Table> object.
+Tables can be specified by their name or an arrayref of schema and table name or another L<DBIx::DBO::Table|DBIx::DBO::Table> object.
 
 =cut
 
@@ -413,9 +413,9 @@ sub table {
   $dbo->query([$schema, $table], ...);
   $dbo->query($table_object, ...);
 
-Create a new L<DBIx::DBO::Query> object from the tables specified.
+Create a new L<DBIx::DBO::Query|DBIx::DBO::Query> object from the tables specified.
 In scalar context, just the C<Query> object will be returned.
-In list context, the C<Query> object and L<DBIx::DBO::Table> objects will be returned for each table specified.
+In list context, the C<Query> object and L<DBIx::DBO::Table|DBIx::DBO::Table> objects will be returned for each table specified.
 
   my ($query, $table1, $table2) = $dbo->query(['my_schema', 'my_table'], 'my_other_table');
 
@@ -431,7 +431,7 @@ sub query {
   $dbo->row($table_object);
   $dbo->row($query_object);
 
-Create and return a new L<DBIx::DBO::Row> object.
+Create and return a new L<DBIx::DBO::Row|DBIx::DBO::Row> object.
 
 =cut
 
