@@ -579,7 +579,8 @@ sub run {
 sub _execute {
     my $me = shift;
     $me->_sql($me->sql, $me->_bind_params_select($me->{build_data}));
-    $me->sth->execute($me->_bind_params_select($me->{build_data}));
+    $me->sth or return;
+    $me->{sth}->execute($me->_bind_params_select($me->{build_data}));
 }
 
 sub _bind_cols_to_hash {
