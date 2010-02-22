@@ -194,6 +194,10 @@ sub delete {
     $me->do($sql, undef, @bind);
 }
 
+=head1 COMMON METHODS
+
+These methods are accessible from all DBIx::DBO* objects.
+
 =head2 dbh
 
 The read-write C<DBI> handle.

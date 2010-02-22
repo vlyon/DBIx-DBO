@@ -23,7 +23,7 @@ DBIx::DBO - An OO interface to SQL queries and results.  Easily constructs SQL q
 
 =cut
 
-our $VERSION = '0.03';
+our $VERSION = '0.03_01';
 
 =head1 SYNOPSIS
 
@@ -246,36 +246,53 @@ sub _bless_dbo {
     bless $new, $class;
 }
 
-=head2 dbh
+=head2 table
 
-The read-write C<DBI> handle.
+  $dbo->table($table);
+  $dbo->table([$schema, $table]);
+  $dbo->table($table_object);
 
-=head2 rdbh
-
-The read-only C<DBI> handle, or if there is no read-only connection, the read-write C<DBI> handle.
-
-=head2 do
-
-  $dbo->do($statement)         or die $dbo->dbh->errstr;
-  $dbo->do($statement, \%attr) or die $dbo->dbh->errstr;
-  $dbo->do($statement, \%attr, @bind_values) or die ...
-
-This provides access to the L<DBI-E<gt>do|DBI/"do"> method. It defaults to using the read-write C<DBI> handle.
+Create and return a new L<DBIx::DBO::Table|DBIx::DBO::Table> object.
+Tables can be specified by their name or an arrayref of schema and table name or another L<DBIx::DBO::Table|DBIx::DBO::Table> object.
 
 =cut
 
-sub dbh {
-    my $me = shift;
-    ouch 'Invalid action for a read-only connection' unless $me->{dbh};
-    return $me->{dbh} if $me->{dbh}->ping;
-    $me->{dbh} = $me->_connect($me->{ConnectArgs});
+sub table {
+    my $class = ref($_[0]).'::Table';
+    $class->_new(@_);
 }
 
-sub rdbh {
-    my $me = shift;
-    return $me->dbh unless $me->{rdbh};
-    return $me->{rdbh} if $me->{rdbh}->ping;
-    $me->{rdbh} = $me->_connect($me->{ConnectReadOnlyArgs});
+=head2 query
+
+  $dbo->query($table, ...);
+  $dbo->query([$schema, $table], ...);
+  $dbo->query($table_object, ...);
+
+Create a new L<DBIx::DBO::Query|DBIx::DBO::Query> object from the tables specified.
+In scalar context, just the C<Query> object will be returned.
+In list context, the C<Query> object and L<DBIx::DBO::Table|DBIx::DBO::Table> objects will be returned for each table specified.
+
+  my ($query, $table1, $table2) = $dbo->query(['my_schema', 'my_table'], 'my_other_table');
+
+=cut
+
+sub query {
+    my $class = ref($_[0]).'::Query';
+    $class->_new(@_);
+}
+
+=head2 row
+
+  $dbo->row($table_object);
+  $dbo->row($query_object);
+
+Create and return a new L<DBIx::DBO::Row|DBIx::DBO::Row> object.
+
+=cut
+
+sub row {
+    my $class = ref($_[0]).'::Row';
+    $class->_new(@_);
 }
 
 =head2 selectrow_array
@@ -395,55 +412,6 @@ sub table_info {
     return ($schema, $table, $me->{TableInfo}{defined $schema ? $schema : ''}{$table});
 }
 
-=head2 table
-
-  $dbo->table($table);
-  $dbo->table([$schema, $table]);
-  $dbo->table($table_object);
-
-Create and return a new L<DBIx::DBO::Table|DBIx::DBO::Table> object.
-Tables can be specified by their name or an arrayref of schema and table name or another L<DBIx::DBO::Table|DBIx::DBO::Table> object.
-
-=cut
-
-sub table {
-    my $class = ref($_[0]).'::Table';
-    $class->_new(@_);
-}
-
-=head2 query
-
-  $dbo->query($table, ...);
-  $dbo->query([$schema, $table], ...);
-  $dbo->query($table_object, ...);
-
-Create a new L<DBIx::DBO::Query|DBIx::DBO::Query> object from the tables specified.
-In scalar context, just the C<Query> object will be returned.
-In list context, the C<Query> object and L<DBIx::DBO::Table|DBIx::DBO::Table> objects will be returned for each table specified.
-
-  my ($query, $table1, $table2) = $dbo->query(['my_schema', 'my_table'], 'my_other_table');
-
-=cut
-
-sub query {
-    my $class = ref($_[0]).'::Query';
-    $class->_new(@_);
-}
-
-=head2 row
-
-  $dbo->row($table_object);
-  $dbo->row($query_object);
-
-Create and return a new L<DBIx::DBO::Row|DBIx::DBO::Row> object.
-
-=cut
-
-sub row {
-    my $class = ref($_[0]).'::Row';
-    $class->_new(@_);
-}
-
 =head2 disconnect
 
 Disconnect both the read-write & read-only connections to the database.
@@ -464,6 +432,42 @@ sub disconnect {
     return;
 }
 
+=head1 COMMON METHODS
+
+These methods are accessible from all DBIx::DBO* objects.
+
+=head2 dbh
+
+The read-write C<DBI> handle.
+
+=head2 rdbh
+
+The read-only C<DBI> handle, or if there is no read-only connection, the read-write C<DBI> handle.
+
+=head2 do
+
+  $dbo->do($statement)         or die $dbo->dbh->errstr;
+  $dbo->do($statement, \%attr) or die $dbo->dbh->errstr;
+  $dbo->do($statement, \%attr, @bind_values) or die ...
+
+This provides access to the L<DBI-E<gt>do|DBI/"do"> method. It defaults to using the read-write C<DBI> handle.
+
+=cut
+
+sub dbh {
+    my $me = shift;
+    ouch 'Invalid action for a read-only connection' unless $me->{dbh};
+    return $me->{dbh} if $me->{dbh}->ping;
+    $me->{dbh} = $me->_connect($me->{ConnectArgs});
+}
+
+sub rdbh {
+    my $me = shift;
+    return $me->dbh unless $me->{rdbh};
+    return $me->{rdbh} if $me->{rdbh}->ping;
+    $me->{rdbh} = $me->_connect($me->{ConnectReadOnlyArgs});
+}
+
 =head2 config
 
   $global_setting = DBIx::DBO->config($option);
@@ -479,12 +483,14 @@ Options include:
 =over
 
 =item C<QuoteIdentifier>
+
 Boolean setting to control quoting of SQL identifiers (schema, table and column names).
-Defaults to 1.
+Defaults to C<1>.
 
 =item C<_Debug_SQL>
-Set to a number 0 - 2 to warn with varying levels of debugging for each SQL command executed.
-Defaults to 0.
+
+Set to C<1> or C<2> to warn about each SQL command executed. C<2> adds a full stack trace.
+Defaults to C<0> (silent).
 
 =back
 

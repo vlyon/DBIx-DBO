@@ -31,22 +31,6 @@ DBIx::DBO::Row - An OO interface to SQL queries and results.  Encapsulates a fet
 
 =head1 METHODS
 
-=head2 dbh
-
-The read-write C<DBI> handle.
-
-=head2 rdbh
-
-The read-only C<DBI> handle, or if there is no read-only connection, the read-write C<DBI> handle.
-
-=head2 do
-
-  $dbo->do($statement)         or die $dbo->dbh->errstr;
-  $dbo->do($statement, \%attr) or die $dbo->dbh->errstr;
-  $dbo->do($statement, \%attr, @bind_values) or die ...
-
-This provides access to the L<DBI-E<gt>do|DBI/"do"> method. It defaults to using the read-write C<DBI> handle.
-
 =cut
 
 sub dbh { ${$_[0]}->{DBO}->dbh }
@@ -96,7 +80,7 @@ sub _copy_build_data {
 
 =head2 tables
 
-Return a list of L<DBIx::DBO::Table> objects for this row.
+Return a list of L<DBIx::DBO::Table|DBIx::DBO::Table> objects for this row.
 
 =cut
 
@@ -140,10 +124,16 @@ sub _column_idx {
 
 =head2 value
 
-  $row->value($column)
+  $value = $row->value($column);
+  $value = $row ** $column;
 
-Return the value in this field.
+Return the value in the C<$column> field. The C<**> method is a shortcut for the C<value> method.
 C<$column> can be a column name or a C<Column> object.
+
+Values in the C<Row> can also be obtained by using the object as an array/hash reference.
+
+  $value = $row->[2];
+  $value = $row->{some_column};
 
 =cut
 
@@ -277,10 +267,30 @@ sub _build_data_matching_this_row {
     return \%h;
 }
 
+=head1 COMMON METHODS
+
+These methods are accessible from all DBIx::DBO* objects.
+
+=head2 dbh
+
+The read-write C<DBI> handle.
+
+=head2 rdbh
+
+The read-only C<DBI> handle, or if there is no read-only connection, the read-write C<DBI> handle.
+
+=head2 do
+
+  $dbo->do($statement)         or die $dbo->dbh->errstr;
+  $dbo->do($statement, \%attr) or die $dbo->dbh->errstr;
+  $dbo->do($statement, \%attr, @bind_values) or die ...
+
+This provides access to the L<DBI-E<gt>do|DBI/"do"> method. It defaults to using the read-write C<DBI> handle.
+
 =head2 config
 
-  $row_setting = $dbo->config($option)
-  $dbo->config($option => $row_setting)
+  $row_setting = $dbo->config($option);
+  $dbo->config($option => $row_setting);
 
 Get or set the L<DBIx::DBO::Row|DBIx::DBO::Row> config settings.
 When setting an option, the previous value is returned.

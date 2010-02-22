@@ -36,22 +36,6 @@ DBIx::DBO::Query - An OO interface to SQL queries and results.  Encapsulates an 
 
 =head1 METHODS
 
-=head2 dbh
-
-The read-write C<DBI> handle.
-
-=head2 rdbh
-
-The read-only C<DBI> handle, or if there is no read-only connection, the read-write C<DBI> handle.
-
-=head2 do
-
-  $dbo->do($statement)         or die $dbo->dbh->errstr;
-  $dbo->do($statement, \%attr) or die $dbo->dbh->errstr;
-  $dbo->do($statement, \%attr, @bind_values) or die ...
-
-This provides access to L<DBI-E<gt>do|DBI/"do"> method. It defaults to using the read-write C<DBI> handle.
-
 =cut
 
 sub _new {
@@ -67,6 +51,75 @@ sub _new {
     }
     $me->reset;
     return wantarray ? ($me, $me->tables) : $me;
+}
+
+=head2 reset
+
+  $query->reset;
+
+Reset the query, start over with a clean slate.
+
+=cut
+
+sub reset {
+    my $me = shift;
+    $me->unwhere;
+#    $me->{IsDistinct} = 0;
+    $me->show;
+    $me->group_by;
+    $me->order_by;
+    $me->limit;
+}
+
+=head2 tables
+
+Return a list of L<DBIx::DBO::Table|DBIx::DBO::Table> objects for this query.
+
+=cut
+
+sub tables {
+    my $me = shift;
+    @{$me->{Tables}};
+}
+
+sub _table_idx {
+    my ($me, $tbl) = @_;
+    for my $i (0 .. $#{$me->{Tables}}) {
+        return $i if $tbl == $me->{Tables}[$i];
+    }
+    return undef;
+}
+
+sub _table_alias {
+    my ($me, $tbl) = @_;
+    my $i = $me->_table_idx($tbl);
+    ouch 'The table is not in this query' unless defined $i;
+    @{$me->{Tables}} > 1 ? 't'.($i + 1) : ();
+}
+
+=head2 show
+
+  $query->show(@columns);
+  $query->show($table1 ** 'id', {FUNC => 'UCASE(?)', COL => 'name', AS => 'NAME'}, ...
+
+Specify which columns to show as an array. If the array is empty all columns will be shown.
+
+=cut
+
+sub show {
+    my $me = shift;
+    undef $me->{sql};
+    undef $me->{build_data}{show};
+    undef @{$me->{build_data}{Showing}};
+    for my $fld (@_) {
+        if (blessed $fld and $fld->isa('DBIx::DBO::Table')) {
+            ouch 'Invalid table field' unless defined $me->_table_idx($fld);
+            push @{$me->{build_data}{Showing}}, $fld;
+            next;
+        }
+        # If the $fld is just a scalar use it as a column name not a value
+        push @{$me->{build_data}{Showing}}, [ $me->_parse_col_val($fld) ];
+    }
 }
 
 =head2 join_table
@@ -106,75 +159,6 @@ sub join_table {
     undef $me->{sql};
     undef $me->{build_data}{from};
     return $tbl;
-}
-
-=head2 tables
-
-Return a list of L<DBIx::DBO::Table|DBIx::DBO::Table> objects for this query.
-
-=cut
-
-sub tables {
-    my $me = shift;
-    @{$me->{Tables}};
-}
-
-sub _table_idx {
-    my ($me, $tbl) = @_;
-    for my $i (0 .. $#{$me->{Tables}}) {
-        return $i if $tbl == $me->{Tables}[$i];
-    }
-    return undef;
-}
-
-sub _table_alias {
-    my ($me, $tbl) = @_;
-    my $i = $me->_table_idx($tbl);
-    ouch 'The table is not in this query' unless defined $i;
-    @{$me->{Tables}} > 1 ? 't'.($i + 1) : ();
-}
-
-=head2 reset
-
-  $query->reset;
-
-Reset the query, start over with a clean slate.
-
-=cut
-
-sub reset {
-    my $me = shift;
-    $me->unwhere;
-#    $me->{IsDistinct} = 0;
-    $me->show;
-    $me->group_by;
-    $me->order_by;
-    $me->limit;
-}
-
-=head2 show
-
-  $query->show(@columns);
-  $query->show($table1 ** 'id', {FUNC => 'UCASE(?)', COL => 'name', AS => 'NAME'}, ...
-
-Specify which columns to show as an array. If the array is empty all columns will be shown.
-
-=cut
-
-sub show {
-    my $me = shift;
-    undef $me->{sql};
-    undef $me->{build_data}{show};
-    undef @{$me->{build_data}{Showing}};
-    for my $fld (@_) {
-        if (blessed $fld and $fld->isa('DBIx::DBO::Table')) {
-            ouch 'Invalid table field' unless defined $me->_table_idx($fld);
-            push @{$me->{build_data}{Showing}}, $fld;
-            next;
-        }
-        # If the $fld is just a scalar use it as a column name not a value
-        push @{$me->{build_data}{Showing}}, [ $me->_parse_col_val($fld) ];
-    }
 }
 
 =head2 join_on
@@ -664,35 +648,6 @@ sub found_rows {
     $me->{Found_Rows};
 }
 
-=head2 sth
-
-  my $sth = $query->sth;
-
-Reutrns the C<DBI> statement handle from the query.
-This will run/rerun the query if needed.
-
-=cut
-
-sub sth {
-    my $me = shift;
-    # Ensure the sql is rebuilt if needed
-    my $sql = $me->sql;
-    $me->{sth} ||= $me->rdbh->prepare($sql);
-}
-
-=head2 finish
-
-  $query->finish;
-
-Calls L<DBI-E<gt>finish|DBI/"finish"> on the statement handle, if it's active.
-
-=cut
-
-sub finish {
-    my $me = shift;
-    $me->{sth}->finish if $me->{sth} and $me->{sth}{Active};
-}
-
 =head2 sql
 
   my $sql = $query->sql;
@@ -728,10 +683,59 @@ sub _build_sql {
     $me->{sql} = $me->_build_sql_select($me->{build_data});
 }
 
+=head2 sth
+
+  my $sth = $query->sth;
+
+Reutrns the C<DBI> statement handle from the query.
+This will run/rerun the query if needed.
+
+=cut
+
+sub sth {
+    my $me = shift;
+    # Ensure the sql is rebuilt if needed
+    my $sql = $me->sql;
+    $me->{sth} ||= $me->rdbh->prepare($sql);
+}
+
+=head2 finish
+
+  $query->finish;
+
+Calls L<DBI-E<gt>finish|DBI/"finish"> on the statement handle, if it's active.
+
+=cut
+
+sub finish {
+    my $me = shift;
+    $me->{sth}->finish if $me->{sth} and $me->{sth}{Active};
+}
+
+=head1 COMMON METHODS
+
+These methods are accessible from all DBIx::DBO* objects.
+
+=head2 dbh
+
+The read-write C<DBI> handle.
+
+=head2 rdbh
+
+The read-only C<DBI> handle, or if there is no read-only connection, the read-write C<DBI> handle.
+
+=head2 do
+
+  $dbo->do($statement)         or die $dbo->dbh->errstr;
+  $dbo->do($statement, \%attr) or die $dbo->dbh->errstr;
+  $dbo->do($statement, \%attr, @bind_values) or die ...
+
+This provides access to L<DBI-E<gt>do|DBI/"do"> method. It defaults to using the read-write C<DBI> handle.
+
 =head2 config
 
-  $query_setting = $dbo->config($option)
-  $dbo->config($option => $query_setting)
+  $query_setting = $dbo->config($option);
+  $dbo->config($option => $query_setting);
 
 Get or set this C<DBIx::DBO::Query> config settings.
 When setting an option, the previous value is returned.
