@@ -9,9 +9,13 @@ use DBIx::DBO::Table;
 use DBIx::DBO::Query;
 use DBIx::DBO::Row;
 
-# The C3 method resolution order is needed for optimal functioning when DBIx::DBO is being subclassed.
-my $mro_c3 = ($] >= 5.009_005 or eval {require MRO::Compat});
+our $use_c3_mro;
 my $need_c3_initialize;
+
+BEGIN {
+    # The C3 method resolution order is needed for optimal functioning when DBIx::DBO is being subclassed.
+    $use_c3_mro = eval {use MRO::Compat} or ($] >= 5.009_005 and eval {use mro});
+}
 
 =head1 NAME
 
@@ -227,7 +231,7 @@ sub _set_inheritance {
         eval "package ${me}";
         eval "package ${me}::$_" for qw(Common Table Query Row);
     }
-    if ($mro_c3) {
+    if ($use_c3_mro) {
         mro::set_mro($class, 'c3');
         mro::set_mro($class.'::'.$_, 'c3') for qw(Table Query Row);
         # If perl < 5.9.5 then we need to call Class::C3::initialize()
