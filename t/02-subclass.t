@@ -16,8 +16,7 @@ my $test_tbl = $Test::DBO::prefix.'_tbl';
 my $quoted = $dbo->_qi($test_db, $test_tbl);
 is $quoted, qq{"$test_db"."$test_tbl"}, 'SubClass Method _qi';
 
-my $mro_c3 = ($] >= 5.009_005 or $INC{'MRO/Compat.pm'})
-    or note 'C3 Method Resolution Order is needed for optimal inheritance when subcalssing!';
+note 'C3 Method Resolution Order is needed for optimal inheritance when subcalssing!' unless $DBIx::DBO::use_c3_mro;
 {
     package # hide from PAUSE
         DBIx::DBO::DBD::Sponge;
@@ -42,7 +41,7 @@ my $mro_c3 = ($] >= 5.009_005 or $INC{'MRO/Compat.pm'})
         };
     }
     # Hack for machines not using MRO::Compat
-    unless ($mro_c3) {
+    unless ($DBIx::DBO::use_c3_mro) {
         *SubClass::DBD::Sponge::_get_table_schema = \&_get_table_schema;
         *SubClass::DBD::Sponge::_get_table_info = \&_get_table_info;
     }
