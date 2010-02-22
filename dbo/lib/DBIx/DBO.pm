@@ -14,7 +14,7 @@ my $need_c3_initialize;
 
 BEGIN {
     # The C3 method resolution order is needed for optimal functioning when DBIx::DBO is being subclassed.
-    $use_c3_mro = eval {use MRO::Compat} or ($] >= 5.009_005 and eval {use mro});
+    $use_c3_mro = eval {require MRO::Compat} || ($] >= 5.009_005 and require mro);
 }
 
 =head1 NAME
