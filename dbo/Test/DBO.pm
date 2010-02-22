@@ -339,7 +339,7 @@ sub query_methods {
     is $q->sql, $dbo->query($t)->sql, 'Method DBIx::DBO::Query->reset';
 
     # Group by the first initial
-    $q->show({FUNC => 'SUBSTRING(?, 1, 1)', COL => 'name', AS => 'initial'});
+    $q->show({FUNC => 'SUBSTR(?, 1, 1)', COL => 'name', AS => 'initial'});
     ok(($q->group_by('initial'), $q->run), 'Method DBIx::DBO::Query->group_by') or diag sql_err($q);
 
     $q->finish;
