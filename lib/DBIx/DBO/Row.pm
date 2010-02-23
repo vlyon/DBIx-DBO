@@ -78,7 +78,7 @@ sub _copy_build_data {
     }
 }
 
-=head2 tables
+=head3 C<tables>
 
 Return a list of L<DBIx::DBO::Table|DBIx::DBO::Table> objects for this row.
 
@@ -122,12 +122,12 @@ sub _column_idx {
     return;
 }
 
-=head2 value
+=head3 C<value>
 
   $value = $row->value($column);
   $value = $row ** $column;
 
-Return the value in the C<$column> field. The C<**> method is a shortcut for the C<value> method.
+Return the value in the C<$column> field.  The C<**> method is a shortcut for the C<value> method.
 C<$column> can be a column name or a C<Column> object.
 
 Values in the C<Row> can also be obtained by using the object as an array/hash reference.
@@ -150,7 +150,7 @@ sub value {
     ouch 'No such column: '.$col;
 }
 
-=head2 load
+=head3 C<load>
 
   $row->load(id => 123);
   $row->load(name => 'Bob', status => 'Employed');
@@ -199,7 +199,7 @@ sub _detach {
     undef $$me->{Parent};
 }
 
-=head2 update
+=head3 C<update>
 
   $row->update(id => 123);
   $row->update(name => 'Bob', status => 'Employed');
@@ -227,7 +227,7 @@ sub update {
     $me->do($sql, undef, $me->_bind_params_update($build_data));
 }
 
-=head2 delete
+=head3 C<delete>
 
   $row->delete;
 
@@ -267,27 +267,27 @@ sub _build_data_matching_this_row {
     return \%h;
 }
 
-=head1 COMMON METHODS
+=head2 Common Methods
 
 These methods are accessible from all DBIx::DBO* objects.
 
-=head2 dbh
+=head3 C<dbh>
 
-The read-write C<DBI> handle.
+The I<read-write> C<DBI> handle.
 
-=head2 rdbh
+=head3 C<rdbh>
 
-The read-only C<DBI> handle, or if there is no read-only connection, the read-write C<DBI> handle.
+The I<read-only> C<DBI> handle, or if there is no I<read-only> connection, the I<read-write> C<DBI> handle.
 
-=head2 do
+=head3 C<do>
 
   $dbo->do($statement)         or die $dbo->dbh->errstr;
   $dbo->do($statement, \%attr) or die $dbo->dbh->errstr;
   $dbo->do($statement, \%attr, @bind_values) or die ...
 
-This provides access to the L<DBI-E<gt>do|DBI/"do"> method. It defaults to using the read-write C<DBI> handle.
+This provides access to the L<DBI-E<gt>do|DBI/"do"> method.  It defaults to using the I<read-write> C<DBI> handle.
 
-=head2 config
+=head3 C<config>
 
   $row_setting = $dbo->config($option);
   $dbo->config($option => $row_setting);
@@ -311,3 +311,13 @@ sub DESTROY {
 }
 
 1;
+
+__END__
+
+=head1 SEE ALSO
+
+L<DBIx::DBO>
+
+
+=cut
+

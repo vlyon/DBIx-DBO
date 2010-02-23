@@ -39,7 +39,7 @@ sub _new {
     bless { %$_, Schema => $schema, Name => $table, DBO => $dbo, LastInsertID => undef }, $class;
 }
 
-=head2 tables
+=head3 C<tables>
 
 Return a list of L<DBIx::DBO::Table|DBIx::DBO::Table> objects, which will always be this C<Table> object.
 
@@ -59,7 +59,7 @@ sub _quoted_name {
     defined $me->{_quoted_name} ? $me->{_quoted_name} : ($me->{_quoted_name} = $me->_qi(@$me{qw(Schema Name)}));
 }
 
-=head2 column
+=head3 C<column>
 
   $table->column($column_name);
   $table ** $column_name;
@@ -76,13 +76,13 @@ sub column {
     defined $me->{Column}{$col} ? $me->{Column}{$col} : ($me->{Column}{$col} = bless [$me, $col], 'DBIx::DBO::Column');
 }
 
-=head2 fetch_row
+=head3 C<fetch_row>
 
   $table->fetch_row(%where);
 
 Fetch the first matching row from the table returning it as a L<DBIx::DBO::Row|DBIx::DBO::Row> object.
 
-The C<%where> is a hash of field/value pairs. The value can be a SCALAR ref, which will be used without quoting.
+The C<%where> is a hash of field/value pairs.  The value can be a SCALAR ref, which will be used without quoting.
 
   $someone = $table->fetch_row(name => \'NOT NULL', age => 21, join_date => \'CURDATE()', end_date => undef);
 
@@ -93,7 +93,7 @@ sub fetch_row {
     $me->{DBO}->row($me)->load(@_);
 }
 
-=head2 fetch_value
+=head3 C<fetch_value>
 
   $table->fetch_value($column, %where);
 
@@ -112,7 +112,7 @@ sub fetch_value {
     return $ref && $ref->[0];
 }
 
-=head2 fetch_hash
+=head3 C<fetch_hash>
 
   $table->fetch_hash(%where);
 
@@ -129,7 +129,7 @@ sub fetch_hash {
     $me->rdbh->selectrow_hashref($sql, undef, @bind);
 }
 
-=head2 fetch_column
+=head3 C<fetch_column>
 
   $table->fetch_column($column, %where);
 
@@ -151,11 +151,11 @@ sub _last_insert_id {
     # Must be provided in a DBD specific method
 }
 
-=head2 insert
+=head3 C<insert>
 
   $table->insert(name => 'Richard', age => 103);
 
-Insert a row into the table. Returns true on success or C<undef> on failure.
+Insert a row into the table.  Returns true on success or C<undef> on failure.
 
 =cut
 
@@ -178,11 +178,11 @@ sub insert {
     return $rv;
 }
 
-=head2 delete
+=head3 C<delete>
 
   $table->delete(name => 'Richard', age => 103);
 
-Delete all rows from the table matching the criteria. Returns the number of rows deleted or C<undef> on failure.
+Delete all rows from the table matching the criteria.  Returns the number of rows deleted or C<undef> on failure.
 
 =cut
 
@@ -194,27 +194,27 @@ sub delete {
     $me->do($sql, undef, @bind);
 }
 
-=head1 COMMON METHODS
+=head2 Common Methods
 
 These methods are accessible from all DBIx::DBO* objects.
 
-=head2 dbh
+=head3 C<dbh>
 
-The read-write C<DBI> handle.
+The I<read-write> C<DBI> handle.
 
-=head2 rdbh
+=head3 C<rdbh>
 
-The read-only C<DBI> handle, or if there is no read-only connection, the read-write C<DBI> handle.
+The I<read-only> C<DBI> handle, or if there is no I<read-only> connection, the I<read-write> C<DBI> handle.
 
-=head2 do
+=head3 C<do>
 
   $dbo->do($statement)         or die $dbo->dbh->errstr;
   $dbo->do($statement, \%attr) or die $dbo->dbh->errstr;
   $dbo->do($statement, \%attr, @bind_values) or die ...
 
-This provides access to L<DBI-E<gt>do|DBI/"do"> method. It defaults to using the read-write C<DBI> handle.
+This provides access to L<DBI-E<gt>do|DBI/"do"> method.  It defaults to using the I<read-write> C<DBI> handle.
 
-=head2 config
+=head3 C<config>
 
   $table_setting = $table->config($option);
   $table->config($option => $table_setting);
@@ -237,3 +237,13 @@ sub DESTROY {
 }
 
 1;
+
+__END__
+
+=head1 SEE ALSO
+
+L<DBIx::DBO>
+
+
+=cut
+
