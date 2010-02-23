@@ -53,7 +53,7 @@ sub _new {
     return wantarray ? ($me, $me->tables) : $me;
 }
 
-=head2 reset
+=head3 C<reset>
 
   $query->reset;
 
@@ -71,7 +71,7 @@ sub reset {
     $me->limit;
 }
 
-=head2 tables
+=head3 C<tables>
 
 Return a list of L<DBIx::DBO::Table|DBIx::DBO::Table> objects for this query.
 
@@ -97,12 +97,12 @@ sub _table_alias {
     @{$me->{Tables}} > 1 ? 't'.($i + 1) : ();
 }
 
-=head2 show
+=head3 C<show>
 
   $query->show(@columns);
   $query->show($table1 ** 'id', {FUNC => 'UCASE(?)', COL => 'name', AS => 'NAME'}, ...
 
-Specify which columns to show as an array. If the array is empty all columns will be shown.
+Specify which columns to show as an array.  If the array is empty all columns will be shown.
 
 =cut
 
@@ -122,7 +122,7 @@ sub show {
     }
 }
 
-=head2 join_table
+=head3 C<join_table>
 
   $query->join_table($table, $join_type);
   $query->join_table([$schema, $table], $join_type);
@@ -130,6 +130,8 @@ sub show {
 
 Join a table onto the query, creating a L<DBIx::DBO::Table|DBIx::DBO::Table> object if needed.
 This will perform a comma (", ") join unless $join_type is specified.
+
+Valid join types are any accepted by the DB. Eg: C<'JOIN'>, C<'LEFT'>, C<'RIGHT'>, C<undef> (for comma join), C<'INNER'>, C<'OUTER'>, ...
 
 Returns the C<Table> object.
 
@@ -161,12 +163,12 @@ sub join_table {
     return $tbl;
 }
 
-=head2 join_on
+=head3 C<join_on>
 
   $query->join_on($table_object, $expression1, $operator, $expression2);
   $query->join_on($table2, $table1 ** 'id', '=', $table2 ** 'id');
 
-Join tables on a specific WHERE clause. The first argument is the table object being joined onto.
+Join tables on a specific WHERE clause.  The first argument is the table object being joined onto.
 Then a JOIN ON condition follows, which uses the same arguments as L</where>.
 
 =cut
@@ -198,7 +200,7 @@ sub join_on {
         $col1, $col1_func, $col1_opt, $col2, $col2_func, $col2_opt, @_);
 }
 
-=head2 where
+=head3 C<where>
 
 Restrict the query with the condition specified (WHERE clause).
 
@@ -207,13 +209,26 @@ Restrict the query with the condition specified (WHERE clause).
 
 C<$operator> is one of: C<'=', '<', 'E<gt>', 'IN', 'NOT IN', 'BETWEEN', 'NOT BETWEEN', ...>
 
-C<$expression> can be any of the following:
+C<$expression>s can be any of the following:
 
-    A SCALAR value: C<123> or C<'hello'>
-    A SCALAR reference: C<\"22 * 3">  (These are passed unqouted in the SQL statement!)
-    An ARRAY reference: C<[1, 3, 5]>  (Used with C<IN> and C<BETWEEN> etc)
-    A Table Column: C<$table ** 'id'> or C<$table->column('id')>
-    A Hash reference: (Described below)
+=over 4
+
+=item *
+A SCALAR value: C<123> or C<'hello'> (or for C<$expression1> a column name: C<'id'>)
+
+=item *
+A SCALAR reference: C<\"22 * 3">  (These are passed unqouted in the SQL statement!)
+
+=item *
+An ARRAY reference: C<[1, 3, 5]>  (Used with C<IN> and C<BETWEEN> etc)
+
+=item *
+A Table Column: C<$table ** 'id'> or C<$table->column('id')>
+
+=item *
+A Hash reference: (Described below)
+
+=back
 
 For a more complex where clause the expression can be passed as a hash reference.
 Possibly containing SCALARs, ARRAYs or Table Columns.
@@ -223,11 +238,24 @@ Possibly containing SCALARs, ARRAYs or Table Columns.
 
 The keys to the hash in a complex expression are:
 
-  VAL       A scalar, scalar reference or an array reference.
-  COL       The name of a column or a Column object.
-  AS        An alias name.
-  FUNC      A string to be inseted into the SQL, possibly containing "?" placeholders.
-  ORDER     To order by a column.
+=over 4
+
+=item C<VAL> =>
+A scalar, scalar reference or an array reference.
+
+=item C<COL> =>
+The name of a column or a Column object.
+
+=item C<AS> =>
+An alias name.
+
+=item C<FUNC> =>
+A string to be inserted into the SQL, possibly containing "?" placeholders.
+
+=item C<ORDER> =>
+To order by a column.
+
+=back
 
 =cut
 
@@ -259,7 +287,7 @@ sub where {
     $me->_add_where($ref, $op, $fld, $fld_func, $fld_opt, $val, $val_func, $val_opt, @_);
 }
 
-=head2 unwhere
+=head3 C<unwhere>
 
   $query->unwhere();
   $query->unwhere($column);
@@ -371,13 +399,13 @@ sub _parse_col_val {
     return [ $me->_parse_col($col, $c{Aliases}) ];
 }
 
-=head2 group_by
+=head3 C<group_by>
 
   $query->group_by('column', ...);
   $query->group_by($table ** 'column', ...);
   $query->group_by({ COL => $table ** 'column', ORDER => 'DESC' }, ...);
 
-Group the results by the column(s) listed. This will replace the GROUP BY clause.
+Group the results by the column(s) listed.  This will replace the GROUP BY clause.
 To remove the GROUP BY clause simply call C<group_by> without any columns.
 
 =cut
@@ -393,13 +421,13 @@ sub group_by {
     }
 }
 
-=head2 order_by
+=head3 C<order_by>
 
   $query->order_by('column', ...);
   $query->order_by($table ** 'column', ...);
   $query->order_by({ COL => $table ** 'column', ORDER => 'DESC' }, ...);
 
-Order the results by the column(s) listed. This will replace the ORDER BY clause.
+Order the results by the column(s) listed.  This will replace the ORDER BY clause.
 To remove the ORDER BY clause simply call C<order_by> without any columns.
 
 =cut
@@ -415,7 +443,7 @@ sub order_by {
     }
 }
 
-=head2 limit
+=head3 C<limit>
 
   $query->limit;
   $query->limit($rows);
@@ -435,7 +463,7 @@ sub limit {
     @{$me->{build_data}{LimitOffset}} = ($rows, $offset);
 }
 
-=head2 arrayref
+=head3 C<arrayref>
 
   $query->arrayref;
   $query->arrayref(\%attr);
@@ -453,7 +481,7 @@ sub arrayref {
     $me->rdbh->selectall_arrayref($me->{$sql_or_sth}, $attr, $me->_bind_params_select($me->{build_data}));
 }
 
-=head2 hashref
+=head3 C<hashref>
 
   $query->hashref($key_field);
   $query->hashref($key_field, \%attr);
@@ -472,12 +500,12 @@ sub hashref {
     $me->rdbh->selectall_hashref($me->{$sql_or_sth}, $key, $attr, $me->_bind_params_select($me->{build_data}));
 }
 
-=head2 col_arrayref
+=head3 C<col_arrayref>
 
   $query->col_arrayref;
   $query->col_arrayref(\%attr);
 
-Run the query using L<DBI-E<gt>selectcol_arrayref|DBI/"selectcol_arrayref"> which returns the result as an arrayref of the values of each row in one array. By default it pushes all the columns requested by the L</show> method onto the result array (this differs from the C<DBI>). Or to specify which columns to include in the result use the 'Columns' attribute in C<%attr> - see L<DBI-E<gt>selectcol_arrayref|DBI/"selectcol_arrayref">.
+Run the query using L<DBI-E<gt>selectcol_arrayref|DBI/"selectcol_arrayref"> which returns the result as an arrayref of the values of each row in one array.  By default it pushes all the columns requested by the L</show> method onto the result array (this differs from the C<DBI>).  Or to specify which columns to include in the result use the 'Columns' attribute in C<%attr> - see L<DBI-E<gt>selectcol_arrayref|DBI/"selectcol_arrayref">.
 
 =cut
 
@@ -495,11 +523,11 @@ sub col_arrayref {
     \@ary;
 }
 
-=head2 fetch
+=head3 C<fetch>
 
   my $row = $query->fetch;
 
-Fetch the next row from the query. This will run/rerun the query if needed.
+Fetch the next row from the query.  This will run/rerun the query if needed.
 
 Returns a L<DBIx::DBO::Row|DBIx::DBO::Row> object or undefined if there are no more rows.
 
@@ -526,7 +554,7 @@ sub fetch {
     ($$row->{array} = $me->{sth}->fetch) ? $me->{Row} : undef %$row;
 }
 
-=head2 row
+=head3 C<row>
 
   my $row = $query->row;
 
@@ -540,7 +568,7 @@ sub row {
     $me->{Row} ||= $me->{DBO}->row($me);
 }
 
-=head2 run
+=head3 C<run>
 
   $query->run;
 
@@ -579,7 +607,7 @@ sub _bind_cols_to_hash {
     }
 }
 
-=head2 rows
+=head3 C<rows>
 
   my $row_count = $query->rows;
 
@@ -601,7 +629,7 @@ sub rows {
     $me->{Row_Count};
 }
 
-=head2 count_rows
+=head3 C<count_rows>
 
   my $row_count = $query->count_rows;
 
@@ -627,7 +655,7 @@ sub count_rows {
     return $count;
 }
 
-=head2 found_rows
+=head3 C<found_rows>
 
   $query->config(CalcFoundRows => 1); # Only applicable to MySQL
   my $total_rows = $query->found_rows;
@@ -648,7 +676,7 @@ sub found_rows {
     $me->{Found_Rows};
 }
 
-=head2 sql
+=head3 C<sql>
 
   my $sql = $query->sql;
 
@@ -683,7 +711,7 @@ sub _build_sql {
     $me->{sql} = $me->_build_sql_select($me->{build_data});
 }
 
-=head2 sth
+=head3 C<sth>
 
   my $sth = $query->sth;
 
@@ -699,7 +727,7 @@ sub sth {
     $me->{sth} ||= $me->rdbh->prepare($sql);
 }
 
-=head2 finish
+=head3 C<finish>
 
   $query->finish;
 
@@ -712,33 +740,32 @@ sub finish {
     $me->{sth}->finish if $me->{sth} and $me->{sth}{Active};
 }
 
-=head1 COMMON METHODS
+=head2 Common Methods
 
 These methods are accessible from all DBIx::DBO* objects.
 
-=head2 dbh
+=head3 C<dbh>
 
-The read-write C<DBI> handle.
+The I<read-write> C<DBI> handle.
 
-=head2 rdbh
+=head3 C<rdbh>
 
-The read-only C<DBI> handle, or if there is no read-only connection, the read-write C<DBI> handle.
+The I<read-only> C<DBI> handle, or if there is no I<read-only> connection, the I<read-write> C<DBI> handle.
 
-=head2 do
+=head3 C<do>
 
   $dbo->do($statement)         or die $dbo->dbh->errstr;
   $dbo->do($statement, \%attr) or die $dbo->dbh->errstr;
   $dbo->do($statement, \%attr, @bind_values) or die ...
 
-This provides access to L<DBI-E<gt>do|DBI/"do"> method. It defaults to using the read-write C<DBI> handle.
+This provides access to L<DBI-E<gt>do|DBI/"do"> method.  It defaults to using the I<read-write> C<DBI> handle.
 
-=head2 config
+=head3 C<config>
 
   $query_setting = $dbo->config($option);
   $dbo->config($option => $query_setting);
 
-Get or set this C<DBIx::DBO::Query> config settings.
-When setting an option, the previous value is returned.
+Get or set this C<Query> object's config settings.  When setting an option, the previous value is returned.
 
 =cut
 
@@ -755,3 +782,13 @@ sub DESTROY {
 }
 
 1;
+
+__END__
+
+=head1 SEE ALSO
+
+L<DBIx::DBO>
+
+
+=cut
+

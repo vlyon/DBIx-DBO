@@ -93,18 +93,18 @@ sub import {
     }
 }
 
-=head2 connect
+=head3 C<connect>
 
   $dbo = DBIx::DBO->connect($data_source, $username, $password, \%attr)
       or die $DBI::errstr;
 
-Takes the same arguments as L<DBI-E<gt>connect|DBI/"connect"> for a read-write connection to a database. It returns the C<DBIx::DBO> object if the connection succeeds or undefined on failure.
+Takes the same arguments as L<DBI-E<gt>connect|DBI/"connect"> for a I<read-write> connection to a database. It returns the C<DBIx::DBO> object if the connection succeeds or undefined on failure.
 
-=head2 connect_readonly
+=head3 C<connect_readonly>
 
-Takes the same arguments as C<connect> for a read-only connection to a database. It returns the C<DBIx::DBO> object if the connection succeeds or undefined on failure.
+Takes the same arguments as C<connect> for a I<read-only> connection to a database. It returns the C<DBIx::DBO> object if the connection succeeds or undefined on failure.
 
-Both C<connect> & C<connect_readonly> can be called on a C<DBIx::DBO> object to add that respective connection to create a C<DBIx::DBO> with both read-write and read-only connections.
+Both C<connect> & C<connect_readonly> can be called on a C<DBIx::DBO> object to add that respective connection to create a C<DBIx::DBO> with both I<read-write> and I<read-only> connections.
 
   my $dbo = DBIx::DBO->connect($master_dsn, $username, $password, \%attr)
       or die $DBI::errstr;
@@ -246,7 +246,7 @@ sub _bless_dbo {
     bless $new, $class;
 }
 
-=head2 table
+=head3 C<table>
 
   $dbo->table($table);
   $dbo->table([$schema, $table]);
@@ -262,7 +262,7 @@ sub table {
     $class->_new(@_);
 }
 
-=head2 query
+=head3 C<query>
 
   $dbo->query($table, ...);
   $dbo->query([$schema, $table], ...);
@@ -281,7 +281,7 @@ sub query {
     $class->_new(@_);
 }
 
-=head2 row
+=head3 C<row>
 
   $dbo->row($table_object);
   $dbo->row($query_object);
@@ -295,19 +295,19 @@ sub row {
     $class->_new(@_);
 }
 
-=head2 selectrow_array
+=head3 C<selectrow_array>
 
   $dbo->selectrow_array($statement, \%attr, @bind_values);
 
 This provides access to the L<DBI-E<gt>selectrow_array|DBI/"selectrow_array"> method.
 
-=head2 selectrow_arrayref
+=head3 C<selectrow_arrayref>
 
   $dbo->selectrow_arrayref($statement, \%attr, @bind_values);
 
 This provides access to the L<DBI-E<gt>selectrow_arrayref|DBI/"selectrow_arrayref"> method.
 
-=head2 selectall_arrayref
+=head3 C<selectall_arrayref>
 
   $dbo->selectall_arrayref($statement, \%attr, @bind_values);
 
@@ -333,7 +333,7 @@ sub selectall_arrayref {
     $me->rdbh->selectall_arrayref($sql, $attr, @_);
 }
 
-=head2 table_info
+=head3 C<table_info>
 
   $dbo->table_info($table);
   $dbo->table_info([$schema, $table]);
@@ -412,9 +412,9 @@ sub table_info {
     return ($schema, $table, $me->{TableInfo}{defined $schema ? $schema : ''}{$table});
 }
 
-=head2 disconnect
+=head3 C<disconnect>
 
-Disconnect both the read-write & read-only connections to the database.
+Disconnect both the I<read-write> & I<read-only> connections to the database.
 
 =cut
 
@@ -432,25 +432,25 @@ sub disconnect {
     return;
 }
 
-=head1 COMMON METHODS
+=head2 Common Methods
 
 These methods are accessible from all DBIx::DBO* objects.
 
-=head2 dbh
+=head3 C<dbh>
 
-The read-write C<DBI> handle.
+The I<read-write> C<DBI> handle.
 
-=head2 rdbh
+=head3 C<rdbh>
 
-The read-only C<DBI> handle, or if there is no read-only connection, the read-write C<DBI> handle.
+The I<read-only> C<DBI> handle, or if there is no I<read-only> connection, the I<read-write> C<DBI> handle.
 
-=head2 do
+=head3 C<do>
 
   $dbo->do($statement)         or die $dbo->dbh->errstr;
   $dbo->do($statement, \%attr) or die $dbo->dbh->errstr;
   $dbo->do($statement, \%attr, @bind_values) or die ...
 
-This provides access to the L<DBI-E<gt>do|DBI/"do"> method. It defaults to using the read-write C<DBI> handle.
+This provides access to the L<DBI-E<gt>do|DBI/"do"> method. It defaults to using the I<read-write> C<DBI> handle.
 
 =cut
 
@@ -468,7 +468,7 @@ sub rdbh {
     $me->{rdbh} = $me->_connect($me->{ConnectReadOnlyArgs});
 }
 
-=head2 config
+=head3 C<config>
 
   $global_setting = DBIx::DBO->config($option);
   DBIx::DBO->config($option => $global_setting);
