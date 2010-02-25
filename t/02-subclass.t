@@ -11,10 +11,8 @@ isa_ok $dbo, 'SubClass::DBD::Sponge', '$dbo';
 
 $dbo->connect_readonly('DBI:Sponge:'), 'Connect (read-only) to Sponge' or die $DBI::errstr;
 
-my $test_db = $Test::DBO::prefix.'_db';
-my $test_tbl = $Test::DBO::prefix.'_tbl';
-my $quoted = $dbo->_qi($test_db, $test_tbl);
-is $quoted, qq{"$test_db"."$test_tbl"}, 'SubClass Method _qi';
+my $quoted = $dbo->_qi($Test::DBO::test_db, $Test::DBO::test_tbl);
+is $quoted, qq{"$Test::DBO::test_db"."$Test::DBO::test_tbl"}, 'SubClass Method _qi';
 
 note 'C3 Method Resolution Order is needed for optimal inheritance when subcalssing!' unless $DBIx::DBO::use_c3_mro;
 {
@@ -47,6 +45,6 @@ note 'C3 Method Resolution Order is needed for optimal inheritance when subcalss
     }
 }
 
-isa_ok my $t = $dbo->table($test_tbl), 'SubClass::DBD::Sponge::Table', '$t';
+isa_ok my $t = $dbo->table($Test::DBO::test_tbl), 'SubClass::DBD::Sponge::Table', '$t';
 isa_ok my $q = $dbo->query($t), 'SubClass::DBD::Sponge::Query', '$q';
 
