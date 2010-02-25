@@ -47,7 +47,9 @@ use DBIx::DBO;
 
 our $dbd;
 our $dbd_name;
-(our $prefix = "DBO_${DBIx::DBO::VERSION}_test") =~ s/\W/_/g;
+(our $test_db = "DBO_${DBIx::DBO::VERSION}_test_db") =~ s/\W/_/g;
+(our $test_sch = "DBO_${DBIx::DBO::VERSION}_test_sch") =~ s/\W/_/g;
+(our $test_tbl = "DBO_${DBIx::DBO::VERSION}_test_tbl") =~ s/\W/_/g;
 our @_cleanup_sql;
 
 sub import {
@@ -92,15 +94,18 @@ sub import {
         }
     }
 
+    if (exists $opt{try_connect}) {
+        try_to_connect($opt{try_connect});
+    }
+
     return unless exists $opt{tests};
 
     if (exists $opt{connect_ok}) {
-        my $dbo_ref = shift @{$opt{connect_ok}};
-        $$dbo_ref = connect_dbo(@{$opt{connect_ok}}) or plan skip_all => "Can't connect: $DBI::errstr";
+        my $dbo = connect_ok(@{$opt{connect_ok}}) or plan skip_all => "Can't connect: $DBI::errstr";
 
         plan tests => $opt{tests};
         pass "Connect to $dbd_name";
-        isa_ok $$dbo_ref, "DBIx::DBO::DBD::${dbd}", '$dbo';
+        isa_ok $dbo, "DBIx::DBO::DBD::${dbd}", '$dbo';
     } else {
         plan tests => $opt{tests};
     }
@@ -119,29 +124,29 @@ sub sql_err {
     join "\n", @err;
 }
 
-sub connect_ok {
-    ok my $dbo = connect_dbo(@_), "Connect to $dbd_name" or die $DBI::errstr;
-    isa_ok $dbo, "DBIx::DBO::DBD::${dbd}", '$dbo';
-    return $dbo;
+sub connect_dbo {
+    my ($dsn, $user, $pass) = @_;
+    defined $dsn or $dsn = '';
+    DBIx::DBO->connect("DBI:$dbd:$dsn", $user, $pass, {RaiseError => 0});
 }
 
-sub connect_dbo {
-    my $dsn = shift;
-    defined $dsn or $dsn = $ENV{'DBO_TEST_'.uc($dbd).'_DB'};
-    defined $dsn or $dsn = '';
-    my $user = shift;
-    defined $user or $user = $ENV{'DBO_TEST_'.uc($dbd).'_USER'};
-    my $pass = shift;
-    defined $pass or $pass = $ENV{'DBO_TEST_'.uc($dbd).'_PASS'};
+sub try_to_connect {
+    my $dbo_ref = shift;
+    my @env = map $ENV{"DBO_TEST_\U$dbd\E_$_"}, qw(DSN USER PASS);
+    if (grep defined, @env) {
+        return $$dbo_ref = connect_dbo(@env);
+    }
+    return undef;
+}
 
-    DBIx::DBO->connect("DBI:$dbd:$dsn", $user, $pass, {RaiseError => 0});
+sub connect_ok {
+    my $dbo_ref = shift;
+    return try_to_connect($dbo_ref) || ($$dbo_ref = connect_dbo(@_));
 }
 
 sub basic_methods {
     my $dbo = shift;
-    my $schema = shift;
-    my $table = shift;
-    my $quoted_table = $dbo->_qi($schema, $table);
+    my $quoted_table = $dbo->_qi($test_sch, $test_tbl);
     my $t;
 
     # Create a test table with a multi-column primary key
@@ -149,7 +154,7 @@ sub basic_methods {
         pass 'Create a test table';
 
         # Create a table object
-        $t = $dbo->table([$schema, $table]);
+        $t = $dbo->table([$test_sch, $test_tbl]);
         isa_ok $t, 'DBIx::DBO::Table', '$t';
 
         # Check the Primary Keys
@@ -159,7 +164,7 @@ sub basic_methods {
         $dbo->do("DROP TABLE $quoted_table") && $dbo->do("CREATE TABLE $quoted_table (id INT, name TEXT)")
             or diag sql_err($dbo) or die "Can't recreate the test table!\n";
         $dbo->_get_table_info($t->{Schema}, $t->{Name});
-        $t = $dbo->table([$schema, $table]);
+        $t = $dbo->table([$test_sch, $test_tbl]);
     }
     else {
         diag sql_err($dbo);
@@ -172,9 +177,11 @@ sub basic_methods {
             or diag sql_err($dbo) or die "Can't create the test table!\n";
 
         # Create our table object
-        $t = $dbo->table([$schema, $table]);
+        $t = $dbo->table([$test_sch, $test_tbl]);
         isa_ok $t, 'DBIx::DBO::Table', '$t';
     }
+    die "Couldn't create the DBIx::DBO::Table object!" unless $t;
+
     pass 'Method DBIx::DBO->do';
 
     # Insert data
@@ -222,7 +229,7 @@ sub basic_methods {
     is $rv, 1, 'Method DBIx::DBO::Table->delete';
 
     # Remove the created table during cleanup
-    push @_cleanup_sql, "DROP TABLE $quoted_table";
+    todo_cleanup("DROP TABLE $quoted_table");
 
     return $t;
 }
@@ -434,6 +441,11 @@ sub join_methods {
     $q->finish;
 }
 
+sub todo_cleanup {
+    my $sql = shift;
+    unshift @_cleanup_sql, $sql;
+}
+
 sub cleanup {
     my $dbo = shift;
 
@@ -441,6 +453,9 @@ sub cleanup {
     for my $sql (@_cleanup_sql) {
         $dbo->do($sql) or diag sql_err($dbo);
     }
+
+    $dbo->disconnect;
+    ok !defined $dbo->{dbh} && !defined $dbo->{rdbh}, 'Method DBIx::DBO->disconnect';
 }
 
 my @_no_recursion;

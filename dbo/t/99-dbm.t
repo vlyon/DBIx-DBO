@@ -3,15 +3,17 @@ use warnings;
 
 # Create the DBO (2 tests)
 my $dbo;
-use Test::DBO DBM => 'DBM', tests => 41, tempdir => 1, connect_ok => [\$dbo];
+use Test::DBO DBM => 'DBM', tests => 44, tempdir => 1, connect_ok => [\$dbo];
 
-my $test_tbl = $Test::DBO::prefix.'_tbl';
+# In DBM there is no Schema
+undef $Test::DBO::test_db;
+undef $Test::DBO::test_sch;
 
 # Make sure QuoteIdentifier is OFF for DBM (1 test)
 is $dbo->config('QuoteIdentifier'), 0, 'Method $dbo->config';
 
 # Table methods: do, select* (15 tests)
-my $t = Test::DBO::basic_methods($dbo, undef, $test_tbl) or die;
+my $t = Test::DBO::basic_methods($dbo);
 
 # Skip... (No tests)
 Test::DBO::skip_advanced_table_methods($dbo, $t);
@@ -19,12 +21,14 @@ Test::DBO::skip_advanced_table_methods($dbo, $t);
 # Row methods: (10 tests)
 Test::DBO::row_methods($dbo, $t);
 
-# Query methods: (13 tests)
+# Query methods: (15 tests)
 my $q = Test::DBO::query_methods($dbo, $t);
 
 # Skip... (No tests)
 Test::DBO::skip_advanced_query_methods($dbo, $t, $q);
 
-# Cleanup
-Test::DBO::cleanup($dbo);
+END {
+    # Cleanup (1 test)
+    Test::DBO::cleanup($dbo);
+}
 

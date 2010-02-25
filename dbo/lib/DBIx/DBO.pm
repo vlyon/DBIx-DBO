@@ -23,7 +23,7 @@ DBIx::DBO - An OO interface to SQL queries and results.  Easily constructs SQL q
 
 =cut
 
-our $VERSION = '0.03_01';
+our $VERSION = '0.03_02';
 
 =head1 SYNOPSIS
 
@@ -429,6 +429,7 @@ sub disconnect {
         undef $me->{rdbh};
     }
     delete $me->{TableInfo};
+    delete $me->{LastSQL};
     return;
 }
 
