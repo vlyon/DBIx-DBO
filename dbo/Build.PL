@@ -12,7 +12,7 @@ my $builder = Module::Build->new(
         'File::Temp' => 0,
     },
     requires => {
-        'perl' => 5.008,
+        'perl' => 5.008_001,
         'DBI' => 1.50,
     },
     recommends => {

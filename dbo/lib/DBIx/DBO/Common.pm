@@ -163,8 +163,8 @@ sub _build_from {
     $h->{from} = $me->_build_table(($me->tables)[0]);
     for (my $i = 1; $i < $me->tables; $i++) {
         $h->{from} .= $h->{Join}[$i].$me->_build_table(($me->tables)[$i]);
-        if ($h->{JoinOn}[$i]) {
-            $h->{from} .= ' ON '.join(' AND ', $me->_build_where_chunk($h->{From_Bind}, 'OR', $h->{JoinOn}[$i]));
+        if ($h->{Join_On}[$i]) {
+            $h->{from} .= ' ON '.join(' AND ', $me->_build_where_chunk($h->{From_Bind}, 'OR', $h->{Join_On}[$i]));
         }
     }
     $h->{from};
@@ -281,6 +281,7 @@ sub _build_val {
     return $func.$extra;
 }
 
+# Construct the WHERE clause
 sub _build_where {
     my $me = shift;
     my $h = shift;
@@ -292,6 +293,7 @@ sub _build_where {
     $h->{where} = join ' AND ', @where;
 }
 
+# Construct the WHERE contents of one set of parentheses
 sub _build_where_chunk {
     my $me = shift;
     my ($bind, $ag, $whs) = @_;
@@ -332,11 +334,13 @@ sub _op_ag {
     return 'AND' if $_[0] eq '!=' or $_[0] eq 'IS NOT' or $_[0] eq '<>' or $_[0] eq 'NOT IN' or $_[0] eq 'NOT BETWEEN';
 }
 
+# Construct one WHERE expression
 sub _build_where_piece {
     my ($me, $bind, $op, $fld, $fld_func, $fld_opt, $val, $val_func, $val_opt) = @_;
     $me->_build_val($bind, $fld, $fld_func, $fld_opt)." $op ".$me->_build_val($bind, $val, $val_func, $val_opt);
 }
 
+# Construct one WHERE expression (simple)
 sub _build_quick_where {
     ouch 'Wrong number of arguments' if @_ & 1;
     my ($me, $bind) = splice @_, 0, 2;
