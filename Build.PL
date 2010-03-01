@@ -18,11 +18,13 @@ my $builder = Module::Build->new(
     recommends => {
         'MRO::Compat' => 0,
     },
-    add_to_cleanup      => [ 'DBIx-DBO-*' ],
-    meta_add => {
-        bugtracker => 'http://rt.cpan.org/NoAuth/Bugs.html?Dist=DBIx-DBO',
-        repository => 'http://vlyon.svn.beanstalkapp.com/src/dbo',
+    meta_merge => {
+        resources => {
+            bugtracker => 'http://rt.cpan.org/Public/Dist/Display.html?Name=DBIx-DBO',
+            repository => 'http://vlyon.svn.beanstalkapp.com/src/dbo',
+        },
     },
+    add_to_cleanup      => [ 'DBIx-DBO-*' ],
 );
 
 $builder->create_build_script();
