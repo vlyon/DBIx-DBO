@@ -124,6 +124,12 @@ sub sql_err {
     join "\n", @err;
 }
 
+sub last_sql {
+    my $me = shift;
+    my ($cmd, $sql, @bind) = @{$me->_last_sql};
+    print $sql, "\n(".join(', ', map $me->rdbh->quote($_), @bind).")\n";
+}
+
 sub connect_dbo {
     my ($dsn, $user, $pass) = @_;
     defined $dsn or $dsn = '';
@@ -341,6 +347,14 @@ sub query_methods {
     1 while $q->fetch;
     is $q->rows, 6, 'Row count is 6';
 
+    # Parentheses
+    $q->where('name', 'LIKE', \"'%o%'");
+    $q->open_bracket('OR');
+    $q->where('name', 'LIKE', \"'%a%'");
+    $q->where('id', '!=', \1);
+    $q->close_bracket;
+    is_deeply $q->col_arrayref({ Columns => [1] }), [4,5,6], 'Method DBIx::DBO::Query->open_bracket';
+
     # Reset the Query
     $q->reset;
     is $q->sql, $dbo->query($t)->sql, 'Method DBIx::DBO::Query->reset';
@@ -484,7 +498,7 @@ sub Dump {
         elsif (reftype $val eq 'REF')  { _Find_Seen(\%seen, $$val) }
         $d->Seen(\%seen);
     }
-    warn $d->Dump;
+    print $d->Dump;
 }
 
 sub _Find_Seen {

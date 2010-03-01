@@ -59,6 +59,8 @@ sub _new {
 
 Reset the query, start over with a clean slate.
 
+NB. This will not remove the JOINs or JOIN ON clauses.
+
 =cut
 
 sub reset {
@@ -157,7 +159,9 @@ sub join_table {
     }
     push @{$me->{Tables}}, $tbl;
     push @{$me->{build_data}{Join}}, $type;
-    push @{$me->{build_data}{JoinOn}}, undef;
+    push @{$me->{build_data}{Join_On}}, undef;
+#    push @{$me->{Join_Bracket_Refs}}, [];
+#    push @{$me->{Join_Brackets}}, [];
     undef $me->{sql};
     undef $me->{build_data}{from};
     return $tbl;
@@ -196,9 +200,32 @@ sub join_on {
     undef $me->{build_data}{from};
 
     $me->{build_data}{Join}[$i] = ' JOIN ' if $me->{build_data}{Join}[$i] eq ', ';
-    $me->_add_where($me->{build_data}{JoinOn}[$i] ||= [], $op,
+    $me->_add_where($me->{build_data}{Join_On}[$i] ||= [], $op,
         $col1, $col1_func, $col1_opt, $col2, $col2_func, $col2_opt, @_);
 }
+
+#=head3 C<open_join_on_bracket>, C<close_join_on_bracket>
+#
+#  $query->open_join_on_bracket($table, 'OR');
+#  $query->join_on(...
+#  $query->close_join_on_bracket($table);
+#
+#Equivalent to L<open_bracket|/open_bracket__close_bracket>, but for the JOIN ON clause.
+#The first argument is the table being joined onto.
+#
+#=cut
+#
+#sub open_join_on_bracket {
+#    my $me = shift;
+#    my $i = $me->_table_idx(shift) or ouch 'No such table object in the join';
+#    $me->_open_bracket($me->{Join_Brackets}[$i], $me->{Join_Bracket_Refs}[$i], $me->{build_data}{Join_On}[$i] ||= [], @_);
+#}
+#
+#sub close_join_on_bracket {
+#    my $me = shift;
+#    my $i = $me->_table_idx(shift) or ouch 'No such table object in the join';
+#    $me->_close_bracket($me->{Join_Brackets}[$i], $me->{Join_Bracket_Refs}[$i]);
+#}
 
 =head3 C<where>
 
@@ -214,24 +241,24 @@ C<$expression>s can be any of the following:
 =over 4
 
 =item *
-A SCALAR value: C<123> or C<'hello'> (or for C<$expression1> a column name: C<'id'>)
+A scalar value: C<123> or C<'hello'> (or for C<$expression1> a column name: C<'id'>)
 
 =item *
-A SCALAR reference: C<\"22 * 3">  (These are passed unqouted in the SQL statement!)
+A scalar reference: C<\"22 * 3">  (These are passed unquoted in the SQL statement!)
 
 =item *
-An ARRAY reference: C<[1, 3, 5]>  (Used with C<IN> and C<BETWEEN> etc)
+An array reference: C<[1, 3, 5]>  (Used with C<IN> and C<BETWEEN> etc)
 
 =item *
-A Table Column: C<$table ** 'id'> or C<$table->column('id')>
+A Column object: C<$table ** 'id'> or C<$table->column('id')>
 
 =item *
-A Hash reference: (Described below)
+A hash reference: (Described below)
 
 =back
 
-For a more complex where clause the expression can be passed as a hash reference.
-Possibly containing SCALARs, ARRAYs or Table Columns.
+For a more complex where expression it can be passed as a hash reference.
+Possibly containing scalars, arrays or Column objects.
 
   $query->where('name', '=', { FUNC => 'COALESCE(?,?)', VAL => [$name, 'Unknown'] });
   $query->where('string', '=', { FUNC => "CONCAT('Mr. ',?)", COL => 'name' });
@@ -240,22 +267,29 @@ The keys to the hash in a complex expression are:
 
 =over 4
 
-=item C<VAL> =>
-A scalar, scalar reference or an array reference.
+=item *
+C<VAL> => A scalar, scalar reference or an array reference.
 
-=item C<COL> =>
-The name of a column or a Column object.
+=item *
+C<COL> => The name of a column or a Column object.
 
-=item C<AS> =>
-An alias name.
+=item *
+C<AS> => An alias name.
 
-=item C<FUNC> =>
-A string to be inserted into the SQL, possibly containing "?" placeholders.
+=item *
+C<FUNC> => A string to be inserted into the SQL, possibly containing "?" placeholders.
 
-=item C<ORDER> =>
-To order by a column.
+=item *
+C<ORDER> => To order by a column. (Used only in C<group_by> and C<order_by>)
 
 =back
+
+Multiple C<where> expressions are combined I<cleverly> using the preferred aggregator C<'AND'> (unless L<open_bracket|/open_bracket__close_bracket> was used to change this). So that when you add where expressions to the query, they will be C<'AND'>ed together. However some expressions will automatically be C<'OR'>ed instead where this makes sense, Eg:
+
+  $query->where('id', '=', 5);
+  $query->where('id', '=', 7);
+  $query->where(...
+  # Produces: WHERE ("id" = 5 OR "id" = 7) AND ...
 
 =cut
 
@@ -282,7 +316,7 @@ sub where {
 
     # Find the current Where_Data reference
     my $ref = $me->{build_data}{Where_Data} ||= [];
-    $ref = $ref->[$_] for (@{$me->{Bracket_Refs}});
+    $ref = $ref->[$_] for (@{$me->{Where_Bracket_Refs}});
 
     $me->_add_where($ref, $op, $fld, $fld_func, $fld_opt, $val, $val_func, $val_opt, @_);
 }
@@ -307,7 +341,7 @@ sub unwhere {
         if (exists $me->{build_data}{Where_Data}) {
             # Find the current Where_Data reference
             my $ref = $me->{build_data}{Where_Data};
-            $ref = $ref->[$_] for (@{$me->{Bracket_Refs}});
+            $ref = $ref->[$_] for (@{$me->{Where_Bracket_Refs}});
 
             for (my $i = $#$ref; $i >= 0; $i--) {
                 # Remove this Where piece if there is no FUNC and it refers to this column only
@@ -317,8 +351,8 @@ sub unwhere {
         }
     } else {
         delete $me->{build_data}{Where_Data};
-        $me->{Bracket_Refs} = [];
-        $me->{Brackets} = [];
+        $me->{Where_Bracket_Refs} = [];
+        $me->{Where_Brackets} = [];
     }
     # This forces a new search
     undef $me->{sql};
@@ -330,7 +364,7 @@ sub unwhere {
 # The arrayref will contain 5 values:
 #  $op, $fld_func, $fld, $val_func, $val, $force
 #  $op is the operator (those supported differ by DBD)
-#  $fld_func is undef or a SCALAR of the form '? AND ?' or 'POSITION(? IN ?)'
+#  $fld_func is undef or a scalar of the form '? AND ?' or 'POSITION(? IN ?)'
 #  $fld is an arrayref of columns/values for use with $fld_func
 #  $val_func is similar to $fld_func
 #  $val is an arrayref of values for use with $val_func
@@ -361,7 +395,7 @@ sub _add_where {
             } else {
                 $val = [ $val ];
             }
-            # Add to previous 'IN' and 'NOT IN' Wheres
+            # Add to previous 'IN' and 'NOT IN' Where expressions
             unless ($opt{FORCE} and $opt{FORCE} ne _op_ag($op)) {
                 for my $lim (grep $$_[0] eq $op, @{$ref}) {
                     next if defined $$lim[1] xor defined $fld;
@@ -397,6 +431,52 @@ sub _parse_col_val {
     my %c = (Check => 'Column', @_);
     return $me->_parse_val($col, %c) if ref $col;
     return [ $me->_parse_col($col, $c{Aliases}) ];
+}
+
+=head3 C<open_bracket>, C<close_bracket>
+
+  $query->open_bracket('OR');
+  $query->where( ...
+  $query->where( ...
+  $query->close_bracket;
+
+Used to group C<where> expressions together in parenthesis using either C<'AND'> or C<'OR'> as the preferred aggregator.
+All the C<where> calls made between C<open_bracket> and C<close_bracket> will be inside the parenthesis.
+
+Without any parenthesis C<'AND'> is the preferred aggregator.
+
+=cut
+
+sub open_bracket {
+    my $me = shift;
+    $me->_open_bracket($me->{Where_Brackets}, $me->{Where_Bracket_Refs}, $me->{build_data}{Where_Data} ||= [], @_);
+}
+
+sub _open_bracket {
+    my ($me, $brackets, $bracket_refs, $ref, $ag) = @_;
+    ouch 'Invalid argument MUST be AND or OR' if !$ag or $ag !~ /^(AND|OR)$/;
+    my $last = @$brackets ? $brackets->[-1] : 'AND';
+    if ($ag ne $last) {
+        # Find the current data reference
+        $ref = $ref->[$_] for @$bracket_refs;
+
+        push @$ref, [];
+        push @$bracket_refs, $#$ref;
+    }
+    push @$brackets, $ag;
+}
+
+sub close_bracket {
+    my $me = shift;
+    $me->_close_bracket($me->{Where_Brackets}, $me->{Where_Bracket_Refs});
+}
+
+sub _close_bracket {
+    my ($me, $brackets, $bracket_refs) = @_;
+    my $ag = pop @{$brackets} or ouch "Can't close bracket with no open bracket!";
+    my $last = @$brackets ? $brackets->[-1] : 'AND';
+    pop @$bracket_refs if $last ne $ag;
+    return $ag;
 }
 
 =head3 C<group_by>
@@ -477,8 +557,7 @@ sub arrayref {
     my $me = shift;
     my $attr = shift;
     $me->_sql($me->sql, $me->_bind_params_select($me->{build_data}));
-    my $sql_or_sth = $me->sth->{Active} ? 'sql' : 'sth';
-    $me->rdbh->selectall_arrayref($me->{$sql_or_sth}, $attr, $me->_bind_params_select($me->{build_data}));
+    $me->rdbh->selectall_arrayref($me->{sql}, $attr, $me->_bind_params_select($me->{build_data}));
 }
 
 =head3 C<hashref>
@@ -496,8 +575,7 @@ sub hashref {
     my $key = shift;
     my $attr = shift;
     $me->_sql($me->sql, $me->_bind_params_select($me->{build_data}));
-    my $sql_or_sth = $me->sth->{Active} ? 'sql' : 'sth';
-    $me->rdbh->selectall_hashref($me->{$sql_or_sth}, $key, $attr, $me->_bind_params_select($me->{build_data}));
+    $me->rdbh->selectall_hashref($me->{sql}, $key, $attr, $me->_bind_params_select($me->{build_data}));
 }
 
 =head3 C<col_arrayref>
@@ -513,14 +591,23 @@ sub col_arrayref {
     my $me = shift;
     my $attr = shift;
     $me->_sql($me->sql, $me->_bind_params_select($me->{build_data}));
-    my $sth = $me->sth->{Active} ? $me->rdbh->prepare($me->{sql}) : $me->{sth};
-    return unless $sth and $sth->execute($me->_bind_params_select($me->{build_data}));
-    my @columns = ($attr->{Columns}) ? @{$attr->{Columns}} : (1 .. $sth->{NUM_OF_FIELDS});
-    my @ary;
-    while (my $ref = $sth->fetch) {
-        push @ary, @$ref;
+    my $sth = $me->rdbh->prepare($me->{sql}) or return;
+    unless (defined $attr->{Columns}) {
+        # Some drivers don't provide $sth->{NUM_OF_FIELDS} until after execute is called
+        if ($sth->{NUM_OF_FIELDS}) {
+            $attr->{Columns} = [1 .. $sth->{NUM_OF_FIELDS}];
+        } else {
+            $sth->execute($me->_bind_params_select($me->{build_data})) or return;
+            my @col;
+            if (my $max = $attr->{MaxRows}) {
+                push @col, @$_ while 0 < $max-- and $_ = $sth->fetch;
+            } else {
+                push @col, @$_ while $_ = $sth->fetch;
+            }
+            return \@col;
+        }
     }
-    \@ary;
+    return $me->rdbh->selectcol_arrayref($sth, $attr, $me->_bind_params_select($me->{build_data}));
 }
 
 =head3 C<fetch>
@@ -784,6 +871,30 @@ sub DESTROY {
 1;
 
 __END__
+
+=head1 TODO LIST
+
+=over
+
+=item *
+
+Better explanation of subclassing, to create easy to use query objects.
+
+=item *
+
+Better explanation of how to construct complex queries.
+
+This module is currently still in development (including the documentation), but I will be adding to/completing it in the near future.
+
+=item *
+
+Add C<DISTINCT> and C<COLLATE> functionality.
+
+=item *
+
+Possibly add C<open_join_on_bracket> for adding parentheses in the JOIN ON clause, but I'm not sure if this would ever be useful.
+
+=back
 
 =head1 SEE ALSO
 
