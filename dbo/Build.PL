@@ -16,7 +16,7 @@ my $builder = Module::Build->new(
         'DBI' => 1.50,
     },
     recommends => {
-        'MRO::Compat' => 0,
+        $] < 5.009_005 ? ('MRO::Compat' => 0) : (),
     },
     meta_merge => {
         resources => {
