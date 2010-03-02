@@ -2,7 +2,15 @@ use strict;
 use warnings;
 use Module::Build;
 
-my $builder = Module::Build->new(
+my $class = $] < 5.009_005 ? 'Module::Build' : Module::Build->subclass(code => q{
+    sub write_metafile {
+        my $self = shift;
+        $self->{properties}{recommends}{'MRO::Compat'} = 0;
+        $self->SUPER::write_metafile(@_);
+    }
+});
+
+my $builder = $class->new(
     module_name         => 'DBIx::DBO',
     license             => 'perl',
     dist_author         => 'Vernon Lyon <vlyon@cpan.org>',
