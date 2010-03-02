@@ -32,7 +32,7 @@ our $VERSION = '0.03_03';
   # Create the DBO
   my $dbo = DBIx::DBO->connect('DBI:mysql:my_db', 'me', 'mypasswd') or die $DBI::errstr;
 
-  # Create a "readonly" connection - useful for a slave database
+  # Create a "read-only" connection - useful for a slave database
   $dbo->connect_readonly('DBI:mysql:my_db', 'me', 'mypasswd') or die $DBI::errstr;
 
   # Start with a Query object
@@ -66,13 +66,13 @@ our $VERSION = '0.03_03';
 
 =head1 DESCRIPTION
 
-This module provides a convenient and efficient way to access a database. It can construct queries for you and returns the results in easy to use methods.
+This module provides a convenient and efficient way to access a database.  It can construct queries for you and returns the results in easy to use methods.
 
-Once you've created a C<DBIx::DBO> object using one or both of C<connect> or C<connect_readonly>, you can begin creating C<DBIx::DBO::Query> objects. These are the "workhorse" objects, they encapsulate an entire query with JOINs, WHERE clauses, etc. You need not have to know about what created the C<Query> to be able to use or modify it. This makes it valuable in environments like mod_perl or large projects that prefer an object oreinted approach to data.
+Once you've created a C<DBIx::DBO> object using one or both of C<connect> or C<connect_readonly>, you can begin creating C<DBIx::DBO::Query> objects.  These are the "workhorse" objects, they encapsulate an entire query with JOINs, WHERE clauses, etc.  You need not have to know about what created the C<Query> to be able to use or modify it.  This makes it valuable in environments like mod_perl or large projects that prefer an object oreinted approach to data.
 
-The query is only automatically executed when the data is requested. This is to make it possible to minimise lookups that may not be needed or to delay them as late as possible.
+The query is only automatically executed when the data is requested.  This is to make it possible to minimise lookups that may not be needed or to delay them as late as possible.
 
-The C<DBIx::DBO::Row> object returned can be treated as both an arrayref or a hashref. The data is aliased for efficient use of memory. C<Row> objects can be updated or deleted, even when created by JOINs (If the DB supports it).
+The C<DBIx::DBO::Row> object returned can be treated as both an arrayref or a hashref.  The data is aliased for efficient use of memory.  C<Row> objects can be updated or deleted, even when created by JOINs (If the DB supports it).
 
 =head1 METHODS
 
@@ -98,11 +98,11 @@ sub import {
   $dbo = DBIx::DBO->connect($data_source, $username, $password, \%attr)
       or die $DBI::errstr;
 
-Takes the same arguments as L<DBI-E<gt>connect|DBI/"connect"> for a I<read-write> connection to a database. It returns the C<DBIx::DBO> object if the connection succeeds or undefined on failure.
+Takes the same arguments as L<DBI-E<gt>connect|DBI/"connect"> for a I<read-write> connection to a database.  It returns the C<DBIx::DBO> object if the connection succeeds or undefined on failure.
 
 =head3 C<connect_readonly>
 
-Takes the same arguments as C<connect> for a I<read-only> connection to a database. It returns the C<DBIx::DBO> object if the connection succeeds or undefined on failure.
+Takes the same arguments as C<connect> for a I<read-only> connection to a database.  It returns the C<DBIx::DBO> object if the connection succeeds or undefined on failure.
 
 Both C<connect> & C<connect_readonly> can be called on a C<DBIx::DBO> object to add that respective connection to create a C<DBIx::DBO> with both I<read-write> and I<read-only> connections.
 
@@ -299,19 +299,19 @@ sub row {
 
   $dbo->selectrow_array($statement, \%attr, @bind_values);
 
-This provides access to the L<DBI-E<gt>selectrow_array|DBI/"selectrow_array"> method.
+This provides access to the L<DBI-E<gt>selectrow_array|DBI/"selectrow_array"> method.  It defaults to using the I<read-only> C<DBI> handle.
 
 =head3 C<selectrow_arrayref>
 
   $dbo->selectrow_arrayref($statement, \%attr, @bind_values);
 
-This provides access to the L<DBI-E<gt>selectrow_arrayref|DBI/"selectrow_arrayref"> method.
+This provides access to the L<DBI-E<gt>selectrow_arrayref|DBI/"selectrow_arrayref"> method.  It defaults to using the I<read-only> C<DBI> handle.
 
 =head3 C<selectall_arrayref>
 
   $dbo->selectall_arrayref($statement, \%attr, @bind_values);
 
-This provides access to the L<DBI-E<gt>selectall_arrayref|DBI/"selectall_arrayref"> method.
+This provides access to the L<DBI-E<gt>selectall_arrayref|DBI/"selectall_arrayref"> method.  It defaults to using the I<read-only> C<DBI> handle.
 
 =cut
 
@@ -451,22 +451,35 @@ The I<read-only> C<DBI> handle, or if there is no I<read-only> connection, the I
   $dbo->do($statement, \%attr) or die $dbo->dbh->errstr;
   $dbo->do($statement, \%attr, @bind_values) or die ...
 
-This provides access to the L<DBI-E<gt>do|DBI/"do"> method. It defaults to using the I<read-write> C<DBI> handle.
+This provides access to the L<DBI-E<gt>do|DBI/"do"> method.  It defaults to using the I<read-write> C<DBI> handle.
 
 =cut
 
+sub _auto_reconnect {
+    my $me = shift;
+    my $handle = shift;
+    my ($d, $c) = $handle ne 'read-only' ? qw(dbh ConnectArgs) : qw(rdbh ConnectReadOnlyArgs);
+    ouch "No $handle handle connected" unless defined $me->{$d};
+    $me->{$d} = $me->_connect($me->{$c}) unless $me->{$d}->ping;
+    return $me->{$d};
+}
+
 sub dbh {
     my $me = shift;
+    if (my $handle = $me->config('UseHandle')) {
+        return $me->_auto_reconnect($handle);
+    }
     ouch 'Invalid action for a read-only connection' unless $me->{dbh};
-    return $me->{dbh} if $me->{dbh}->ping;
-    $me->{dbh} = $me->_connect($me->{ConnectArgs});
+    $me->_auto_reconnect('read-write');
 }
 
 sub rdbh {
     my $me = shift;
+    if (my $handle = $me->config('UseHandle')) {
+        return $me->_auto_reconnect($handle);
+    }
     return $me->dbh unless $me->{rdbh};
-    return $me->{rdbh} if $me->{rdbh}->ping;
-    $me->{rdbh} = $me->_connect($me->{ConnectReadOnlyArgs});
+    $me->_auto_reconnect('read-only');
 }
 
 =head3 C<config>
@@ -486,11 +499,15 @@ Options include:
 =item C<QuoteIdentifier>
 
 Boolean setting to control quoting of SQL identifiers (schema, table and column names).
-Defaults to C<1>.
+
+=item C<UseHandle>
+
+Set to C<'read-write'> or C<'read-only'> to force using only that handle for all operations.
+Defaults to C<undef> which chooses the I<read-only> handle for reads and the I<read-write> handle otherwise.
 
 =item C<_Debug_SQL>
 
-Set to C<1> or C<2> to warn about each SQL command executed. C<2> adds a full stack trace.
+Set to C<1> or C<2> to warn about each SQL command executed.  C<2> adds a full stack trace.
 Defaults to C<0> (silent).
 
 =back
@@ -510,7 +527,7 @@ sub config {
         return $val;
     }
     my $val = defined $me->{Config}{$opt} ? $me->{Config}{$opt} : $Config{$opt};
-    $me->{Config}{$opt} = shift if @_;
+    $me->_set_config($me->{Config}, $opt, shift) if @_;
     return $val;
 }
 

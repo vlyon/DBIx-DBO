@@ -59,7 +59,7 @@ sub _new {
 
 Reset the query, start over with a clean slate.
 
-NB. This will not remove the JOINs or JOIN ON clauses.
+B<NB>: This will not remove the JOINs or JOIN ON clauses.
 
 =cut
 
@@ -133,7 +133,7 @@ sub show {
 Join a table onto the query, creating a L<DBIx::DBO::Table|DBIx::DBO::Table> object if needed.
 This will perform a comma (", ") join unless $join_type is specified.
 
-Valid join types are any accepted by the DB. Eg: C<'JOIN'>, C<'LEFT'>, C<'RIGHT'>, C<undef> (for comma join), C<'INNER'>, C<'OUTER'>, ...
+Valid join types are any accepted by the DB.  Eg: C<'JOIN'>, C<'LEFT'>, C<'RIGHT'>, C<undef> (for comma join), C<'INNER'>, C<'OUTER'>, ...
 
 Returns the C<Table> object.
 
@@ -280,11 +280,11 @@ C<AS> => An alias name.
 C<FUNC> => A string to be inserted into the SQL, possibly containing "?" placeholders.
 
 =item *
-C<ORDER> => To order by a column. (Used only in C<group_by> and C<order_by>)
+C<ORDER> => To order by a column (Used only in C<group_by> and C<order_by>).
 
 =back
 
-Multiple C<where> expressions are combined I<cleverly> using the preferred aggregator C<'AND'> (unless L<open_bracket|/open_bracket__close_bracket> was used to change this). So that when you add where expressions to the query, they will be C<'AND'>ed together. However some expressions will automatically be C<'OR'>ed instead where this makes sense, Eg:
+Multiple C<where> expressions are combined I<cleverly> using the preferred aggregator C<'AND'> (unless L<open_bracket|/open_bracket__close_bracket> was used to change this).  So that when you add where expressions to the query, they will be C<'AND'>ed together.  However some expressions will automatically be C<'OR'>ed instead where this makes sense, Eg:
 
   $query->where('id', '=', 5);
   $query->where('id', '=', 7);
@@ -325,7 +325,6 @@ sub where {
 
   $query->unwhere();
   $query->unwhere($column);
-  $query->unwhere($table1 ** 'id');
 
 Removes all previously added where() restrictions for a column.
 If no column is provided, ALL where() restrictions are removed.
@@ -591,7 +590,7 @@ sub col_arrayref {
     my $me = shift;
     my $attr = shift;
     $me->_sql($me->sql, $me->_bind_params_select($me->{build_data}));
-    my $sth = $me->rdbh->prepare($me->{sql}) or return;
+    my $sth = $me->rdbh->prepare($me->{sql}, $attr) or return;
     unless (defined $attr->{Columns}) {
         # Some drivers don't provide $sth->{NUM_OF_FIELDS} until after execute is called
         if ($sth->{NUM_OF_FIELDS}) {
@@ -860,7 +859,7 @@ sub config {
     my $me = shift;
     my $opt = shift;
     my $val = defined $me->{Config}{$opt} ? $me->{Config}{$opt} : $me->{DBO}->config($opt);
-    $me->{Config}{$opt} = shift if @_;
+    $me->_set_config($me->{Config}, $opt, shift) if @_;
     return $val;
 }
 
@@ -882,9 +881,7 @@ Better explanation of subclassing, to create easy to use query objects.
 
 =item *
 
-Better explanation of how to construct complex queries.
-
-This module is currently still in development (including the documentation), but I will be adding to/completing it in the near future.
+Better explanation of how to construct complex queries.  This module is currently still in development (including the documentation), but I will be adding to/completing it in the near future.
 
 =item *
 

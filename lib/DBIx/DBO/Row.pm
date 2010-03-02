@@ -302,7 +302,7 @@ sub config {
     my $opt = shift;
     my $val = defined $$me->{Config}{$opt} ? $$me->{Config}{$opt} :
         (defined $$me->{Parent} ? $$me->{Parent} : $$me->{DBO})->config($opt);
-    $$me->{Config}{$opt} = shift if @_;
+    $me->_set_config($$me->{Config}, $opt, shift) if @_;
     return $val;
 }
 
