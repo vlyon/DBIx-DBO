@@ -397,7 +397,7 @@ sub _set_config {
     my $me = shift;
     my ($ref, $opt, $val) = @_;
     ouch "Invalid value for the 'UseHandle' setting"
-        if $opt = 'UseHandle' and defined $val and $val ne 'readonly' and $val ne 'readwrite';
+        if $opt eq 'UseHandle' and defined $val and $val ne 'readonly' and $val ne 'readwrite';
     $ref->{$opt} = $val;
 }
 
