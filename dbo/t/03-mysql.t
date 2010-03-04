@@ -23,7 +23,7 @@ plan tests => 65;
 
 # Create the DBO (3 tests)
 pass "Connect to MySQL $quoted_db database";
-isa_ok $dbo, "DBIx::DBO::DBD::mysql", '$dbo';
+isa_ok $dbo, 'DBIx::DBO::DBD::mysql', '$dbo';
 ok $dbo->do('SET NAMES utf8'), 'SET NAMES utf8' or diag sql_err($dbo);
 
 # In MySQL the Schema is the DB

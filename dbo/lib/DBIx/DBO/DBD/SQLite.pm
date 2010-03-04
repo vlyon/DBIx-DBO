@@ -23,7 +23,7 @@ sub _get_table_schema {
 }
 
 package # hide from PAUSE
-    DBIx::DBO::DBD::SQLite::Query;
+    DBIx::DBO::Query::DBD::SQLite;
 use DBIx::DBO::Common;
 
 sub fetch {

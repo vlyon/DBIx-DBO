@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 # Create the DBO (2 tests)
-use Test::DBO Sponge => 'Sponge', tests => 5;
+use Test::DBO Sponge => 'Sponge', tests => 11;
 
 # Empty Subclass
 @SubClass::ISA = ('DBIx::DBO');
@@ -45,6 +45,18 @@ note 'C3 Method Resolution Order is needed for optimal inheritance when subcalss
     }
 }
 
-isa_ok my $t = $dbo->table($Test::DBO::test_tbl), 'SubClass::DBD::Sponge::Table', '$t';
-isa_ok my $q = $dbo->query($t), 'SubClass::DBD::Sponge::Query', '$q';
+isa_ok my $t = $dbo->table($Test::DBO::test_tbl), 'SubClass::Table::DBD::Sponge', '$t';
+isa_ok my $q = $dbo->query($t), 'SubClass::Query::DBD::Sponge', '$q';
+
+# Empty Table Subclass
+@MyTable::ISA = ('DBIx::DBO::Table');
+isa_ok $q = MyTable->new($dbo, $t), 'MyTable::DBD::Sponge', '$t';
+isa_ok $q, 'MyTable', '$t';
+isa_ok $q, 'DBIx::DBO::Table::DBD::Sponge', '$t';
+
+# Empty Query Subclass
+@MyQuery::ISA = ('DBIx::DBO::Query');
+isa_ok $q = MyQuery->new($dbo, $t), 'MyQuery::DBD::Sponge', '$q';
+isa_ok $q, 'MyQuery', '$q';
+isa_ok $q, 'DBIx::DBO::Query::DBD::Sponge', '$q';
 
