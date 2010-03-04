@@ -31,20 +31,27 @@ DBIx::DBO::Row - An OO interface to SQL queries and results.  Encapsulates a fet
 
 =head1 METHODS
 
+=head3 C<new>
+
+  DBIx::DBO::Row->new($dbo, $table_object);
+  DBIx::DBO::Row->new($dbo, $query_object);
+
+Create and return a new C<Row> object.
+
 =cut
 
 sub dbh { ${$_[0]}->{DBO}->dbh }
 sub rdbh { ${$_[0]}->{DBO}->rdbh }
 
-sub _new {
+sub new {
     my $proto = shift;
     my $class = ref($proto) || $proto;
     my $me = \{ DBO => shift, Parent => shift, array => undef, hash => {} };
     blessed $$me->{DBO} and $$me->{DBO}->isa('DBIx::DBO') or ouch 'Invalid DBO Object';
     ouch 'Invalid Parent Object' unless defined $$me->{Parent};
     $$me->{Parent} = $$me->{DBO}->table($$me->{Parent}) unless blessed $$me->{Parent};
-    _init($me);
-    bless $me, $class;
+    bless $me, $$me->{DBO}->_create_dbd_class($class, __PACKAGE__);
+    $me->_init;
     return wantarray ? ($me, $me->tables) : $me;
 }
 
@@ -53,7 +60,7 @@ sub _init {
     $$me->{build_data}{LimitOffset} = [1];
     if ($$me->{Parent}->isa('DBIx::DBO::Query')) {
         $$me->{Tables} = [ @{$$me->{Parent}{Tables}} ];
-        _copy_build_data($me);
+        $me->_copy_build_data;
         # We must weaken this to avoid a circular reference
         weaken $$me->{Parent};
     } elsif ($$me->{Parent}->isa('DBIx::DBO::Table')) {

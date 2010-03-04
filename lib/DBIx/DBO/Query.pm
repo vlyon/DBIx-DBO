@@ -36,15 +36,23 @@ DBIx::DBO::Query - An OO interface to SQL queries and results.  Encapsulates an 
 
 =head1 METHODS
 
+=head3 C<new>
+
+  DBIx::DBO::Query->new($dbo, $table1, ...);
+
+Create a new C<Query> object from the tables specified.
+In scalar context, just the C<Query> object will be returned.
+In list context, the C<Query> object and L<DBIx::DBO::Table|DBIx::DBO::Table> objects will be returned for each table specified.
+
 =cut
 
-sub _new {
+sub new {
     my $proto = shift;
     my $class = ref($proto) || $proto;
     my $me = { DBO => shift, sql => undef };
     blessed $me->{DBO} and $me->{DBO}->isa('DBIx::DBO') or ouch 'Invalid DBO Object';
     ouch 'No table specified in new Query' unless @_;
-    bless $me, $class;
+    bless $me, $me->{DBO}->_create_dbd_class($class, __PACKAGE__);
 
     for my $table (@_) {
         $me->join_table($table);

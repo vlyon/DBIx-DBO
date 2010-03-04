@@ -36,7 +36,7 @@ sub config {
 }
 
 package # hide from PAUSE
-    DBIx::DBO::DBD::mysql::Common;
+    DBIx::DBO::Common::DBD::mysql;
 use DBIx::DBO::Common;
 
 sub _build_sql_select {
@@ -47,7 +47,7 @@ sub _build_sql_select {
 }
 
 package # hide from PAUSE
-    DBIx::DBO::DBD::mysql::Table;
+    DBIx::DBO::Table::DBD::mysql;
 use DBIx::DBO::Common;
 
 sub _last_insert_id {
@@ -57,7 +57,7 @@ sub _last_insert_id {
 }
 
 package # hide from PAUSE
-    DBIx::DBO::DBD::mysql::Query;
+    DBIx::DBO::Query::DBD::mysql;
 use DBIx::DBO::Common;
 
 sub found_rows {

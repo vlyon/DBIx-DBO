@@ -29,13 +29,23 @@ DBIx::DBO::Table - An OO interface to SQL queries and results.  Encapsulates a t
 
 =head1 METHODS
 
+=head3 C<new>
+
+  DBIx::DBO::Table->new($dbo, $table);
+  DBIx::DBO::Table->new($dbo, [$schema, $table]);
+  DBIx::DBO::Table->new($dbo, $table_object);
+
+Create and return a new C<Table> object.
+Tables can be specified by their name or an arrayref of schema and table name or another L<DBIx::DBO::Table|DBIx::DBO::Table> object.
+
 =cut
 
-sub _new {
+sub new {
     my ($proto, $dbo, $table) = @_;
     my $class = ref($proto) || $proto;
     blessed $dbo and $dbo->isa('DBIx::DBO') or ouch 'Invalid DBO Object';
     (my $schema, $table, $_) = $dbo->table_info($table) or ouch 'No such table: '.$table;
+    $class = $dbo->_create_dbd_class($class, __PACKAGE__);
     bless { %$_, Schema => $schema, Name => $table, DBO => $dbo, LastInsertID => undef }, $class;
 }
 

@@ -123,7 +123,8 @@ sub connect {
     }
     my $new = { rdbh => undef, ConnectArgs => [], ConnectReadOnlyArgs => [] };
     $new->{dbh} = $me->_connect($new->{ConnectArgs}, @_) or return;
-    my $class = $me->_require_dbd_class($new->{dbh}{Driver}{Name});
+    $new->{dbd} = $new->{dbh}{Driver}{Name};
+    my $class = $me->_require_dbd_class($new->{dbd});
     unless ($class) {
         $new->{dbh}->set_err('', $@);
         return;
@@ -142,7 +143,8 @@ sub connect_readonly {
     }
     my $new = { dbh => undef, ConnectArgs => [], ConnectReadOnlyArgs => [] };
     $new->{rdbh} = $me->_connect($new->{ConnectReadOnlyArgs}, @_) or return;
-    my $class = $me->_require_dbd_class($new->{rdbh}{Driver}{Name});
+    $new->{dbd} = $new->{rdbh}{Driver}{Name};
+    my $class = $me->_require_dbd_class($new->{dbd});
     unless ($class) {
         $new->{rdbh}->set_err('', $@);
         return;
@@ -158,6 +160,7 @@ sub _check_driver {
         ouch "Can't connect to data source '$dsn' because I can't work out what driver to use " .
             "(it doesn't seem to contain a 'dbi:driver:' prefix and the DBI_DRIVER env var is not set)";
     ref($me) =~ /::DBD::\Q$driver\E$/ or
+    $driver eq $me->{dbd} or
         ouch "Can't connect to the data source '$dsn'\n" .
             "The read-write and read-only connections must use the same DBI driver";
 }
@@ -216,28 +219,43 @@ sub _require_dbd_class {
 
 sub _set_inheritance {
     my $me = shift;
-    my $dbd = shift;
-    my $class = $me.'::DBD::'.$dbd;
+    my $_dbd = '::DBD::'.shift;
 
     no strict 'refs';
-    return $class if "@{$class.'::Common::ISA'}" eq $me.'::Common';
+    return $me.$_dbd if "@{$me.$_dbd.'::Common::ISA'}" eq $me.'::Common';
 
-    @{$class.'::Common::ISA'} = ($me.'::Common');
-    @{$class.'::ISA'} = ($me, $class.'::Common');
-    @{$class.'::'.$_.'::ISA'} = ($me.'::'.$_, $class.'::Common') for qw(Table Query Row);
+    @{$me.'::Common'.$_dbd.'::ISA'} = ($me.'::Common');
+    @{$me.$_.$_dbd.'::ISA'} = ($me.$_, $me.'::Common'.$_dbd) for ('', '::Table', '::Query', '::Row');
     if ($me ne __PACKAGE__) {
-        push @{$class.'::ISA'}, __PACKAGE__.'::DBD::'.$dbd;
-        push @{$class.'::'.$_.'::ISA'}, __PACKAGE__.'::DBD::'.$dbd.'::'.$_ for qw(Table Query Row);
-        eval "package ${me}";
-        eval "package ${me}::$_" for qw(Common Table Query Row);
+        for ('::Common', '', '::Table', '::Query', '::Row') {
+            push @{$me.$_.$_dbd.'::ISA'}, __PACKAGE__.$_.$_dbd;
+            eval "package ${me}$_";
+        }
     }
     if ($use_c3_mro) {
-        mro::set_mro($class, 'c3');
-        mro::set_mro($class.'::'.$_, 'c3') for qw(Table Query Row);
+        mro::set_mro($me.$_.$_dbd, 'c3') for ('::Common', '', '::Table', '::Query', '::Row');
         # If perl < 5.9.5 then we need to call Class::C3::initialize()
         $need_c3_initialize = $] < 5.009_005;
     }
-    return $class;
+    return $me.$_dbd;
+}
+
+sub _create_dbd_class {
+    my $me = shift;
+    my $class = shift;
+    my $base_class = shift;
+    my $_dbd = '::DBD::'.$me->{dbd};
+    $class =~ s/::DBD::\w+$//;
+    # Inheritance
+    no strict 'refs';
+    unless (@{$class.$_dbd.'::ISA'}) {
+        @{$class.$_dbd.'::ISA'} = ($class, $base_class.$_dbd);
+        if ($use_c3_mro) {
+            mro::set_mro($class.$_dbd, 'c3');
+            Class::C3::initialize() if $] < 5.009_005;
+        }
+    }
+    return $class.$_dbd;
 }
 
 sub _bless_dbo {
@@ -258,8 +276,8 @@ Tables can be specified by their name or an arrayref of schema and table name or
 =cut
 
 sub table {
-    my $class = ref($_[0]).'::Table';
-    $class->_new(@_);
+    (my $class = ref($_[0])) =~ s/(::DBD::\w+)$/::Table$1/;
+    $class->new(@_);
 }
 
 =head3 C<query>
@@ -277,8 +295,8 @@ In list context, the C<Query> object and L<DBIx::DBO::Table|DBIx::DBO::Table> ob
 =cut
 
 sub query {
-    my $class = ref($_[0]).'::Query';
-    $class->_new(@_);
+    (my $class = ref($_[0])) =~ s/(::DBD::\w+)$/::Query$1/;
+    $class->new(@_);
 }
 
 =head3 C<row>
@@ -291,8 +309,8 @@ Create and return a new L<DBIx::DBO::Row|DBIx::DBO::Row> object.
 =cut
 
 sub row {
-    my $class = ref($_[0]).'::Row';
-    $class->_new(@_);
+    (my $class = ref($_[0])) =~ s/(::DBD::\w+)$/::Row$1/;
+    $class->new(@_);
 }
 
 =head3 C<selectrow_array>
