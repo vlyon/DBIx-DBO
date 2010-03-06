@@ -2,6 +2,7 @@ use strict;
 use warnings;
 use Module::Build;
 
+# Recommend MRO::Compat if using perl < 5.9.5
 my $class = $] < 5.009_005 ? 'Module::Build' : Module::Build->subclass(code => q{
     sub write_metafile {
         my $self = shift;
@@ -32,7 +33,6 @@ my $builder = $class->new(
             repository => 'http://vlyon.svn.beanstalkapp.com/src/dbo',
         },
     },
-    add_to_cleanup      => [ 'DBIx-DBO-*' ],
 );
 
 $builder->create_build_script();
