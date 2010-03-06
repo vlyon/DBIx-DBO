@@ -50,9 +50,9 @@ isa_ok my $q = $dbo->query($t), 'SubClass::Query::DBD::Sponge', '$q';
 
 # Empty Table Subclass
 @MyTable::ISA = ('DBIx::DBO::Table');
-isa_ok $q = MyTable->new($dbo, $t), 'MyTable::DBD::Sponge', '$t';
-isa_ok $q, 'MyTable', '$t';
-isa_ok $q, 'DBIx::DBO::Table::DBD::Sponge', '$t';
+isa_ok $t = MyTable->new($dbo, $t), 'MyTable::DBD::Sponge', '$t';
+isa_ok $t, 'MyTable', '$t';
+isa_ok $t, 'DBIx::DBO::Table::DBD::Sponge', '$t';
 
 # Empty Query Subclass
 @MyQuery::ISA = ('DBIx::DBO::Query');
