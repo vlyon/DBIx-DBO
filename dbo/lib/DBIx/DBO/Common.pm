@@ -17,7 +17,7 @@ use subs qw(ouch oops);
 
 our %Config = (
     QuoteIdentifier => 1,
-    _Debug_SQL => 0,
+    DebugSQL => 0,
 );
 our @CARP_NOT;
 our $placeholder = PLACEHOLDER;
@@ -55,7 +55,7 @@ sub _last_sql {
 sub _carp_last_sql {
     my $me = shift;
     my ($cmd, $sql, @bind) = @{$me->_last_sql};
-    local $Carp::Verbose = 1 if $me->config('_Debug_SQL') > 1;
+    local $Carp::Verbose = 1 if $me->config('DebugSQL') > 1;
     my @mess = split /\n/, Carp::shortmess("\t$cmd called");
     splice @mess, 0, 3 if $Carp::Verbose;
     warn join "\n", $sql, '('.join(', ', map $me->rdbh->quote($_), @bind).')', @mess;
@@ -65,7 +65,7 @@ sub _sql {
     my ($me, $sql) = splice @_, 0, 2;
     my $cmd = (caller(1))[3];
     $me->_last_sql($cmd, $sql, @_);
-    $me->_carp_last_sql if $me->config('_Debug_SQL');
+    $me->_carp_last_sql if $me->config('DebugSQL');
 }
 
 sub do {
@@ -397,8 +397,10 @@ sub _set_config {
     my $me = shift;
     my ($ref, $opt, $val) = @_;
     ouch "Invalid value for the 'UseHandle' setting"
-        if $opt eq 'UseHandle' and defined $val and $val ne 'readonly' and $val ne 'readwrite';
+        if $opt eq 'UseHandle' and defined $val and $val ne 'read-only' and $val ne 'read-write';
+    my $old = $ref->{$opt};
     $ref->{$opt} = $val;
+    return $old;
 }
 
 1;

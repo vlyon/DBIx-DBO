@@ -24,19 +24,19 @@ BEGIN {
         die $@ if $@;
     }
 
-    # Set up _Debug_SQL if requested
+    # Set up DebugSQL if requested
     require DBIx::DBO::Common;
 
     if ($ENV{DBO_DEBUG_SQL}) {
         diag "DBO_DEBUG_SQL=$ENV{DBO_DEBUG_SQL}";
         package DBIx::DBO::Common;
 
-        $DBIx::DBO::Common::Config{_Debug_SQL} = $ENV{DBO_DEBUG_SQL};
+        $DBIx::DBO::Common::Config{DebugSQL} = $ENV{DBO_DEBUG_SQL};
         no warnings 'redefine';
         *DBIx::DBO::Common::_carp_last_sql = sub {
             my $me = shift;
             my ($cmd, $sql, @bind) = @{$me->_last_sql};
-            local $Carp::Verbose = 1 if $me->config('_Debug_SQL') > 1;
+            local $Carp::Verbose = 1 if $me->config('DebugSQL') > 1;
             my @mess = split /\n/, Carp::shortmess("\t$cmd called");
             splice @mess, 0, 3 if $Carp::Verbose;
             Test::More::diag join "\n", "DEBUG_SQL: $sql", 'DEBUG_SQL: ('.join(', ', map $me->rdbh->quote($_), @bind).')', @mess;
