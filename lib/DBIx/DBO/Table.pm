@@ -36,7 +36,7 @@ DBIx::DBO::Table - An OO interface to SQL queries and results.  Encapsulates a t
   DBIx::DBO::Table->new($dbo, $table_object);
 
 Create and return a new C<Table> object.
-Tables can be specified by their name or an arrayref of schema and table name or another L<DBIx::DBO::Table|DBIx::DBO::Table> object.
+Tables can be specified by their name or an arrayref of schema and table name or another C<Table> object.
 
 =cut
 
@@ -51,7 +51,7 @@ sub new {
 
 =head3 C<tables>
 
-Return a list of L<DBIx::DBO::Table|DBIx::DBO::Table> objects, which will always be this C<Table> object.
+Return a list of C<Table> objects, which will always be this C<Table> object.
 
 =cut
 
@@ -229,8 +229,9 @@ This provides access to L<DBI-E<gt>do|DBI/"do"> method.  It defaults to using th
   $table_setting = $table->config($option);
   $table->config($option => $table_setting);
 
-Get or set the C<Table> config settings.
-When setting an option, the previous value is returned.
+Get or set the C<Table> config settings.  When setting an option, the previous value is returned.  When getting an option's value, if the value is undefined, the L<DBIx::DBO|DBIx::DBO>'s value is returned.
+
+See L<DBIx::DBO/available_config_options>.
 
 =cut
 

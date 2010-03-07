@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 4;
+use Test::More tests => 5;
 
 BEGIN {
     if ($Test::More::VERSION < 0.84) {
@@ -25,6 +25,11 @@ note 'Available DBI drivers: '.join(', ', DBI->available_drivers);
 ok $DBIx::DBO::Config{QuoteIdentifier}, 'QuoteIdentifier setting is ON by default';
 import DBIx::DBO QuoteIdentifier => 123;
 is $DBIx::DBO::Config{QuoteIdentifier}, 123, "Check 'QuoteIdentifier' import option";
+
 DBIx::DBO->config(QuoteIdentifier => 456);
 is +DBIx::DBO->config('QuoteIdentifier'), 456, 'Method DBIx::DBO->config';
+
+DBIx::DBO->config(UseHandle => 'read-only');
+is +DBIx::DBO->config('UseHandle'), 'read-only', 'UseHandle config setting';
+DBIx::DBO->config(UseHandle => undef);
 

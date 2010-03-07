@@ -859,16 +859,17 @@ This provides access to L<DBI-E<gt>do|DBI/"do"> method.  It defaults to using th
   $query_setting = $dbo->config($option);
   $dbo->config($option => $query_setting);
 
-Get or set this C<Query> object's config settings.  When setting an option, the previous value is returned.
+Get or set this C<Query> object's config settings.  When setting an option, the previous value is returned.  When getting an option's value, if the value is undefined, the L<DBIx::DBO|DBIx::DBO>'s value is returned.
+
+See L<DBIx::DBO/available_config_options>.
 
 =cut
 
 sub config {
     my $me = shift;
     my $opt = shift;
-    my $val = defined $me->{Config}{$opt} ? $me->{Config}{$opt} : $me->{DBO}->config($opt);
-    $me->_set_config($me->{Config}, $opt, shift) if @_;
-    return $val;
+    return $me->_set_config($me->{Config}, $opt, shift) if @_;
+    return defined $me->{Config}{$opt} ? $me->{Config}{$opt} : $me->{DBO}->config($opt);
 }
 
 sub DESTROY {

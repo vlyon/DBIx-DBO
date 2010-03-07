@@ -23,7 +23,7 @@ DBIx::DBO - An OO interface to SQL queries and results.  Easily constructs SQL q
 
 =cut
 
-our $VERSION = '0.03_03';
+our $VERSION = '0.04';
 
 =head1 SYNOPSIS
 
@@ -174,7 +174,7 @@ sub _connect {
 
 ### Add a stack trace to PrintError & RaiseError
         $attr{HandleError} = sub {
-            if ($Config{_Debug_SQL} > 1) {
+            if ($Config{DebugSQL} > 1) {
                 $_[0] = Carp::longmess($_[0]);
                 return 0;
             }
@@ -507,10 +507,9 @@ sub rdbh {
   $dbo_setting = $dbo->config($option);
   $dbo->config($option => $dbo_setting);
 
-Get or set the global or C<DBIx::DBO> config settings.
-When setting an option, the previous value is returned.
+Get or set the global or C<DBIx::DBO> config settings.  When setting an option, the previous value is returned.  When getting an option's value, if the value is undefined, the global value is returned.
 
-Options include:
+=head2 Available C<config> options
 
 =over
 
@@ -523,7 +522,7 @@ Boolean setting to control quoting of SQL identifiers (schema, table and column 
 Set to C<'read-write'> or C<'read-only'> to force using only that handle for all operations.
 Defaults to C<undef> which chooses the I<read-only> handle for reads and the I<read-write> handle otherwise.
 
-=item C<_Debug_SQL>
+=item C<DebugSQL>
 
 Set to C<1> or C<2> to warn about each SQL command executed.  C<2> adds a full stack trace.
 Defaults to C<0> (silent).
@@ -532,7 +531,7 @@ Defaults to C<0> (silent).
 
 Global options can also be set when C<use>'ing the module:
 
-  use DBIx::DBO QuoteIdentifier => 0, _Debug_SQL => 1;
+  use DBIx::DBO QuoteIdentifier => 0, DebugSQL => 1;
 
 =cut
 
@@ -540,13 +539,11 @@ sub config {
     my $me = shift;
     my $opt = shift;
     unless (blessed $me) {
-        my $val = $Config{$opt};
-        $Config{$opt} = shift if @_;
-        return $val;
+        return DBIx::DBO::Common->_set_config(\%Config, $opt, shift) if @_;
+        return $Config{$opt};
     }
-    my $val = defined $me->{Config}{$opt} ? $me->{Config}{$opt} : $Config{$opt};
-    $me->_set_config($me->{Config}, $opt, shift) if @_;
-    return $val;
+    return $me->_set_config($me->{Config}, $opt, shift) if @_;
+    return defined $me->{Config}{$opt} ? $me->{Config}{$opt} : $Config{$opt};
 }
 
 sub DESTROY {
