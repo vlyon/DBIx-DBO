@@ -34,6 +34,16 @@ DBIx::DBO::Query - An OO interface to SQL queries and results.  Encapsulates an 
   $query->where($table1 ** 'age', '<', 20, FORCE => 'OR'); # Force OR so that we get: (age < 20 OR age > 30)
   $query->where($table1 ** 'age', '>', 30, FORCE => 'OR'); # instead of the default: (age < 20 AND age > 30)
 
+=head1 DESCRIPTION
+
+A C<Query> object represents rows from a database (from one or more tables). This module makes it easy, not only to fetch and use the data in the returned rows, but also to modify the query to return a different result set.
+
+=head1 SUBCLASSING
+
+When subclassing C<DBIx::DBO::Query>, please note that C<Query> objects created with the L</new> method are blessed into a DBD driver specific module. For example if using MySQL, a new C<Query> object will be blessed into C<DBIx::DBO::Query::DBD::mysql> which inherits from C<DBIx::DBO::Query>.  However if objects are created from a subclass called C<MySubClass> the new object will be blessed into C<MySubClass::DBD::mysql> which will inherit from both C<MySubClass> and C<DBIx::DBO::Query::DBD::mysql>.
+
+For this reason it's advisable that L<MRO::Compat|MRO::Compat> is installed if the perl version you are using is less than 5.9.5 as this module will try to ensure that the 'C3' method resolution order is used.
+
 =head1 METHODS
 
 =head3 C<new>
@@ -292,12 +302,13 @@ C<ORDER> => To order by a column (Used only in C<group_by> and C<order_by>).
 
 =back
 
-Multiple C<where> expressions are combined I<cleverly> using the preferred aggregator C<'AND'> (unless L<open_bracket|/open_bracket__close_bracket> was used to change this).  So that when you add where expressions to the query, they will be C<'AND'>ed together.  However some expressions will automatically be C<'OR'>ed instead where this makes sense, Eg:
+Multiple C<where> expressions are combined I<cleverly> using the preferred aggregator C<'AND'> (unless L<open_bracket|/open_bracket__close_bracket> was used to change this).  So that when you add where expressions to the query, they will be C<AND>ed together.  However some expressions that refer to the same caloumn will automatically be C<OR>ed instead where this makes sense, currently: C<'='>, C<'IS NULL'>, C<E<lt>=E<gt>>, C<IN> and C<'BETWEEN'>.  Similarly, when the preferred aggregator is C<'OR'> the following operators will be C<AND>ed together: C<'!='>, C<'IS NOT NULL'>, C<E<lt>E<gt>>, C<NOT IN> and C<'NOT BETWEEN'>.
 
   $query->where('id', '=', 5);
+  $query->where('name', '=', 'Bob');
   $query->where('id', '=', 7);
   $query->where(...
-  # Produces: WHERE ("id" = 5 OR "id" = 7) AND ...
+  # Produces: WHERE ("id" = 5 OR "id" = 7) AND "name" = 'Bob' AND ...
 
 =cut
 
@@ -868,7 +879,7 @@ See L<DBIx::DBO/available_config_options>.
 sub config {
     my $me = shift;
     my $opt = shift;
-    return $me->_set_config($me->{Config}, $opt, shift) if @_;
+    return $me->_set_config($me->{Config} ||= {}, $opt, shift) if @_;
     return defined $me->{Config}{$opt} ? $me->{Config}{$opt} : $me->{DBO}->config($opt);
 }
 
@@ -883,10 +894,6 @@ __END__
 =head1 TODO LIST
 
 =over
-
-=item *
-
-Better explanation of subclassing, to create easy to use query objects.
 
 =item *
 
