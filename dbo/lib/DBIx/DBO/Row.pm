@@ -308,7 +308,7 @@ See L<DBIx::DBO/available_config_options>.
 sub config {
     my $me = shift;
     my $opt = shift;
-    return $me->_set_config($$me->{Config}, $opt, shift) if @_;
+    return $me->_set_config($$me->{Config} ||= {}, $opt, shift) if @_;
     return defined $$me->{Config}{$opt} ? $$me->{Config}{$opt} :
         (defined $$me->{Parent} ? $$me->{Parent} : $$me->{DBO})->config($opt);
 }

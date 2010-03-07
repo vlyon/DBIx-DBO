@@ -238,9 +238,8 @@ See L<DBIx::DBO/available_config_options>.
 sub config {
     my $me = shift;
     my $opt = shift;
-    my $val = defined $me->{Config}{$opt} ? $me->{Config}{$opt} : $me->{DBO}->config($opt);
-    $me->_set_config($me->{Config}, $opt, shift) if @_;
-    return $val;
+    return $me->_set_config($me->{Config} ||= {}, $opt, shift) if @_;
+    return defined $me->{Config}{$opt} ? $me->{Config}{$opt} : $me->{DBO}->config($opt);
 }
 
 sub DESTROY {
