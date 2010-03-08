@@ -14,16 +14,16 @@ DBIx::DBO::Table - An OO interface to SQL queries and results.  Encapsulates a t
 
   # Create a Table object
   my $table = $dbo->table('my_table');
-
+  
   # Get a column reference
   my $column = $table ** 'employee_id';
-
+  
   # Quickly display my employee id
   print $table->fetch_value('employee_id', name => 'Vernon');
-
+  
   # Insert a new row into the table
   $table->insert(employee_id => 007, name => 'James Bond');
-
+  
   # Remove rows from the table where the name IS NULL
   $table->delete(name => undef);
 
@@ -231,7 +231,7 @@ This provides access to L<DBI-E<gt>do|DBI/"do"> method.  It defaults to using th
 
 Get or set the C<Table> config settings.  When setting an option, the previous value is returned.  When getting an option's value, if the value is undefined, the L<DBIx::DBO|DBIx::DBO>'s value is returned.
 
-See L<DBIx::DBO/available_config_options>.
+See L<DBIx::DBO/Available_config_options>.
 
 =cut
 

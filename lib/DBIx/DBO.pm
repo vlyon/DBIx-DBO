@@ -28,37 +28,37 @@ our $VERSION = '0.04';
 =head1 SYNOPSIS
 
   use DBIx::DBO;
-
+  
   # Create the DBO
   my $dbo = DBIx::DBO->connect('DBI:mysql:my_db', 'me', 'mypasswd') or die $DBI::errstr;
-
+  
   # Create a "read-only" connection - useful for a slave database
   $dbo->connect_readonly('DBI:mysql:my_db', 'me', 'mypasswd') or die $DBI::errstr;
-
+  
   # Start with a Query object
   my $query = $dbo->query('my_table');
-
+  
   # Find records with an 'o' in the name
   $query->where('name', 'LIKE', '%o%');
-
+  
   # And with an id that is less than 500
   $query->where('id', '<', 500);
-
+  
   # Exluding those with an age range from 20 to 29
   $query->where('age', 'NOT BETWEEN', [20, 29]);
-
+  
   # Return only the first 10 rows
   $query->limit(10);
-
+  
   # Fetch the rows
   while (my $row = $query->fetch) {
-
+  
       # Use the row as an array reference
       printf "id=%d  name=%s  status=%s\n", $row->[0], $row->[1], $row->[4];
-
+  
       # Or as a hash reference
       print 'id=', $row->{id}, "\n", 'name=', $row->{name};
-
+  
       # Update/delete rows
       $row->update(status => 'Fired!') if $row->{name} eq 'Harry';
       $row->delete if $record->{id} == 27;

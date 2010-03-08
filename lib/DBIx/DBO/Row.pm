@@ -16,16 +16,16 @@ DBIx::DBO::Row - An OO interface to SQL queries and results.  Encapsulates a fet
 
   # Create a Row object for the `users` table
   my $row = $dbo->row('users');
-
+  
   # Load my record
   $row->load(login => 'vlyon') or die "Where am I?";
-
+  
   # Double my salary :)
   $row->update(salary => {FUNC => '? * 2', COL => 'salary'});
-
+  
   # Print my email address
   print $row ** 'email';  # Short for: $row->value('email')
-
+  
   # Delete my boss
   $row->load(id => $row ** boss_id)->delete or die "Can't kill the boss";
 
@@ -301,7 +301,7 @@ This provides access to the L<DBI-E<gt>do|DBI/"do"> method.  It defaults to usin
 
 Get or set the C<Row> config settings.  When setting an option, the previous value is returned.  When getting an option's value, if the value is undefined, the C<Query> object (If the the C<Row> belongs to one) or L<DBIx::DBO|DBIx::DBO>'s value is returned.
 
-See L<DBIx::DBO/available_config_options>.
+See L<DBIx::DBO/Available_config_options>.
 
 =cut
 
