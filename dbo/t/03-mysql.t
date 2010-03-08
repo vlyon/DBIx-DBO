@@ -15,7 +15,10 @@ if ($dbo->do("CREATE DATABASE $quoted_db CHARACTER SET utf8")) {
     $dbo->do("USE $quoted_db");
 } else {
     my $msg = "Can't create the test database: $DBI::errstr";
-    $Test::DBO::test_db = $dbo->selectrow_array('SELECT DATABASE()') or plan skip_all => $msg;
+    unless ($Test::DBO::test_db = $dbo->selectrow_array('SELECT DATABASE()')) {
+        undef $dbo;
+        plan skip_all => $msg;
+    }
     $quoted_db = $dbo->_qi($Test::DBO::test_db);
 }
 

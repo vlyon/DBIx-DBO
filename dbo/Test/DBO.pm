@@ -133,6 +133,7 @@ sub last_sql {
 sub connect_dbo {
     my ($dsn, $user, $pass) = @_;
     defined $dsn or $dsn = '';
+warn "DBI:$dbd:$dsn";
     DBIx::DBO->connect("DBI:$dbd:$dsn", $user, $pass, {RaiseError => 0});
 }
 
@@ -140,7 +141,8 @@ sub try_to_connect {
     my $dbo_ref = shift;
     my @env = map $ENV{"DBO_TEST_\U$dbd\E_$_"}, qw(DSN USER PASS);
     if (grep defined, @env) {
-        return $$dbo_ref = connect_dbo(@env);
+        return $$dbo_ref if $$dbo_ref = connect_dbo(@env);
+        plan skip_all => "Can't connect: $DBI::errstr";
     }
     return undef;
 }
