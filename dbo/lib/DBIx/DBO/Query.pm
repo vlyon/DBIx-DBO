@@ -13,23 +13,23 @@ DBIx::DBO::Query - An OO interface to SQL queries and results.  Encapsulates an 
 
   # Create a Query object by JOINing 2 tables
   my $query = $dbo->query('my_table', 'my_other_table');
-
+  
   # Get the Table objects from the query
   my ($table1, $table2) = $query->tables;
-
+  
   # Add a JOIN ON clause
   $query->join_on($table1 ** 'login', '=', $table2 ** 'username');
-
+  
   # Find our ancestors, and order by age (oldest first)
   $query->where('name', '=', 'Adam');
   $query->where('name', '=', 'Eve');
   $query->order_by({ COL => 'age', ORDER => 'DESC' });
-
+  
   # New Query using a LEFT JOIN
   ($query, $table1) = $dbo->query('my_table');
   $table2 = $query->join_table('another_table', 'LEFT');
   $query->join_on($table1 ** 'parent_id', '=', $table2 ** 'child_id');
-
+  
   # Find those not aged between 20 and 30.
   $query->where($table1 ** 'age', '<', 20, FORCE => 'OR'); # Force OR so that we get: (age < 20 OR age > 30)
   $query->where($table1 ** 'age', '>', 30, FORCE => 'OR'); # instead of the default: (age < 20 AND age > 30)
@@ -268,7 +268,7 @@ A scalar reference: C<\"22 * 3">  (These are passed unquoted in the SQL statemen
 An array reference: C<[1, 3, 5]>  (Used with C<IN> and C<BETWEEN> etc)
 
 =item *
-A Column object: C<$table ** 'id'> or C<$table->column('id')>
+A Column object: C<$table ** 'id'> or C<$table-E<gt>column('id')>
 
 =item *
 A hash reference: (Described below)
@@ -302,7 +302,7 @@ C<ORDER> => To order by a column (Used only in C<group_by> and C<order_by>).
 
 =back
 
-Multiple C<where> expressions are combined I<cleverly> using the preferred aggregator C<'AND'> (unless L<open_bracket|/open_bracket__close_bracket> was used to change this).  So that when you add where expressions to the query, they will be C<AND>ed together.  However some expressions that refer to the same caloumn will automatically be C<OR>ed instead where this makes sense, currently: C<'='>, C<'IS NULL'>, C<E<lt>=E<gt>>, C<IN> and C<'BETWEEN'>.  Similarly, when the preferred aggregator is C<'OR'> the following operators will be C<AND>ed together: C<'!='>, C<'IS NOT NULL'>, C<E<lt>E<gt>>, C<NOT IN> and C<'NOT BETWEEN'>.
+Multiple C<where> expressions are combined I<cleverly> using the preferred aggregator C<'AND'> (unless L<open_bracket|/open_bracket__close_bracket> was used to change this).  So that when you add where expressions to the query, they will be C<AND>ed together.  However some expressions that refer to the same column will automatically be C<OR>ed instead where this makes sense, currently: C<'='>, C<'IS NULL'>, C<E<lt>=E<gt>>, C<IN> and C<'BETWEEN'>.  Similarly, when the preferred aggregator is C<'OR'> the following operators will be C<AND>ed together: C<'!='>, C<'IS NOT NULL'>, C<E<lt>E<gt>>, C<NOT IN> and C<'NOT BETWEEN'>.
 
   $query->where('id', '=', 5);
   $query->where('name', '=', 'Bob');
@@ -345,8 +345,8 @@ sub where {
   $query->unwhere();
   $query->unwhere($column);
 
-Removes all previously added where() restrictions for a column.
-If no column is provided, ALL where() restrictions are removed.
+Removes all previously added L</where> restrictions for a column.
+If no column is provided, the I<whole> WHERE clause is removed.
 
 =cut
 
@@ -872,7 +872,7 @@ This provides access to L<DBI-E<gt>do|DBI/"do"> method.  It defaults to using th
 
 Get or set this C<Query> object's config settings.  When setting an option, the previous value is returned.  When getting an option's value, if the value is undefined, the L<DBIx::DBO|DBIx::DBO>'s value is returned.
 
-See L<DBIx::DBO/available_config_options>.
+See L<DBIx::DBO/Available_config_options>.
 
 =cut
 
@@ -898,6 +898,10 @@ __END__
 =item *
 
 Better explanation of how to construct complex queries.  This module is currently still in development (including the documentation), but I will be adding to/completing it in the near future.
+
+=item *
+
+Improve the L</unwhere> method.  Currently it has very limited use.
 
 =item *
 
