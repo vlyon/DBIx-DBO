@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 # Create the DBO (2 tests)
-use Test::DBO Sponge => 'Sponge', tests => 11;
+use Test::DBO Sponge => 'Sponge', tests => 15;
 
 # Empty Subclass
 @SubClass::ISA = ('DBIx::DBO');
@@ -13,6 +13,11 @@ $dbo->connect_readonly('DBI:Sponge:'), 'Connect (read-only) to Sponge' or die $D
 
 my $quoted = $dbo->_qi($Test::DBO::test_db, $Test::DBO::test_tbl);
 is $quoted, qq{"$Test::DBO::test_db"."$Test::DBO::test_tbl"}, 'SubClass Method _qi';
+my $table_info = {
+    PrimaryKeys => [],
+    Columns => [ 'id', 'name', 'age' ],
+    Column_Idx => { id => 1, name => 2, age => 3 },
+};
 
 note 'C3 Method Resolution Order is needed for optimal inheritance when subcalssing!' unless $DBIx::DBO::use_c3_mro;
 {
@@ -32,11 +37,7 @@ note 'C3 Method Resolution Order is needed for optimal inheritance when subcalss
         my $table = shift;
         ouch 'No table name supplied' unless defined $table and length $table;
         # Fake table info
-        return $me->{TableInfo}{''}{$table} = {
-            PrimaryKeys => [],
-            Columns => [ 'id', 'name', 'age' ],
-            Column_Idx => { id => 1, name => 2, age => 3 }
-        };
+        return $me->{TableInfo}{''}{$table} = $table_info;
     }
     # Hack for machines not using MRO::Compat
     unless ($DBIx::DBO::use_c3_mro) {
@@ -47,6 +48,7 @@ note 'C3 Method Resolution Order is needed for optimal inheritance when subcalss
 
 isa_ok my $t = $dbo->table($Test::DBO::test_tbl), 'SubClass::Table::DBD::Sponge', '$t';
 isa_ok my $q = $dbo->query($t), 'SubClass::Query::DBD::Sponge', '$q';
+isa_ok my $r = $q->row, 'SubClass::Row::DBD::Sponge', '$r';
 
 # Empty Table Subclass
 @MyTable::ISA = ('DBIx::DBO::Table');
@@ -59,4 +61,10 @@ isa_ok $t, 'DBIx::DBO::Table::DBD::Sponge', '$t';
 isa_ok $q = MyQuery->new($dbo, $t), 'MyQuery::DBD::Sponge', '$q';
 isa_ok $q, 'MyQuery', '$q';
 isa_ok $q, 'DBIx::DBO::Query::DBD::Sponge', '$q';
+
+# Empty Row Subclass
+@MyRow::ISA = ('DBIx::DBO::Row');
+isa_ok $r = MyRow->new($dbo, $t), 'MyRow::DBD::Sponge', '$r';
+isa_ok $r, 'MyRow', '$r';
+isa_ok $r, 'DBIx::DBO::Row::DBD::Sponge', '$r';
 
