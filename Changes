@@ -1,9 +1,12 @@
 Revision history for DBIx-DBO
 
+0.04_01	Mar ?, 2010
+	- Added the DBIx::DBO->new method. [VLYON]
+
 0.04	Mar 7, 2010
 	- Improved POD docs, tests and compatibility with other platforms. [VLYON]
-	- Added DBIx::DBO::Query->open_bracket method. [VLYON]
-	- Added UseHandle config setting. [VLYON]
+	- Added the DBIx::DBO::Query->open_bracket method. [VLYON]
+	- Added the UseHandle config option. [VLYON]
 
 0.03	Feb 12, 2010
 	- Make it compatible with perl 5.8.x. [VLYON]
