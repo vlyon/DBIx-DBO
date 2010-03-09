@@ -133,7 +133,6 @@ sub last_sql {
 sub connect_dbo {
     my ($dsn, $user, $pass) = @_;
     defined $dsn or $dsn = '';
-warn "DBI:$dbd:$dsn";
     DBIx::DBO->connect("DBI:$dbd:$dsn", $user, $pass, {RaiseError => 0});
 }
 

@@ -23,7 +23,7 @@ DBIx::DBO - An OO interface to SQL queries and results.  Easily constructs SQL q
 
 =cut
 
-our $VERSION = '0.04';
+our $VERSION = '0.04_01';
 
 =head1 SYNOPSIS
 
@@ -93,6 +93,13 @@ sub import {
     }
 }
 
+=head3 C<new>
+
+  DBIx::DBO->new($dbh);
+  DBIx::DBO->new(undef, $readonly_dbh);
+
+Create a new C<DBIx::DBO> object from existsing C<DBI> handles.  You must provide one or both of the I<read-write> and I<read-only> C<DBI> handles.
+
 =head3 C<connect>
 
   $dbo = DBIx::DBO->connect($data_source, $username, $password, \%attr)
@@ -113,24 +120,49 @@ Both C<connect> & C<connect_readonly> can be called on a C<DBIx::DBO> object to 
 
 =cut
 
+sub new {
+    my $me = shift;
+    ouch 'Too many arguments for '.(caller(0))[3] if @_ > 3;
+    my $new;
+    if (@_ == 3 and defined($new = pop) and not UNIVERSAL::isa($new, 'HASH')) {
+        ouch '3rd argument to '.(caller(0))[3].' is not a HASH reference';
+    }
+    if (defined($new->{dbh} = shift)) {
+        ouch 'Invalid read-write database handle' unless blessed $new->{dbh} and $new->{dbh}->isa('DBI::db');
+        $new->{dbd} = $new->{dbh}{Driver}{Name};
+    }
+    if (defined($new->{rdbh} = shift)) {
+        ouch 'Invalid read-only database handle' unless blessed $new->{rdbh} and $new->{rdbh}->isa('DBI::db');
+        if ($new->{dbh}) {
+            ouch 'The read-write and read-only connections must use the same DBI driver'
+                if $new->{dbd} ne $new->{rdbh}{Driver}{Name};
+        } else {
+            $new->{dbd} = $new->{rdbh}{Driver}{Name};
+        }
+    }
+    ouch "Can't create the DBO, unknown database driver" unless $new->{dbd};
+
+    my $class = $me->_require_dbd_class($new->{dbd}) or return;
+    unless ($class) {
+        my $dbh = $new->{dbh} || $new->{rdbh};
+        $dbh->set_err('', $@) if $dbh;
+        return;
+    }
+    Class::C3::initialize() if $need_c3_initialize;
+    $class->_bless_dbo($new);
+}
+
 sub connect {
     my $me = shift;
     if (blessed $me) {
         ouch 'DBO is already connected' if $me->{dbh};
         $me->_check_driver($_[0]) if @_;
-        $me->{dbh} = $me->_connect($me->{ConnectArgs}, @_) or return;
+        $me->{dbh} = $me->_connect($me->{ConnectArgs} ||= [], @_) or return;
         return $me;
     }
-    my $new = { rdbh => undef, ConnectArgs => [], ConnectReadOnlyArgs => [] };
-    $new->{dbh} = $me->_connect($new->{ConnectArgs}, @_) or return;
-    $new->{dbd} = $new->{dbh}{Driver}{Name};
-    my $class = $me->_require_dbd_class($new->{dbd});
-    unless ($class) {
-        $new->{dbh}->set_err('', $@);
-        return;
-    }
-    Class::C3::initialize() if $need_c3_initialize;
-    $class->_bless_dbo($new);
+    my %new;
+    my $dbh = $me->_connect($new{ConnectArgs} = [], @_) or return;
+    $me->new($dbh, undef, \%new);
 }
 
 sub connect_readonly {
@@ -138,19 +170,12 @@ sub connect_readonly {
     if (blessed $me) {
         $me->{rdbh}->disconnect if $me->{rdbh};
         $me->_check_driver($_[0]) if @_;
-        $me->{rdbh} = $me->_connect($me->{ConnectReadOnlyArgs}, @_) or return;
+        $me->{rdbh} = $me->_connect($me->{ConnectReadOnlyArgs} ||= [], @_) or return;
         return $me;
     }
-    my $new = { dbh => undef, ConnectArgs => [], ConnectReadOnlyArgs => [] };
-    $new->{rdbh} = $me->_connect($new->{ConnectReadOnlyArgs}, @_) or return;
-    $new->{dbd} = $new->{rdbh}{Driver}{Name};
-    my $class = $me->_require_dbd_class($new->{dbd});
-    unless ($class) {
-        $new->{rdbh}->set_err('', $@);
-        return;
-    }
-    Class::C3::initialize() if $need_c3_initialize;
-    $class->_bless_dbo($new);
+    my %new;
+    my $dbh = $me->_connect($new{ConnectReadOnlyArgs} = [], @_) or return;
+    $me->new(undef, $dbh, \%new);
 }
 
 sub _check_driver {
@@ -229,7 +254,7 @@ sub _set_inheritance {
     if ($me ne __PACKAGE__) {
         for ('::Common', '', '::Table', '::Query', '::Row') {
             push @{$me.$_.$_dbd.'::ISA'}, __PACKAGE__.$_.$_dbd;
-            eval "package ${me}$_";
+            @{$me.$_.'::ISA'} = (__PACKAGE__.$_) unless @{$me.$_.'::ISA'};
         }
     }
     if ($use_c3_mro) {
@@ -473,31 +498,32 @@ This provides access to the L<DBI-E<gt>do|DBI/"do"> method.  It defaults to usin
 
 =cut
 
-sub _auto_reconnect {
+sub _handle {
     my $me = shift;
     my $handle = shift;
     my ($d, $c) = $handle ne 'read-only' ? qw(dbh ConnectArgs) : qw(rdbh ConnectReadOnlyArgs);
     ouch "No $handle handle connected" unless defined $me->{$d};
-    $me->{$d} = $me->_connect($me->{$c}) unless $me->{$d}->ping;
+    # Automatically reconnect, but only if possible and needed
+    $me->{$d} = $me->_connect($me->{$c}) if exists $me->{$c} and not $me->{$d}->ping;
     return $me->{$d};
 }
 
 sub dbh {
     my $me = shift;
     if (my $handle = $me->config('UseHandle')) {
-        return $me->_auto_reconnect($handle);
+        return $me->_handle($handle);
     }
     ouch 'Invalid action for a read-only connection' unless $me->{dbh};
-    $me->_auto_reconnect('read-write');
+    $me->_handle('read-write');
 }
 
 sub rdbh {
     my $me = shift;
     if (my $handle = $me->config('UseHandle')) {
-        return $me->_auto_reconnect($handle);
+        return $me->_handle($handle);
     }
     return $me->dbh unless $me->{rdbh};
-    $me->_auto_reconnect('read-only');
+    $me->_handle('read-only');
 }
 
 =head3 C<config>
