@@ -43,6 +43,8 @@ Create and return a new C<Row> object.
 sub dbh { ${$_[0]}->{DBO}->dbh }
 sub rdbh { ${$_[0]}->{DBO}->rdbh }
 
+*_create_dbd_class = \&DBIx::DBO::Common::_create_dbd_class;
+
 sub new {
     my $proto = shift;
     my $class = ref($proto) || $proto;
@@ -50,7 +52,7 @@ sub new {
     blessed $$me->{DBO} and $$me->{DBO}->isa('DBIx::DBO') or ouch 'Invalid DBO Object';
     ouch 'Invalid Parent Object' unless defined $$me->{Parent};
     $$me->{Parent} = $$me->{DBO}->table($$me->{Parent}) unless blessed $$me->{Parent};
-    bless $me, $$me->{DBO}->_create_dbd_class($class, __PACKAGE__);
+    bless $me, $class->_create_dbd_class($$me->{DBO}{dbd});
     $me->_init;
     return wantarray ? ($me, $me->tables) : $me;
 }

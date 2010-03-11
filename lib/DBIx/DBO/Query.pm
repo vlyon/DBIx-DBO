@@ -56,13 +56,15 @@ In list context, the C<Query> object and L<DBIx::DBO::Table|DBIx::DBO::Table> ob
 
 =cut
 
+*_create_dbd_class = \&DBIx::DBO::Common::_create_dbd_class;
+
 sub new {
     my $proto = shift;
     my $class = ref($proto) || $proto;
     my $me = { DBO => shift, sql => undef };
     blessed $me->{DBO} and $me->{DBO}->isa('DBIx::DBO') or ouch 'Invalid DBO Object';
     ouch 'No table specified in new Query' unless @_;
-    bless $me, $me->{DBO}->_create_dbd_class($class, __PACKAGE__);
+    bless $me, $class->_create_dbd_class($me->{DBO}{dbd});
 
     for my $table (@_) {
         $me->join_table($table);
@@ -684,6 +686,7 @@ This is called automatically before fetching the first row.
 
 sub run {
     my $me = shift;
+    # TODO: What should be done here? We dont need to create a Row object yet!
     my $row = $me->row;
     undef $$row->{array};
     undef %$row;
