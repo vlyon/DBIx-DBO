@@ -40,12 +40,14 @@ Tables can be specified by their name or an arrayref of schema and table name or
 
 =cut
 
+*_create_dbd_class = \&DBIx::DBO::Common::_create_dbd_class;
+
 sub new {
     my ($proto, $dbo, $table) = @_;
     my $class = ref($proto) || $proto;
     blessed $dbo and $dbo->isa('DBIx::DBO') or ouch 'Invalid DBO Object';
     (my $schema, $table, $_) = $dbo->table_info($table) or ouch 'No such table: '.$table;
-    $class = $dbo->_create_dbd_class($class, __PACKAGE__);
+    $class = $class->_create_dbd_class($dbo->{dbd});
     bless { %$_, Schema => $schema, Name => $table, DBO => $dbo, LastInsertID => undef }, $class;
 }
 

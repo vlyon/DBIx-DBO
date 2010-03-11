@@ -265,24 +265,6 @@ sub _set_inheritance {
     return $me.$_dbd;
 }
 
-sub _create_dbd_class {
-    my $me = shift;
-    my $class = shift;
-    my $base_class = shift;
-    my $_dbd = '::DBD::'.$me->{dbd};
-    $class =~ s/::DBD::\w+$//;
-    # Inheritance
-    no strict 'refs';
-    unless (@{$class.$_dbd.'::ISA'}) {
-        @{$class.$_dbd.'::ISA'} = ($class, $base_class.$_dbd);
-        if ($use_c3_mro) {
-            mro::set_mro($class.$_dbd, 'c3');
-            Class::C3::initialize() if $] < 5.009_005;
-        }
-    }
-    return $class.$_dbd;
-}
-
 sub _bless_dbo {
     my $class = shift;
     my $new = shift;
