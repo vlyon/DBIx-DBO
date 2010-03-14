@@ -9,8 +9,9 @@ use DBIx::DBO::Table;
 use DBIx::DBO::Query;
 use DBIx::DBO::Row;
 
+our @ISA;
 our $use_c3_mro;
-my $need_c3_initialize;
+our $need_c3_initialize;
 
 BEGIN {
     # The C3 method resolution order is needed for optimal functioning when DBIx::DBO is being subclassed.
@@ -225,7 +226,7 @@ sub _require_dbd_class {
     my @warn;
     {
         local $SIG{__WARN__} = sub { push @warn, join '', @_ };
-        return $me->_set_inheritance($dbd) if eval "require $class";
+        return $me->_set_dbd_inheritance($dbd) if eval "require $class";
     }
 
     (my $file = $class.'.pm') =~ s'::'/'g;
@@ -239,30 +240,28 @@ sub _require_dbd_class {
 
     delete $INC{$file};
     $INC{$file} = 1;
-    return $me->_set_inheritance($dbd);
+    return $me->_set_dbd_inheritance($dbd);
 }
 
-sub _set_inheritance {
-    my $me = shift;
-    my $_dbd = '::DBD::'.shift;
-
+sub _set_dbd_inheritance {
+    my $class = shift;
+    my $dbd = shift;
     no strict 'refs';
-    return $me.$_dbd if "@{$me.$_dbd.'::Common::ISA'}" eq $me.'::Common';
-
-    @{$me.'::Common'.$_dbd.'::ISA'} = ($me.'::Common');
-    @{$me.$_.$_dbd.'::ISA'} = ($me.$_, $me.'::Common'.$_dbd) for ('', '::Table', '::Query', '::Row');
-    if ($me ne __PACKAGE__) {
-        for ('::Common', '', '::Table', '::Query', '::Row') {
-            push @{$me.$_.$_dbd.'::ISA'}, __PACKAGE__.$_.$_dbd;
-            @{$me.$_.'::ISA'} = (__PACKAGE__.$_) unless @{$me.$_.'::ISA'};
+    my @isa = @_ ? @_ : @{$class.'::ISA'};
+    if ($class eq __PACKAGE__) {
+        # Let DBIx::DBO secretly inherit from DBIx::DBO::Common
+        push @isa, 'DBIx::DBO::Common' unless @_;
+    } else {
+        for my $obj (qw(Table Query Row)) {
+            unless (@{$class.'::'.$obj.'::ISA'}) {
+                @{$class.'::'.$obj.'::ISA'} = map UNIVERSAL::isa($_, __PACKAGE__) ? $_.'::'.$obj : $_, @isa;
+            }
         }
     }
-    if ($use_c3_mro) {
-        mro::set_mro($me.$_.$_dbd, 'c3') for ('::Common', '', '::Table', '::Query', '::Row');
-        # If perl < 5.9.5 then we need to call Class::C3::initialize()
-        $need_c3_initialize = $] < 5.009_005;
+    for my $class (map $class.'::'.$_, qw(Table Query Row)) {
+        $class->_set_dbd_inheritance($dbd);
     }
-    return $me.$_dbd;
+    $class->DBIx::DBO::Common::_set_dbd_inheritance($dbd, @isa);
 }
 
 sub _bless_dbo {
@@ -283,7 +282,7 @@ Tables can be specified by their name or an arrayref of schema and table name or
 =cut
 
 sub table {
-    (my $class = ref($_[0])) =~ s/(::DBD::\w+)$/::Table$1/;
+    (my $class = ref($_[0])) =~ s/(::DBD::\w+)$/::Table/;
     $class->new(@_);
 }
 
@@ -302,7 +301,7 @@ In list context, the C<Query> object and L<DBIx::DBO::Table|DBIx::DBO::Table> ob
 =cut
 
 sub query {
-    (my $class = ref($_[0])) =~ s/(::DBD::\w+)$/::Query$1/;
+    (my $class = ref($_[0])) =~ s/(::DBD::\w+)$/::Query/;
     $class->new(@_);
 }
 
@@ -316,7 +315,7 @@ Create and return a new L<DBIx::DBO::Row|DBIx::DBO::Row> object.
 =cut
 
 sub row {
-    (my $class = ref($_[0])) =~ s/(::DBD::\w+)$/::Row$1/;
+    (my $class = ref($_[0])) =~ s/(::DBD::\w+)$/::Row/;
     $class->new(@_);
 }
 

@@ -5,6 +5,8 @@ use Devel::Peek 'SvREFCNT';
 use strict;
 use warnings;
 
+our @ISA;
+
 =head1 NAME
 
 DBIx::DBO::Query - An OO interface to SQL queries and results.  Encapsulates an entire query in an object.
@@ -56,8 +58,6 @@ In list context, the C<Query> object and L<DBIx::DBO::Table|DBIx::DBO::Table> ob
 
 =cut
 
-*_create_dbd_class = \&DBIx::DBO::Common::_create_dbd_class;
-
 sub new {
     my $proto = shift;
     my $class = ref($proto) || $proto;
@@ -71,6 +71,16 @@ sub new {
     }
     $me->reset;
     return wantarray ? ($me, $me->tables) : $me;
+}
+
+*_create_dbd_class = \&DBIx::DBO::Common::_create_dbd_class;
+
+sub _set_dbd_inheritance {
+    my $class = shift;
+    my $dbd = shift;
+    # Let DBIx::DBO::Query secretly inherit from DBIx::DBO::Common
+    @_ = (@ISA, 'DBIx::DBO::Common') if not @_ and $class eq __PACKAGE__;
+    $class->DBIx::DBO::Common::_set_dbd_inheritance($dbd, @_);
 }
 
 =head3 C<reset>
