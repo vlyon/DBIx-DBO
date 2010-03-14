@@ -8,6 +8,8 @@ use warnings;
 use overload '@{}' => sub {${$_[0]}->{array} || []}, '%{}' => sub {${$_[0]}->{hash}};
 use overload '**' => \&value, fallback => 1;
 
+our @ISA;
+
 =head1 NAME
 
 DBIx::DBO::Row - An OO interface to SQL queries and results.  Encapsulates a fetched row of data in an object.
@@ -43,8 +45,6 @@ Create and return a new C<Row> object.
 sub dbh { ${$_[0]}->{DBO}->dbh }
 sub rdbh { ${$_[0]}->{DBO}->rdbh }
 
-*_create_dbd_class = \&DBIx::DBO::Common::_create_dbd_class;
-
 sub new {
     my $proto = shift;
     my $class = ref($proto) || $proto;
@@ -53,8 +53,19 @@ sub new {
     ouch 'Invalid Parent Object' unless defined $$me->{Parent};
     $$me->{Parent} = $$me->{DBO}->table($$me->{Parent}) unless blessed $$me->{Parent};
     bless $me, $class->_create_dbd_class($$me->{DBO}{dbd});
+    Class::C3::initialize() if $DBIx::DBO::need_c3_initialize;
     $me->_init;
     return wantarray ? ($me, $me->tables) : $me;
+}
+
+*_create_dbd_class = \&DBIx::DBO::Common::_create_dbd_class;
+
+sub _set_dbd_inheritance {
+    my $class = shift;
+    my $dbd = shift;
+    # Let DBIx::DBO::Row secretly inherit from DBIx::DBO::Common
+    @_ = (@ISA, 'DBIx::DBO::Common') if not @_ and $class eq __PACKAGE__;
+    $class->DBIx::DBO::Common::_set_dbd_inheritance($dbd, @_);
 }
 
 sub _init {

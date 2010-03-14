@@ -6,6 +6,8 @@ use warnings;
 
 use overload '**' => \&column, fallback => 1;
 
+our @ISA;
+
 =head1 NAME
 
 DBIx::DBO::Table - An OO interface to SQL queries and results.  Encapsulates a table in an object.
@@ -40,8 +42,6 @@ Tables can be specified by their name or an arrayref of schema and table name or
 
 =cut
 
-*_create_dbd_class = \&DBIx::DBO::Common::_create_dbd_class;
-
 sub new {
     my ($proto, $dbo, $table) = @_;
     my $class = ref($proto) || $proto;
@@ -49,6 +49,16 @@ sub new {
     (my $schema, $table, $_) = $dbo->table_info($table) or ouch 'No such table: '.$table;
     $class = $class->_create_dbd_class($dbo->{dbd});
     bless { %$_, Schema => $schema, Name => $table, DBO => $dbo, LastInsertID => undef }, $class;
+}
+
+*_create_dbd_class = \&DBIx::DBO::Common::_create_dbd_class;
+
+sub _set_dbd_inheritance {
+    my $class = shift;
+    my $dbd = shift;
+    # Let DBIx::DBO::Table secretly inherit from DBIx::DBO::Common
+    @_ = (@ISA, 'DBIx::DBO::Common') if not @_ and $class eq __PACKAGE__;
+    $class->DBIx::DBO::Common::_set_dbd_inheritance($dbd, @_);
 }
 
 =head3 C<tables>

@@ -405,18 +405,28 @@ sub _set_config {
 
 sub _create_dbd_class {
     my $class = shift;
-    my $_dbd = '::DBD::'.shift;
+    $class =~ s/::DBD::\w+$//;
+    $class = $class->_set_dbd_inheritance(@_);
+    Class::C3::initialize() if $DBIx::DBO::need_c3_initialize;
+    return $class;
+}
+
+sub _set_dbd_inheritance {
+    my $class = shift;
+    my $dbd = shift;
     $class =~ s/::DBD::\w+$//;
     # Inheritance
     no strict 'refs';
-    unless (@{$class.$_dbd.'::ISA'}) {
-        @{$class.$_dbd.'::ISA'} = ($class, map $_.$_dbd, @_ ? @_ : @{$class.'::ISA'});
+    unless (@{$class.'::DBD::'.$dbd.'::ISA'}) {
+        my @isa = grep $_->can('_set_dbd_inheritance'), @_ ? @_ : @{$class.'::ISA'};
+        $_->_set_dbd_inheritance($dbd) for @isa;
+        @{$class.'::DBD::'.$dbd.'::ISA'} = ($class, map $_.'::DBD::'.$dbd, @isa);
         if ($DBIx::DBO::use_c3_mro) {
-            mro::set_mro($class.$_dbd, 'c3');
-            Class::C3::initialize() if $] < 5.009_005;
+            mro::set_mro($class.'::DBD::'.$dbd, 'c3');
+            $DBIx::DBO::need_c3_initialize = $] < 5.009_005;
         }
     }
-    return $class.$_dbd;
+    return $class.'::DBD::'.$dbd;
 }
 
 1;
