@@ -528,7 +528,7 @@ Boolean setting to control quoting of SQL identifiers (schema, table and column 
 =item C<UseHandle>
 
 Set to C<'read-write'> or C<'read-only'> to force using only that handle for all operations.
-Defaults to C<undef> which chooses the I<read-only> handle for reads and the I<read-write> handle otherwise.
+Defaults to C<false> which chooses the I<read-only> handle for reads and the I<read-write> handle otherwise.
 
 =item C<DebugSQL>
 

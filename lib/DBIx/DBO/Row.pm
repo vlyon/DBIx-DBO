@@ -186,7 +186,7 @@ sub load {
 
     $me->_detach;
 
-    # TODO: Shouldn't this replace the Quick_Where?
+    # Use Quick_Where to load a row, but make sure to restore its value afterward
     my $old_qw = $#{$$me->{build_data}{Quick_Where}};
     push @{$$me->{build_data}{Quick_Where}}, @_;
     undef $$me->{build_data}{where};
@@ -214,7 +214,10 @@ sub _detach {
         $$me->{array} = [ @$me ];
         $$me->{hash} = { %$me };
         undef $$me->{Parent}{Row};
-        # TODO: Save configs from Parent
+        # Save config from Parent
+        if ($$me->{Parent}{Config} and %{$$me->{Parent}{Config}}) {
+            $$me->{Config} = { %{$$me->{Parent}{Config}}, $$me->{Config} ? %{$$me->{Config}} : () };
+        }
     }
     undef $$me->{Parent};
 }
@@ -240,11 +243,17 @@ sub update {
     $build_data->{LimitOffset} = [1] if $me->config('LimitRowUpdate') and $me->tables == 1;
     my $sql = $me->_build_sql_update($build_data, @_);
 
+    my $rv = $me->do($sql, undef, $me->_bind_params_update($build_data));
+    $me->_reset_on_update($build_data, @_) if $rv and $rv > 0;
+    return $rv;
+}
+
+sub _reset_on_update {
+    my $me = shift;
     # TODO: Reload/update instead of leaving the row empty?
     # To update the Row object is difficult because columns may have been aliased
     undef $$me->{array};
     undef %$me;
-    $me->do($sql, undef, $me->_bind_params_update($build_data));
 }
 
 =head3 C<delete>
@@ -275,13 +284,17 @@ sub delete {
 sub _build_data_matching_this_row {
     my $me = shift;
     # Identify the row by the PrimaryKeys if any, otherwise by all Columns
-    my @cols;
+    my @quick_where;
     for my $tbl (@{$$me->{Tables}}) {
-        push @cols, map $tbl ** $_, @{$tbl->{ @{$tbl->{PrimaryKeys}} ? 'PrimaryKeys' : 'Columns' }};
+        for my $col (map $tbl ** $_, @{$tbl->{ @{$tbl->{PrimaryKeys}} ? 'PrimaryKeys' : 'Columns' }}) {
+            my $i = $me->_column_idx($col);
+            defined $i or ouch 'The '.$me->_qi($tbl->{Name}, $col->[1]).' field needed to identify this row, was not included in this query';
+            push @quick_where, $col => $$me->{array}[$i];
+        }
     }
     my %h = (
         from => $$me->{build_data}{from},
-        Quick_Where => [ map {$_ => $me->value($_)} @cols ]
+        Quick_Where => \@quick_where
     );
     $h{From_Bind} = $$me->{build_data}{From_Bind} if exists $$me->{build_data}{From_Bind};
     return \%h;
