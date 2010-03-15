@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 5;
+use Test::More tests => 8;
 
 BEGIN {
     if ($Test::More::VERSION < 0.84) {
@@ -32,4 +32,11 @@ is +DBIx::DBO->config('QuoteIdentifier'), 456, 'Method DBIx::DBO->config';
 DBIx::DBO->config(UseHandle => 'read-only');
 is +DBIx::DBO->config('UseHandle'), 'read-only', 'UseHandle config setting';
 DBIx::DBO->config(UseHandle => undef);
+
+my $dbo = DBIx::DBO->new(undef, undef, {dbd => 'xxx'});
+isa_ok $dbo, 'DBIx::DBO', '$dbo';
+
+$dbo->config(UseHandle => 0);
+is $dbo->config('UseHandle'), 0, 'Setting $dbo->config overrides DBIx::DBO->config';
+is $dbo->config('QuoteIdentifier'), 456, '$dbo->config inherits from DBIx::DBO->config';
 
