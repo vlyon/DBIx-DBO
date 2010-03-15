@@ -238,6 +238,7 @@ sub _require_dbd_class {
         die join "\n", "Can't load $dbd driver", @warn, $err;
     }
 
+    $@ = '';
     delete $INC{$file};
     $INC{$file} = 1;
     return $me->_set_dbd_inheritance($dbd);
@@ -549,7 +550,7 @@ sub config {
         return DBIx::DBO::Common->_set_config(\%Config, $opt, shift) if @_;
         return $Config{$opt};
     }
-    return $me->_set_config($me->{Config}, $opt, shift) if @_;
+    return $me->_set_config($me->{Config} ||= {}, $opt, shift) if @_;
     return defined $me->{Config}{$opt} ? $me->{Config}{$opt} : $Config{$opt};
 }
 

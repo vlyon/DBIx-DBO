@@ -54,7 +54,7 @@ our @_cleanup_sql;
 
 sub import {
     my $class = shift;
-    $dbd = shift;
+    $dbd = shift or return;
     $dbd_name = shift;
     my %opt = splice @_;
 
