@@ -41,7 +41,7 @@ sub _qi {
     my $me = shift;
     return $me->dbh->quote_identifier(@_) if $me->config('QuoteIdentifier');
     # Strip off any null/undef elements (ie schema)
-    shift while @_ and !defined $_[0];
+    shift while @_ and not (defined $_[0] and length $_[0]);
     join '.', @_;
 }
 
@@ -179,7 +179,7 @@ sub _valid_col {
 }
 
 sub _parse_col {
-    my ($me, $col, $_chk_aliases) = @_;
+    my ($me, $col, $_check_aliases) = @_;
     if (ref $col) {
         return $me->_valid_col($col) if blessed $col and $col->isa('DBIx::DBO::Column');
         ouch 'Invalid column: '.$col;
@@ -187,8 +187,9 @@ sub _parse_col {
     for my $tbl ($me->tables) {
         return $tbl->column($col) if exists $tbl->{Column_Idx}{$col};
     }
-    if ($_chk_aliases) {
+    if ($_check_aliases) {
         for my $fld (@{$me->{build_data}{Showing}}) {
+            # For an alias return a scalar ref of the quoted alias name
             return \($me->_qi($col))
                 if !blessed $fld and exists $fld->[2]{AS} and $col eq $fld->[2]{AS};
         }
@@ -397,7 +398,7 @@ sub _set_config {
     my $me = shift;
     my ($ref, $opt, $val) = @_;
     ouch "Invalid value for the 'UseHandle' setting"
-        if $opt eq 'UseHandle' and defined $val and $val ne 'read-only' and $val ne 'read-write';
+        if $opt eq 'UseHandle' and $val and $val ne 'read-only' and $val ne 'read-write';
     my $old = $ref->{$opt};
     $ref->{$opt} = $val;
     return $old;
