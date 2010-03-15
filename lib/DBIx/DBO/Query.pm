@@ -681,7 +681,7 @@ Returns the L<DBIx::DBO::Row|DBIx::DBO::Row> object for the current row from the
 
 sub row {
     my $me = shift;
-    $me->sql; # Detach if needed
+    $me->sql; # Build the SQL and detach the Row if needed
     $me->{Row} ||= $me->{DBO}->row($me);
 }
 
@@ -696,10 +696,11 @@ This is called automatically before fetching the first row.
 
 sub run {
     my $me = shift;
-    # TODO: What should be done here? We dont need to create a Row object yet!
-    my $row = $me->row;
-    undef $$row->{array};
-    undef %$row;
+    $me->sql; # Build the SQL and detach the Row if needed
+    if (defined $me->{Row}) {
+        undef ${$me->{Row}}{array};
+        undef %{$me->{Row}};
+    }
 
     my $rv = $me->_execute or return undef;
     $me->_bind_cols_to_hash;
