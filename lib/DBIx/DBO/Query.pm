@@ -124,9 +124,11 @@ sub _table_idx {
 
 sub _table_alias {
     my ($me, $tbl) = @_;
+    return undef if $me == $tbl; # This means it's checking for an aliased column
     my $i = $me->_table_idx($tbl);
     ouch 'The table is not in this query' unless defined $i;
-    @{$me->{Tables}} > 1 ? 't'.($i + 1) : ();
+    # TODO: Use table aliases, when there's more than 1 table or column aliases are used
+    @{$me->{Tables}} > 1 || @{$me->{build_data}{Showing}} ? 't'.($i + 1) : ();
 }
 
 =head3 C<show>
@@ -138,9 +140,11 @@ Specify which columns to show as an array.  If the array is empty all columns wi
 
 =cut
 
+# TODO: Keep track of all aliases in use and die if a used alias is removed
 sub show {
     my $me = shift;
     undef $me->{sql};
+    undef $me->{build_data}{from};
     undef $me->{build_data}{show};
     undef @{$me->{build_data}{Showing}};
     for my $fld (@_) {
@@ -364,14 +368,19 @@ If no column is provided, the I<whole> WHERE clause is removed.
 
 sub unwhere {
     my $me = shift;
-    my $col = shift;
+    $me->_del_where('Where', @_);
+}
+
+sub _del_where {
+    my $me = shift;
+    my $clause = shift;
     # TODO: Remove a condition by specifying the whole condition
-    if ($col) {
+    if (my $col = shift) {
         ouch 'Invalid column' unless blessed $col and $col->isa('DBIx::DBO::Column');
-        if (exists $me->{build_data}{Where_Data}) {
+        if (exists $me->{build_data}{$clause.'_Data'}) {
             # Find the current Where_Data reference
-            my $ref = $me->{build_data}{Where_Data};
-            $ref = $ref->[$_] for (@{$me->{Where_Bracket_Refs}});
+            my $ref = $me->{build_data}{$clause.'_Data'};
+            $ref = $ref->[$_] for (@{$me->{$clause.'_Bracket_Refs'}});
 
             for (my $i = $#$ref; $i >= 0; $i--) {
                 # Remove this Where piece if there is no FUNC and it refers to this column only
@@ -380,13 +389,13 @@ sub unwhere {
             }
         }
     } else {
-        delete $me->{build_data}{Where_Data};
-        $me->{Where_Bracket_Refs} = [];
-        $me->{Where_Brackets} = [];
+        delete $me->{build_data}{$clause.'_Data'};
+        $me->{$clause.'_Bracket_Refs'} = [];
+        $me->{$clause.'_Brackets'} = [];
     }
     # This forces a new search
     undef $me->{sql};
-    undef $me->{build_data}{where};
+    undef $me->{build_data}{lc $clause};
 }
 
 ##
@@ -529,6 +538,57 @@ sub group_by {
         my @group = $me->_parse_col_val($col, Aliases => 1);
         push @{$me->{build_data}{GroupBy}}, \@group;
     }
+}
+
+=head3 C<having>
+
+Restrict the query with the condition specified (HAVING clause).  This takes the same arguments as L</where>.
+
+  $query->having($expression1, $operator, $expression2);
+
+=cut
+
+sub having {
+    my $me = shift;
+
+    # If the $fld is just a scalar use it as a column name not a value
+    my ($fld, $fld_func, $fld_opt) = $me->_parse_col_val(shift, Aliases => 1);
+    my $op = shift;
+    my ($val, $val_func, $val_opt) = $me->_parse_val(shift, Check => 'Auto');
+
+    # Validate the fields
+    for my $f (@$fld, @$val) {
+        if (blessed $f and $f->isa('DBIx::DBO::Column')) {
+            ouch 'Invalid table field' unless defined $me->_table_idx($f->[0]) or $f->[0] eq $me;
+        } elsif (my $type = ref $f) {
+            ouch 'Invalid value type: '.$type;
+        }
+    }
+
+    # Force a new search
+    undef $me->{sql};
+    undef $me->{build_data}{having};
+
+    # Find the current Having_Data reference
+    my $ref = $me->{build_data}{Having_Data} ||= [];
+    $ref = $ref->[$_] for (@{$me->{Having_Bracket_Refs}});
+
+    $me->_add_where($ref, $op, $fld, $fld_func, $fld_opt, $val, $val_func, $val_opt, @_);
+}
+
+=head3 C<unhaving>
+
+  $query->unhaving();
+  $query->unhaving($column);
+
+Removes all previously added L</having> restrictions for a column.
+If no column is provided, the I<whole> HAVING clause is removed.
+
+=cut
+
+sub unhaving {
+    my $me = shift;
+    $me->_del_where('Having', @_);
 }
 
 =head3 C<order_by>
@@ -915,7 +975,7 @@ Better explanation of how to construct complex queries.  This module is currentl
 
 =item *
 
-Improve the L</unwhere> method.  Currently it has very limited use.
+Improve the L</unwhere> & L</unhaving> methods.  Currently they have very limited use.
 
 =item *
 

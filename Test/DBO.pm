@@ -389,7 +389,7 @@ sub advanced_query_methods {
     $case_sensitive = $case_sensitive->[0];
     note "$dbd_name 'LIKE' is".($case_sensitive ? '' : ' NOT').' case sensitive';
 
-    # Where clause
+    # WHERE clause
     $q->show('id');
     ok $q->where('name', 'LIKE', '%a%'), 'Method DBIx::DBO::Query->where LIKE';
     my $a = $q->col_arrayref or diag sql_err($q);
@@ -400,6 +400,10 @@ sub advanced_query_methods {
     ok $q->where('name', 'NOT LIKE', '%i%'), 'Method DBIx::DBO::Query->where NOT LIKE';
     $a = $q->hashref('id') or diag sql_err($q);
     is_deeply $a, {4 => {id => 4},6 => {id => 6}}, 'Method DBIx::DBO::Query->hashref';
+
+    # HAVING clause
+    $q->show('id', 'name', { FUNC => 'CONCAT(?, ?)', COL => [qw(id name)], AS => 'combo'});
+    ok $q->having('combo', '=', '4James Bond'), 'Method DBIx::DBO::Query->having';
 
     $q->finish;
 }

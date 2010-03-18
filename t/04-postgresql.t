@@ -44,7 +44,7 @@ unless ($quoted_db) {
     $quoted_db = $dbo->_qi($Test::DBO::test_db);
 }
 
-plan tests => 65;
+plan tests => 66;
 pass "Connect to PostgreSQL $quoted_db database";
 isa_ok $dbo, 'DBIx::DBO::DBD::Pg', '$dbo';
 
