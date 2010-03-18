@@ -262,6 +262,16 @@ sub DESTROY {
 
 __END__
 
+=head1 TODO LIST
+
+=over
+
+=item *
+
+Add a multi_insert method for extended INSERTs.
+
+=back
+
 =head1 SEE ALSO
 
 L<DBIx::DBO>

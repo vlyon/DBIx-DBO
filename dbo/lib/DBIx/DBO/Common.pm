@@ -81,6 +81,7 @@ sub _build_sql_select {
     $sql .= ' FROM '.$me->_build_from($h);
     $sql .= ' WHERE '.$_ if $_ = $me->_build_where($h);
     $sql .= ' GROUP BY '.$_ if $_ = $me->_build_group($h);
+    $sql .= ' HAVING '.$_ if $_ = $me->_build_having($h);
     $sql .= ' ORDER BY '.$_ if $_ = $me->_build_order($h);
     $sql .= ' '.$_ if $_ = $me->_build_limit($h);
     $sql;
@@ -91,7 +92,7 @@ sub _bind_params_select {
     my $h = shift;
     map {
         exists $h->{$_} ? @{$h->{$_}} : ()
-    } qw(Show_Bind From_Bind Where_Bind Group_Bind Order_Bind);
+    } qw(Show_Bind From_Bind Where_Bind Group_Bind Having_Bind Order_Bind);
 }
 
 # TODO: Should we die if GROUP BY is set?
@@ -184,15 +185,15 @@ sub _parse_col {
         return $me->_valid_col($col) if blessed $col and $col->isa('DBIx::DBO::Column');
         ouch 'Invalid column: '.$col;
     }
-    for my $tbl ($me->tables) {
-        return $tbl->column($col) if exists $tbl->{Column_Idx}{$col};
-    }
     if ($_check_aliases) {
         for my $fld (@{$me->{build_data}{Showing}}) {
-            # For an alias return a scalar ref of the quoted alias name
-            return \($me->_qi($col))
+            # For an alias return a Column object with the Query as it's table
+            return bless [$me, $col], 'DBIx::DBO::Column'
                 if !blessed $fld and exists $fld->[2]{AS} and $col eq $fld->[2]{AS};
         }
+    }
+    for my $tbl ($me->tables) {
+        return $tbl->column($col) if exists $tbl->{Column_Idx}{$col};
     }
     ouch 'No such column: '.$col;
 }
@@ -224,7 +225,8 @@ sub _parse_val {
         $opt{COLLATE} = $fld->{COLLATE} if exists $fld->{COLLATE};
         if (exists $fld->{COL}) {
             ouch 'Invalid HASH containing both COL and VAL' if exists $fld->{VAL};
-            $fld = $me->_parse_col($fld->{COL}, $c{Aliases});
+            my @cols = ref $fld->{COL} eq 'ARRAY' ? @{$fld->{COL}} : $fld->{COL};
+            $fld = [ map $me->_parse_col($_, $c{Aliases}), @cols ];
         } else {
             $fld = exists $fld->{VAL} ? $fld->{VAL} : [];
         }
@@ -374,6 +376,17 @@ sub _build_group {
     return $h->{group} if defined $h->{group};
     undef @{$h->{Group_Bind}};
     $h->{group} = join ', ', map $me->_build_val($h->{Group_Bind}, @$_), @{$h->{GroupBy}};
+}
+
+# Construct the HAVING clause
+sub _build_having {
+    my $me = shift;
+    my $h = shift;
+    return $h->{having} if defined $h->{having};
+    undef @{$h->{Having_Bind}};
+    my @having;
+    push @having, $me->_build_where_chunk($h->{Having_Bind}, 'OR', $h->{Having_Data}) if exists $h->{Having_Data};
+    $h->{having} = join ' AND ', @having;
 }
 
 sub _build_order {

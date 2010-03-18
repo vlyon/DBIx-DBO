@@ -22,7 +22,7 @@ if ($dbo->do("CREATE DATABASE $quoted_db CHARACTER SET utf8")) {
     $quoted_db = $dbo->_qi($Test::DBO::test_db);
 }
 
-plan tests => 65;
+plan tests => 66;
 
 # Create the DBO (3 tests)
 pass "Connect to MySQL $quoted_db database";
