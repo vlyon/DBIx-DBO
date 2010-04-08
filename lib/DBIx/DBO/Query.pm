@@ -131,10 +131,24 @@ sub _table_alias {
     @{$me->{Tables}} > 1 || @{$me->{build_data}{Showing}} ? 't'.($i + 1) : ();
 }
 
+sub column {
+    my ($me, $col, $_check_aliases) = @_;
+    if ($_check_aliases) {
+        for my $fld (@{$me->{build_data}{Showing}}) {
+            return $me->{Column}{$col} ||= bless [$me, $col], 'DBIx::DBO::Column'
+                if !blessed $fld and exists $fld->[2]{AS} and $col eq $fld->[2]{AS};
+        }
+    }
+    for my $tbl ($me->tables) {
+        return $tbl->column($col) if exists $tbl->{Column_Idx}{$col};
+    }
+    ouch 'No such column'.($_check_aliases ? '/alias' : '').': '.$me->_qi($col);
+}
+
 =head3 C<show>
 
   $query->show(@columns);
-  $query->show($table1 ** 'id', {FUNC => 'UCASE(?)', COL => 'name', AS => 'NAME'}, ...
+  $query->show($table1 ** 'id', {FUNC => 'UCASE(?)', COL => 'name', AS => 'alias'}, ...
 
 Specify which columns to show as an array.  If the array is empty all columns will be shown.
 
