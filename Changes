@@ -1,6 +1,8 @@
 Revision history for DBIx-DBO
 
-0.04_01	Mar ?, 2010
+0.04_01	Apr 8, 2010
+	- Added a HAVING clause. [VLYON]
+	- Improved inheritance for subclasses under 5.8.x. [VLYON]
 	- Added the DBIx::DBO->new method. [VLYON]
 
 0.04	Mar 7, 2010
