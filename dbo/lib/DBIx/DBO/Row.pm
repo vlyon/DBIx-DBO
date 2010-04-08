@@ -142,6 +142,15 @@ sub _column_idx {
     return;
 }
 
+=head3 C<column>
+
+  $query->column($column_name);
+  $query->column($column_or_alias_name, 1);
+
+Returns a reference to a column for use with other methods.
+
+=cut
+
 sub column {
     my ($me, $col, $_check_aliases) = @_;
     if ($_check_aliases) {
