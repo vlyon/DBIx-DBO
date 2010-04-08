@@ -31,7 +31,7 @@ BEGIN {
         diag "DBO_DEBUG_SQL=$ENV{DBO_DEBUG_SQL}";
         package DBIx::DBO::Common;
 
-        $DBIx::DBO::Common::Config{DebugSQL} = $ENV{DBO_DEBUG_SQL};
+        DBIx::DBO->config(DebugSQL => $ENV{DBO_DEBUG_SQL});
         no warnings 'redefine';
         *DBIx::DBO::Common::_carp_last_sql = sub {
             my $me = shift;

@@ -185,17 +185,7 @@ sub _parse_col {
         return $me->_valid_col($col) if blessed $col and $col->isa('DBIx::DBO::Column');
         ouch 'Invalid column: '.$col;
     }
-    if ($_check_aliases) {
-        for my $fld (@{$me->{build_data}{Showing}}) {
-            # For an alias return a Column object with the Query as it's table
-            return bless [$me, $col], 'DBIx::DBO::Column'
-                if !blessed $fld and exists $fld->[2]{AS} and $col eq $fld->[2]{AS};
-        }
-    }
-    for my $tbl ($me->tables) {
-        return $tbl->column($col) if exists $tbl->{Column_Idx}{$col};
-    }
-    ouch 'No such column: '.$col;
+    $me->column($col, $_check_aliases);
 }
 
 sub _build_col {

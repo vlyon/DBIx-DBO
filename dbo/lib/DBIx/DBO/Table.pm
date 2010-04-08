@@ -95,7 +95,7 @@ sub column {
     my ($me, $col) = @_;
     ouch 'Invalid column '.$me->_qi($col).' in table '.$me->_quoted_name
         unless exists $me->{Column_Idx}{$col};
-    defined $me->{Column}{$col} ? $me->{Column}{$col} : ($me->{Column}{$col} = bless [$me, $col], 'DBIx::DBO::Column');
+    $me->{Column}{$col} ||= bless [$me, $col], 'DBIx::DBO::Column';
 }
 
 =head3 C<fetch_row>
