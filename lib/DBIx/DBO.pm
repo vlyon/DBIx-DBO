@@ -572,17 +572,21 @@ You can find more information for this module at:
 
 =over 4
 
-=item * RT: CPAN's request tracker
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=DBIx-DBO>
+=item *
 
-=item * AnnoCPAN: Annotated CPAN documentation
-L<http://annocpan.org/dist/DBIx-DBO>
+RT: CPAN's request tracker L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=DBIx-DBO>
 
-=item * CPAN Ratings
-L<http://cpanratings.perl.org/d/DBIx-DBO>
+=item *
 
-=item * Search CPAN
-L<http://search.cpan.org/dist/DBIx-DBO>
+AnnoCPAN: Annotated CPAN documentation L<http://annocpan.org/dist/DBIx-DBO>
+
+=item *
+
+CPAN Ratings L<http://cpanratings.perl.org/d/DBIx-DBO>
+
+=item *
+
+Search CPAN L<http://search.cpan.org/dist/DBIx-DBO>
 
 =back
 

@@ -131,6 +131,15 @@ sub _table_alias {
     @{$me->{Tables}} > 1 || @{$me->{build_data}{Showing}} ? 't'.($i + 1) : ();
 }
 
+=head3 C<column>
+
+  $query->column($column_name);
+  $query->column($column_or_alias_name, 1);
+
+Returns a reference to a column for use with other methods.
+
+=cut
+
 sub column {
     my ($me, $col, $_check_aliases) = @_;
     if ($_check_aliases) {
@@ -289,18 +298,23 @@ C<$expression>s can be any of the following:
 =over 4
 
 =item *
+
 A scalar value: C<123> or C<'hello'> (or for C<$expression1> a column name: C<'id'>)
 
 =item *
+
 A scalar reference: C<\"22 * 3">  (These are passed unquoted in the SQL statement!)
 
 =item *
+
 An array reference: C<[1, 3, 5]>  (Used with C<IN> and C<BETWEEN> etc)
 
 =item *
+
 A Column object: C<$table ** 'id'> or C<$table-E<gt>column('id')>
 
 =item *
+
 A hash reference: (Described below)
 
 =back
@@ -316,18 +330,23 @@ The keys to the hash in a complex expression are:
 =over 4
 
 =item *
+
 C<VAL> => A scalar, scalar reference or an array reference.
 
 =item *
+
 C<COL> => The name of a column or a Column object.
 
 =item *
+
 C<AS> => An alias name.
 
 =item *
+
 C<FUNC> => A string to be inserted into the SQL, possibly containing "?" placeholders.
 
 =item *
+
 C<ORDER> => To order by a column (Used only in C<group_by> and C<order_by>).
 
 =back
@@ -981,7 +1000,7 @@ __END__
 
 =head1 TODO LIST
 
-=over
+=over 4
 
 =item *
 
