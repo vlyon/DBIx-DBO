@@ -261,28 +261,28 @@ sub join_on {
         $col1, $col1_func, $col1_opt, $col2, $col2_func, $col2_opt, @_);
 }
 
-#=head3 C<open_join_on_bracket>, C<close_join_on_bracket>
-#
-#  $query->open_join_on_bracket($table, 'OR');
-#  $query->join_on(...
-#  $query->close_join_on_bracket($table);
-#
-#Equivalent to L<open_bracket|/open_bracket__close_bracket>, but for the JOIN ON clause.
-#The first argument is the table being joined onto.
-#
-#=cut
-#
-#sub open_join_on_bracket {
-#    my $me = shift;
-#    my $i = $me->_table_idx(shift) or ouch 'No such table object in the join';
-#    $me->_open_bracket($me->{Join_Brackets}[$i], $me->{Join_Bracket_Refs}[$i], $me->{build_data}{Join_On}[$i] ||= [], @_);
-#}
-#
-#sub close_join_on_bracket {
-#    my $me = shift;
-#    my $i = $me->_table_idx(shift) or ouch 'No such table object in the join';
-#    $me->_close_bracket($me->{Join_Brackets}[$i], $me->{Join_Bracket_Refs}[$i]);
-#}
+=head3 C<open_join_on_bracket>, C<close_join_on_bracket>
+
+  $query->open_join_on_bracket($table, 'OR');
+  $query->join_on(...
+  $query->close_join_on_bracket($table);
+
+Equivalent to L<open_bracket|/open_bracket__close_bracket>, but for the JOIN ON clause.
+The first argument is the table being joined onto.
+
+=cut
+
+sub open_join_on_bracket {
+    my $me = shift;
+    my $i = $me->_table_idx(shift) or ouch 'No such table object in the join';
+    $me->_open_bracket($me->{Join_Brackets}[$i], $me->{Join_Bracket_Refs}[$i], $me->{build_data}{Join_On}[$i] ||= [], @_);
+}
+
+sub close_join_on_bracket {
+    my $me = shift;
+    my $i = $me->_table_idx(shift) or ouch 'No such table object in the join';
+    $me->_close_bracket($me->{Join_Brackets}[$i], $me->{Join_Bracket_Refs}[$i]);
+}
 
 =head3 C<where>
 
@@ -407,20 +407,31 @@ sub unwhere {
 sub _del_where {
     my $me = shift;
     my $clause = shift;
-    # TODO: Remove a condition by specifying the whole condition
-    if (my $col = shift) {
-        ouch 'Invalid column' unless blessed $col and $col->isa('DBIx::DBO::Column');
-        if (exists $me->{build_data}{$clause.'_Data'}) {
-            # Find the current Where_Data reference
-            my $ref = $me->{build_data}{$clause.'_Data'};
-            $ref = $ref->[$_] for (@{$me->{$clause.'_Bracket_Refs'}});
 
-            for (my $i = $#$ref; $i >= 0; $i--) {
-                # Remove this Where piece if there is no FUNC and it refers to this column only
-                splice @{$ref}, $i, 1
-                    if !defined $ref->[$i][2] and @{$ref->[$i][1]} == 1 and $ref->[$i][1][0] == $col;
-            }
+    if (@_) {
+        require Data::Dumper;
+        my ($fld, $fld_func, $fld_opt) = $me->_parse_col_val(shift);
+        # TODO: Validate the fields?
+
+        return unless exists $me->{build_data}{$clause.'_Data'};
+        # Find the current Where_Data reference
+        my $ref = $me->{build_data}{$clause.'_Data'};
+        $ref = $ref->[$_] for (@{$me->{$clause.'_Bracket_Refs'}});
+
+        local $Data::Dumper::Indent = 0;
+        my @match = grep {
+            Data::Dumper::Dumper($fld, $fld_func, $fld_opt) eq Data::Dumper::Dumper(@{$ref->[$_]}[1,2,3])
+        } 0 .. $#$ref;
+
+        if (@_) {
+            my $op = shift;
+            my ($val, $val_func, $val_opt) = $me->_parse_val(shift, Check => 'Auto');
+
+            @match = grep {
+                Data::Dumper::Dumper($op, $val, $val_func, $val_opt) eq Data::Dumper::Dumper(@{$ref->[$_]}[0,4,5,6])
+            } @match;
         }
+        splice @$ref, $_, 1 for reverse @match;
     } else {
         delete $me->{build_data}{$clause.'_Data'};
         $me->{$clause.'_Bracket_Refs'} = [];
@@ -432,7 +443,7 @@ sub _del_where {
 }
 
 ##
-# This will ad an arrayref to the $ref given.
+# This will add an arrayref to the $ref given.
 # The arrayref will contain 5 values:
 #  $op, $fld_func, $fld, $val_func, $val, $force
 #  $op is the operator (those supported differ by DBD)
@@ -1008,15 +1019,7 @@ Better explanation of how to construct complex queries.  This module is currentl
 
 =item *
 
-Improve the L</unwhere> & L</unhaving> methods.  Currently they have very limited use.
-
-=item *
-
 Add C<DISTINCT> and C<COLLATE> functionality.
-
-=item *
-
-Possibly add C<open_join_on_bracket> for adding parentheses in the JOIN ON clause, but I'm not sure if this would ever be useful.
 
 =back
 
