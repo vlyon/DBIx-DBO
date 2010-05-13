@@ -6,7 +6,7 @@ use Module::Build;
 my $class = $] < 5.009_005 ? 'Module::Build' : Module::Build->subclass(code => q{
     sub write_metafile {
         my $self = shift;
-        $self->{properties}{recommends}{'MRO::Compat'} = 0;
+        $self->{properties}{requires}{'MRO::Compat'} = 0;
         $self->SUPER::write_metafile(@_);
     }
 });
@@ -23,8 +23,6 @@ my $builder = $class->new(
     requires => {
         'perl' => 5.008_001,
         'DBI' => 1.50,
-    },
-    recommends => {
         $] < 5.009_005 ? ('MRO::Compat' => 0) : (),
     },
     meta_merge => {

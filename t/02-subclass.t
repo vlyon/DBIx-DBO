@@ -19,7 +19,6 @@ my $table_info = {
     Column_Idx => { id => 1, name => 2, age => 3 },
 };
 
-note 'C3 Method Resolution Order is needed for optimal inheritance when subcalssing!' unless $DBIx::DBO::use_c3_mro;
 {
     package # hide from PAUSE
         DBIx::DBO::DBD::Sponge;
@@ -38,11 +37,6 @@ note 'C3 Method Resolution Order is needed for optimal inheritance when subcalss
         ouch 'No table name supplied' unless defined $table and length $table;
         # Fake table info
         return $me->{TableInfo}{''}{$table} = $table_info;
-    }
-    # Hack for machines not using MRO::Compat
-    unless ($DBIx::DBO::use_c3_mro) {
-        *SubClass::DBD::Sponge::_get_table_schema = \&_get_table_schema;
-        *SubClass::DBD::Sponge::_get_table_info = \&_get_table_info;
     }
 }
 

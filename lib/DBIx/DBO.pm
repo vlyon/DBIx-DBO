@@ -10,12 +10,15 @@ use DBIx::DBO::Query;
 use DBIx::DBO::Row;
 
 our @ISA;
-our $use_c3_mro;
-our $need_c3_initialize;
+my $need_c3_initialize;
 
 BEGIN {
-    # The C3 method resolution order is needed for optimal functioning when DBIx::DBO is being subclassed.
-    $use_c3_mro = eval {require MRO::Compat} || ($] >= 5.009_005 and require mro);
+    # The C3 method resolution order is required.
+    if ($] < 5.009_005) {
+        require MRO::Compat;
+    } else {
+        require mro;
+    }
 }
 
 =head1 NAME
@@ -143,12 +146,7 @@ sub new {
     }
     ouch "Can't create the DBO, unknown database driver" unless $new->{dbd};
 
-    my $class = $me->_require_dbd_class($new->{dbd}) or return;
-    unless ($class) {
-        my $dbh = $new->{dbh} || $new->{rdbh};
-        $dbh->set_err('', $@) if $dbh;
-        return;
-    }
+    my $class = $me->_require_dbd_class($new->{dbd});
     Class::C3::initialize() if $need_c3_initialize;
     $class->_bless_dbo($new);
 }
@@ -219,9 +217,14 @@ sub _connect {
 sub _require_dbd_class {
     my $me = shift;
     my $dbd = shift;
+    $me = ref $me if ref $me;
     my $class = $me.'::DBD::'.$dbd;
 
-    __PACKAGE__->_require_dbd_class($dbd) or return if $me ne __PACKAGE__;
+    # Don't do Class::C3::initialize until later
+    local *Class::C3::initialize;
+    *Class::C3::initialize = sub { $need_c3_initialize = 1 };
+
+    __PACKAGE__->_require_dbd_class($dbd) if $me ne __PACKAGE__;
 
     my @warn;
     {

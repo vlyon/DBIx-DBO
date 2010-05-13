@@ -1,14 +1,13 @@
 package DBIx::DBO::Row;
-use DBIx::DBO::Common;
-use Scalar::Util 'weaken';
 
 use strict;
 use warnings;
+use DBIx::DBO::Common;
+use Scalar::Util 'weaken';
+our @ISA;
 
 use overload '@{}' => sub {${$_[0]}->{array} || []}, '%{}' => sub {${$_[0]}->{hash}};
 use overload '**' => \&value, fallback => 1;
-
-our @ISA;
 
 =head1 NAME
 
@@ -52,13 +51,10 @@ sub new {
     blessed $$me->{DBO} and $$me->{DBO}->isa('DBIx::DBO') or ouch 'Invalid DBO Object';
     ouch 'Invalid Parent Object' unless defined $$me->{Parent};
     $$me->{Parent} = $$me->{DBO}->table($$me->{Parent}) unless blessed $$me->{Parent};
-    bless $me, $class->_create_dbd_class($$me->{DBO}{dbd});
-    Class::C3::initialize() if $DBIx::DBO::need_c3_initialize;
+    bless $me, $class->_set_dbd_inheritance($$me->{DBO}{dbd});
     $me->_init;
     return wantarray ? ($me, $me->tables) : $me;
 }
-
-*_create_dbd_class = \&DBIx::DBO::Common::_create_dbd_class;
 
 sub _set_dbd_inheritance {
     my $class = shift;
