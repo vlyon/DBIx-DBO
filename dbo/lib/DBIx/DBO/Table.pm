@@ -1,12 +1,11 @@
 package DBIx::DBO::Table;
-use DBIx::DBO::Common;
 
 use strict;
 use warnings;
+use DBIx::DBO::Common;
+our @ISA;
 
 use overload '**' => \&column, fallback => 1;
-
-our @ISA;
 
 =head1 NAME
 
@@ -47,11 +46,9 @@ sub new {
     my $class = ref($proto) || $proto;
     blessed $dbo and $dbo->isa('DBIx::DBO') or ouch 'Invalid DBO Object';
     (my $schema, $table, $_) = $dbo->table_info($table) or ouch 'No such table: '.$table;
-    $class = $class->_create_dbd_class($dbo->{dbd});
+    $class = $class->_set_dbd_inheritance($dbo->{dbd});
     bless { %$_, Schema => $schema, Name => $table, DBO => $dbo, LastInsertID => undef }, $class;
 }
-
-*_create_dbd_class = \&DBIx::DBO::Common::_create_dbd_class;
 
 sub _set_dbd_inheritance {
     my $class = shift;

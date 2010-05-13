@@ -1,10 +1,9 @@
 package DBIx::DBO::Query;
-use DBIx::DBO::Common;
-use Devel::Peek 'SvREFCNT';
 
 use strict;
 use warnings;
-
+use DBIx::DBO::Common;
+use Devel::Peek 'SvREFCNT';
 our @ISA;
 
 =head1 NAME
@@ -64,7 +63,7 @@ sub new {
     my $me = { DBO => shift, sql => undef };
     blessed $me->{DBO} and $me->{DBO}->isa('DBIx::DBO') or ouch 'Invalid DBO Object';
     ouch 'No table specified in new Query' unless @_;
-    bless $me, $class->_create_dbd_class($me->{DBO}{dbd});
+    bless $me, $class->_set_dbd_inheritance($me->{DBO}{dbd});
 
     for my $table (@_) {
         $me->join_table($table);
@@ -72,8 +71,6 @@ sub new {
     $me->reset;
     return wantarray ? ($me, $me->tables) : $me;
 }
-
-*_create_dbd_class = \&DBIx::DBO::Common::_create_dbd_class;
 
 sub _set_dbd_inheritance {
     my $class = shift;
