@@ -113,13 +113,11 @@ sub import {
 
 sub sql_err {
     my $obj = shift;
-
-    my $errstr = $DBI::errstr or return;
     my ($cmd, $sql, @bind) = @{$obj->_last_sql};
     $sql =~ s/^/  /mg;
     my @err = ('SQL command failed:', $sql.';');
     push @err, 'Bind Values: ('.join(', ', map $obj->rdbh->quote($_), @bind).')' if @bind;
-    push @err, $errstr || '???';
+    push @err, $obj->rdbh->errstr || '???';
     $err[-1] =~ s/ at line \d+$//;
     join "\n", @err;
 }
@@ -154,10 +152,11 @@ sub connect_ok {
 sub basic_methods {
     my $dbo = shift;
     my $quoted_table = $dbo->_qi($test_sch, $test_tbl);
+    my @quoted_cols = map $dbo->_qi($_), qw(type id name);
     my $t;
 
     # Create a test table with a multi-column primary key
-    if ($dbo->do("CREATE TABLE $quoted_table (name TEXT, id INT, type VARCHAR(8), PRIMARY KEY (type, id))")) {
+    if ($dbo->do("CREATE TABLE $quoted_table ($quoted_cols[2] VARCHAR(20), $quoted_cols[1] INT, $quoted_cols[0] VARCHAR(8), PRIMARY KEY ($quoted_cols[0], $quoted_cols[1]))")) {
         pass 'Create a test table';
 
         # Create a table object
@@ -168,8 +167,12 @@ sub basic_methods {
         is_deeply $t->{PrimaryKeys}, ['type', 'id'], 'Check PrimaryKeys';
 
         # Recreate our test table
-        $dbo->do("DROP TABLE $quoted_table") && $dbo->do("CREATE TABLE $quoted_table (id INT, name TEXT)")
+        $dbo->do("DROP TABLE $quoted_table") && $dbo->do("CREATE TABLE $quoted_table ($quoted_cols[1] INT, $quoted_cols[2] VARCHAR(20))")
             or diag sql_err($dbo) or die "Can't recreate the test table!\n";
+
+        # Remove the created table during cleanup
+        todo_cleanup("DROP TABLE $quoted_table");
+
         $dbo->_get_table_info($t->{Schema}, $t->{Name});
         $t = $dbo->table([$test_sch, $test_tbl]);
     }
@@ -180,8 +183,11 @@ sub basic_methods {
         }
 
         # Create our test table
-        ok $dbo->do("CREATE TABLE $quoted_table (id INT, name TEXT)"), 'Create our test table'
+        ok $dbo->do("CREATE TABLE $quoted_table ($quoted_cols[1] INT, $quoted_cols[2] VARCHAR(20))"), 'Create our test table'
             or diag sql_err($dbo) or die "Can't create the test table!\n";
+
+        # Remove the created table during cleanup
+        todo_cleanup("DROP TABLE $quoted_table");
 
         # Create our table object
         $t = $dbo->table([$test_sch, $test_tbl]);
@@ -235,9 +241,6 @@ sub basic_methods {
     $rv = $t->delete(id => 3) or diag sql_err($t);
     is $rv, 1, 'Method DBIx::DBO::Table->delete';
 
-    # Remove the created table during cleanup
-    todo_cleanup("DROP TABLE $quoted_table");
-
     return $t;
 }
 
@@ -283,7 +286,6 @@ sub row_methods {
     ok $r->load(id => 2, name => 'Jane Smith'), 'Method DBIx::DBO::Row->load' or diag sql_err($r);
     is_deeply $$r->{array}, [ 2, 'Jane Smith' ], 'Row loaded correctly';
 
-$r->config(DEBUG_SQL => 1);
     is $r->update(name => 'Someone Else'), 1, 'Method DBIx::DBO::Row->update' or diag sql_err($r);
     is $$r->{array}, undef, 'Row is empty again';
     is_deeply \@{$r->load(id => 2)}, [ 2, 'Someone Else' ], 'Row updated correctly' or diag sql_err($r);
@@ -386,7 +388,7 @@ sub advanced_query_methods {
 
     # Check case sensitivity of LIKE
     my $case_sensitive = $dbo->selectrow_arrayref('SELECT ? LIKE ?', undef, 'a', 'A') or diag sql_err($dbo);
-    $case_sensitive = $case_sensitive->[0];
+    $case_sensitive = not $case_sensitive->[0];
     note "$dbd_name 'LIKE' is".($case_sensitive ? '' : ' NOT').' case sensitive';
 
     # WHERE clause
