@@ -753,10 +753,9 @@ Returns a L<DBIx::DBO::Row|DBIx::DBO::Row> object or undefined if there are no m
 
 sub fetch {
     my $me = shift;
-    unless ($me->sth->{Active}) {
-        $me->run or return undef;
-    }
-
+    # Prepare and/or execute the query if needed
+    $me->sth and ($me->{sth}{Active} or $me->run)
+        or ouch $me->rdbh->errstr;
     # Detach the old record if there is still another reference to it
     my $row;
     if (defined $me->{Row} and SvREFCNT(${$me->{Row}}) > 1) {
@@ -765,9 +764,7 @@ sub fetch {
     } else {
         $row = $me->row;
     }
-
     $$row->{hash} = $me->{hash};
-
     # Fetch and store the data then return the Row on success and undef on failure or no more rows
     ($$row->{array} = $me->{sth}->fetch) ? $me->{Row} : undef %$row;
 }
@@ -832,7 +829,7 @@ sub _bind_cols_to_hash {
   my $row_count = $query->rows;
 
 Count the number of rows returned.
-Returns undefined if there is an error or the number is unknown.
+Returns undefined if the number is unknown.
 
 =cut
 
@@ -840,9 +837,8 @@ sub rows {
     my $me = shift;
     $me->sql; # Ensure the Row_Count is cleared if needed
     unless (defined $me->{Row_Count}) {
-        unless ($me->sth->{Executed}) {
-            $me->run or return undef;
-        }
+        $me->sth and ($me->{sth}{Executed} or $me->run)
+            or ouch $me->rdbh->errstr;
         $me->{Row_Count} = $me->sth->rows;
         $me->{Row_Count} = $me->count_rows if $me->{Row_Count} == -1;
     }
