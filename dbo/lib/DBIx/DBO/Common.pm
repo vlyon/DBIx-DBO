@@ -137,7 +137,7 @@ sub _build_table {
     my $me = shift;
     my $t = shift;
     my $alias = $me->_table_alias($t);
-    $alias = $alias ? ' AS '.$me->_qi($alias) : '';
+    $alias = $alias ? ' '.$me->_qi($alias) : '';
     $t->_quoted_name.$alias;
 }
 
