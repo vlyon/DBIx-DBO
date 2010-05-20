@@ -22,6 +22,18 @@ sub _get_table_schema {
     return $info->[0][1];
 }
 
+# Hack to fix quoted primary keys
+if ($DBD::SQLite::VERSION < 1.30) {
+    *_set_table_key_info = sub {
+        my $me = shift;
+        my $schema = shift;
+        my $table = shift;
+        my $h = shift;
+        $me->SUPER::_set_table_key_info($schema, $table, $h);
+        s/^(["'`])(.+)\1$/$2/ for @{$h->{PrimaryKeys}}; # dequote
+    }
+}
+
 package # hide from PAUSE
     DBIx::DBO::Query::DBD::SQLite;
 use DBIx::DBO::Common;
