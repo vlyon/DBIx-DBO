@@ -31,6 +31,7 @@ ok $dbo->do('SET NAMES utf8'), 'SET NAMES utf8' or diag sql_err($dbo);
 
 # In MySQL the Schema is the DB
 $Test::DBO::test_sch = $Test::DBO::test_db;
+$Test::DBO::multi_table_update = 1;
 
 # Table methods: do, select* (15 tests)
 my $t = Test::DBO::basic_methods($dbo);

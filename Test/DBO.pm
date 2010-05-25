@@ -9,6 +9,7 @@ use warnings;
 
 use Scalar::Util qw(blessed reftype);
 use Test::More;
+use DBIx::DBO;
 BEGIN {
     # If we are using a version of Test::More older than 0.82 ...
     unless (exists $Test::More::{note}) {
@@ -43,7 +44,6 @@ BEGIN {
         };
     }
 }
-use DBIx::DBO;
 
 our $dbd;
 our $dbd_name;
@@ -51,6 +51,8 @@ our $dbd_name;
 (our $test_sch = "DBO_${DBIx::DBO::VERSION}_test_sch") =~ s/\W/_/g;
 (our $test_tbl = "DBO_${DBIx::DBO::VERSION}_test_tbl") =~ s/\W/_/g;
 our @_cleanup_sql;
+our $case_sensitivity_sql = 'SELECT ? LIKE ?';
+our $multi_table_update;
 
 sub import {
     my $class = shift;
@@ -363,8 +365,9 @@ sub query_methods {
     is $q->sql, $dbo->query($t)->sql, 'Method DBIx::DBO::Query->reset';
 
     # Group by the first initial
-    $q->show({FUNC => 'SUBSTR(?, 1, 1)', COL => 'name', AS => 'initial'});
-    ok(($q->group_by('initial'), $q->run), 'Method DBIx::DBO::Query->group_by') or diag sql_err($q);
+    $q->show(\'COUNT(*)');
+    ok(($q->group_by({FUNC => 'SUBSTR(?, 1, 1)', COL => 'name'}), $q->run),
+        'Method DBIx::DBO::Query->group_by') or diag sql_err($q);
 
     $q->finish;
     return $q;
@@ -387,7 +390,7 @@ sub advanced_query_methods {
     is $q->fetch ** $t ** 'name', 'John Doe', 'Access specific column from a shown table';
 
     # Check case sensitivity of LIKE
-    my $case_sensitive = $dbo->selectrow_arrayref('SELECT ? LIKE ?', undef, 'a', 'A') or diag sql_err($dbo);
+    my $case_sensitive = $dbo->selectrow_arrayref($case_sensitivity_sql, undef, 'a', 'A') or diag sql_err($dbo);
     $case_sensitive = not $case_sensitive->[0];
     note "$dbd_name 'LIKE' is".($case_sensitive ? '' : ' NOT').' case sensitive';
 
@@ -417,7 +420,6 @@ sub skip_advanced_query_methods {
 sub join_methods {
     my $dbo = shift;
     my $table = shift;
-    my $skip_multi = shift;
 
     my ($q, $t1, $t2) = $dbo->query($table, $table);
     $q->limit(3);
@@ -432,7 +434,8 @@ sub join_methods {
     $q->where($t1 ** 'name', '>', $t2 ** 'name', FORCE => 'OR');
     my $r;
     SKIP: {
-        $r = $q->fetch or diag sql_err($q) or fail 'JOIN ON' or skip 'No Left Join', 1;
+        $q->run or diag sql_err($q) or fail 'JOIN ON' or skip 'No Left Join', 1;
+        $r = $q->fetch or fail 'JOIN ON' or skip 'No Left Join', 1;
 
         is_deeply \@$r, [ 1, 'John Doe', 2, 'Jane Smith' ], 'JOIN ON';
         $r->load($t1 ** id => 2) or diag sql_err($r);
@@ -446,7 +449,8 @@ sub join_methods {
     $q->limit(1, 3);
 
     SKIP: {
-        $r = $q->fetch or diag sql_err($q) or fail 'LEFT JOIN' or skip 'No Left Join', 3;
+        $q->sth or diag sql_err($q) or fail 'LEFT JOIN' or skip 'No Left Join', 3;
+        $r = $q->fetch or fail 'LEFT JOIN' or skip 'No Left Join', 3;
 
         is_deeply \@$r, [ 4, 'James Bond', undef, undef ], 'LEFT JOIN';
         is $r->_column_idx($t2 ** 'id'), 2, 'Method DBIx::DBO::Row->_column_idx';
@@ -454,7 +458,7 @@ sub join_methods {
 
         # Update the LEFT JOINed row
         SKIP: {
-            skip "Mutli-table UPDATE is not supported by $dbd_name", 1 if $skip_multi;
+            skip "Multi-table UPDATE is not supported by $dbd_name", 1 unless $multi_table_update;
             ok $r->update($t1 ** 'name' => 'Vernon Wayne Lyon'), 'Method DBIx::DBO::Row->update' or diag sql_err($r);
         }
     }
