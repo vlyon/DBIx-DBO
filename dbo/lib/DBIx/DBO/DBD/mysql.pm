@@ -50,10 +50,15 @@ package # hide from PAUSE
     DBIx::DBO::Table::DBD::mysql;
 use DBIx::DBO::Common;
 
-sub _last_insert_id {
+sub _save_last_insert_id {
     my $me = shift;
     my $sth = shift;
     return $sth->{mysql_insertid};
+}
+
+sub last_insert_id {
+    my $me = shift;
+    $me->{LastInsertID};
 }
 
 package # hide from PAUSE
