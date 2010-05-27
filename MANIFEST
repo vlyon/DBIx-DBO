@@ -3,6 +3,7 @@ Changes
 lib/DBIx/DBO.pm
 lib/DBIx/DBO/Common.pm
 lib/DBIx/DBO/DBD/DBM.pm
+lib/DBIx/DBO/DBD/Oracle.pm
 lib/DBIx/DBO/DBD/Pg.pm
 lib/DBIx/DBO/DBD/mysql.pm
 lib/DBIx/DBO/DBD/SQLite.pm
@@ -16,6 +17,7 @@ t/02-subclass.t
 t/03-mysql.t
 t/04-postgresql.t
 t/05-sqlite.t
+t/06-oracle.t
 t/99-dbm.t
 t/pod-coverage.t
 t/pod.t
