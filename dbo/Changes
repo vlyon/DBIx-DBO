@@ -1,6 +1,7 @@
 Revision history for DBIx-DBO
 
-0.04_02	May 17, 2010
+0.05	May 27, 2010
+	- Added support for Oracle. [VLYON]
 	- Improved Query clause removal methods. [VLYON]
 	- Added a HAVING clause. [VLYON]
 	- Improved inheritance for subclasses under 5.8.x. [VLYON]

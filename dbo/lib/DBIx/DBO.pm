@@ -27,7 +27,7 @@ DBIx::DBO - An OO interface to SQL queries and results.  Easily constructs SQL q
 
 =cut
 
-our $VERSION = '0.04_02';
+our $VERSION = '0.05';
 
 =head1 SYNOPSIS
 
