@@ -156,6 +156,7 @@ sub basic_methods {
     my $quoted_table = $dbo->_qi($test_sch, $test_tbl);
     my @quoted_cols = map $dbo->_qi($_), qw(type id name);
     my $t;
+    my $create_table = "CREATE TABLE $quoted_table ($quoted_cols[1] INT, $quoted_cols[2] VARCHAR(20))";
 
     # Create a test table with a multi-column primary key
     if ($dbo->do("CREATE TABLE $quoted_table ($quoted_cols[2] VARCHAR(20), $quoted_cols[1] INT, $quoted_cols[0] VARCHAR(8), PRIMARY KEY ($quoted_cols[0], $quoted_cols[1]))")) {
@@ -169,7 +170,7 @@ sub basic_methods {
         is_deeply $t->{PrimaryKeys}, ['type', 'id'], 'Check PrimaryKeys';
 
         # Recreate our test table
-        $dbo->do("DROP TABLE $quoted_table") && $dbo->do("CREATE TABLE $quoted_table ($quoted_cols[1] INT, $quoted_cols[2] VARCHAR(20))")
+        $dbo->do("DROP TABLE $quoted_table") && $dbo->do($create_table)
             or diag sql_err($dbo) or die "Can't recreate the test table!\n";
 
         # Remove the created table during cleanup
@@ -185,7 +186,7 @@ sub basic_methods {
         }
 
         # Create our test table
-        ok $dbo->do("CREATE TABLE $quoted_table ($quoted_cols[1] INT, $quoted_cols[2] VARCHAR(20))"), 'Create our test table'
+        ok $dbo->do($create_table), 'Create our test table'
             or diag sql_err($dbo) or die "Can't create the test table!\n";
 
         # Remove the created table during cleanup
@@ -446,7 +447,15 @@ sub join_methods {
     $t2 = $q->join_table($table, 'left');
     $q->join_on($t2, $t1 ** 'id', '=', { FUNC => '?/2.0', COL => $t2 ** 'id' });
     $q->order_by({ COL => $t1 ** 'name', ORDER => 'DESC' });
-    $q->limit(1, 3);
+
+    if ($dbd eq 'Oracle') {
+        # Oracle doesn't support LIMIT OFFSET
+        $q->fetch;
+        $q->fetch;
+        $q->fetch;
+    } else {
+        $q->limit(1, 3);
+    }
 
     SKIP: {
         $q->sth or diag sql_err($q) or fail 'LEFT JOIN' or skip 'No Left Join', 3;
