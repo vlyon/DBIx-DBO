@@ -178,6 +178,23 @@ sub show {
     }
 }
 
+=head3 C<distinct>
+
+  $query->distinct(1);
+  my $is_distinct = $query->distinct();
+
+Takes a boolean argument to add or remove the DISTINCT clause for the returned rows.
+Returns the previous setting.
+
+=cut
+
+sub distinct {
+    my $me = shift;
+    my $distinct = $me->{build_data}{Show_Distinct};
+    $me->{build_data}{Show_Distinct} = shift() ? 1 : undef if @_;
+    return $distinct;
+}
+
 =head3 C<join_table>
 
   $query->join_table($table, $join_type);
@@ -344,6 +361,10 @@ C<FUNC> => A string to be inserted into the SQL, possibly containing "?" placeho
 
 =item *
 
+C<COLLATE> => The collation for this value/field.
+
+=item *
+
 C<ORDER> => To order by a column (Used only in C<group_by> and C<order_by>).
 
 =back
@@ -493,14 +514,6 @@ sub _add_where {
             ouch 'Wrong number of fields/values, called with '.@$val.' while needing 1';
         }
     }
-
-    # Collation
-#    if (exists $fld_opt->{COLLATE}) {
-#        $fld_func .= " COLLATE $fld_opt->{COLLATE}";
-#    }
-#    if (exists $val_opt->{COLLATE}) {
-#        $val_func .= " COLLATE $val_opt->{COLLATE}";
-#    }
 
     push @{$ref}, [ $op, $fld, $fld_func, $fld_opt, $val, $val_func, $val_opt, $opt{FORCE} ];
 }
@@ -1009,10 +1022,6 @@ __END__
 =item *
 
 Better explanation of how to construct complex queries.  This module is currently still in development (including the documentation), but I will be adding to/completing it in the near future.
-
-=item *
-
-Add C<DISTINCT> and C<COLLATE> functionality.
 
 =back
 

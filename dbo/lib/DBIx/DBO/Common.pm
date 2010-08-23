@@ -145,15 +145,16 @@ sub _build_show {
     my $me = shift;
     my $h = shift;
     return $h->{show} if defined $h->{show};
+    my $distinct = $h->{Show_Distinct} ? 'DISTINCT ' : '';
     undef @{$h->{Show_Bind}};
-    return $h->{show} = '*' unless @{$h->{Showing}};
+    return $h->{show} = $distinct.'*' unless @{$h->{Showing}};
     my @flds;
     for my $fld (@{$h->{Showing}}) {
         push @flds, (blessed $fld and $fld->isa('DBIx::DBO::Table'))
             ? $me->_qi($me->_table_alias($fld) || $fld->{Name}).'.*'
             : $me->_build_val($h->{Show_Bind}, @$fld);
     }
-    $h->{show} = join ', ', @flds;
+    $h->{show} = $distinct.join(', ', @flds);
 }
 
 sub _build_from {

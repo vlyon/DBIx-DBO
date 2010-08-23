@@ -52,7 +52,7 @@ our $dbd_name;
 (our $test_tbl = "DBO_${DBIx::DBO::VERSION}_test_tbl") =~ s/\W/_/g;
 our @_cleanup_sql;
 our $case_sensitivity_sql = 'SELECT ? LIKE ?';
-our $multi_table_update;
+our %can;
 
 sub import {
     my $class = shift;
@@ -382,7 +382,14 @@ sub advanced_query_methods {
 
     # Show specific columns only
     $q->show({ FUNC => 'UPPER(?)', COL => 'name', AS => 'name' }, 'id', 'name');
-    $q->order_by('id');
+    SKIP: {
+        unless ($can{collate}) {
+            $q->order_by('id');
+            skip 'COLLATE is not supported', 1;
+        }
+        $q->order_by({ COL => 'id', COLLATE => $can{collate} });
+        pass 'Method DBIx::DBO::Query->order_by COLLATE';
+    }
     is $q->fetch->{name}, 'JOHN DOE', 'Method DBIx::DBO::Query->show';
     is $q->row ** $t ** 'name', 'John Doe', 'Access specific column';
 
@@ -467,7 +474,7 @@ sub join_methods {
 
         # Update the LEFT JOINed row
         SKIP: {
-            skip "Multi-table UPDATE is not supported by $dbd_name", 1 unless $multi_table_update;
+            skip "Multi-table UPDATE is not supported by $dbd_name", 1 unless $can{multi_table_update};
             ok $r->update($t1 ** 'name' => 'Vernon Wayne Lyon'), 'Method DBIx::DBO::Row->update' or diag sql_err($r);
         }
     }
