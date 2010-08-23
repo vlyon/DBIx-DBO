@@ -22,7 +22,7 @@ if ($dbo->do("CREATE DATABASE $quoted_db CHARACTER SET utf8")) {
     $quoted_db = $dbo->_qi($Test::DBO::test_db);
 }
 
-plan tests => 66;
+plan tests => 67;
 
 # Create the DBO (3 tests)
 pass "Connect to MySQL $quoted_db database";
@@ -31,7 +31,8 @@ ok $dbo->do('SET NAMES utf8'), 'SET NAMES utf8' or diag sql_err($dbo);
 
 # In MySQL the Schema is the DB
 $Test::DBO::test_sch = $Test::DBO::test_db;
-$Test::DBO::multi_table_update = 1;
+$Test::DBO::can{collate} = 'BINARY';
+$Test::DBO::can{multi_table_update} = 1;
 
 # Table methods: do, select* (15 tests)
 my $t = Test::DBO::basic_methods($dbo);
@@ -45,7 +46,7 @@ Test::DBO::row_methods($dbo, $t);
 # Query methods: (16 tests)
 my $q = Test::DBO::query_methods($dbo, $t);
 
-# Advanced query methods: (9 tests)
+# Advanced query methods: (10 tests)
 Test::DBO::advanced_query_methods($dbo, $t, $q);
 
 # Join methods: (9 tests)
