@@ -1,5 +1,10 @@
 Revision history for DBIx-DBO
 
+0.06	Aug 23, 2010
+	- Included missing Oracle files in MANIFEST
+	- Added DISTINCT queries.
+	- Added COLLATE option.
+
 0.05	May 27, 2010
 	- Added support for Oracle. [VLYON]
 	- Improved Query clause removal methods. [VLYON]
