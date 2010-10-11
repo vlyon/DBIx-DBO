@@ -41,9 +41,9 @@ A C<Query> object represents rows from a database (from one or more tables). Thi
 
 =head1 SUBCLASSING
 
-When subclassing C<DBIx::DBO::Query>, please note that C<Query> objects created with the L</new> method are blessed into a DBD driver specific module. For example if using MySQL, a new C<Query> object will be blessed into C<DBIx::DBO::Query::DBD::mysql> which inherits from C<DBIx::DBO::Query>.  However if objects are created from a subclass called C<MySubClass> the new object will be blessed into C<MySubClass::DBD::mysql> which will inherit from both C<MySubClass> and C<DBIx::DBO::Query::DBD::mysql>.
+C<DBIx::DBO> supports multiple inheritance.  When subclassing C<DBIx::DBO::Query>, please note that C<Query> objects created with the L</new> method are blessed into a DBD driver specific module. For example if using MySQL, a new C<Query> object will be blessed into C<DBIx::DBO::Query::DBD::mysql> which inherits from C<DBIx::DBO::Query>.  However if objects are created from a subclass called C<MySubClass> the new object will be blessed into C<MySubClass::DBD::mysql> which will inherit from both C<MySubClass> and C<DBIx::DBO::Query::DBD::mysql>.
 
-For this reason it's advisable that L<MRO::Compat|MRO::Compat> is installed if the perl version you are using is less than 5.9.5 as this module will try to ensure that the 'C3' method resolution order is used.
+For this reason it's advisable that L<MRO::Compat|MRO::Compat> is installed if the perl version you are using is less than 5.9.5 as this module will ensure that the 'C3' method resolution order is used.
 
 =head1 METHODS
 
@@ -78,6 +78,20 @@ sub _set_dbd_inheritance {
     # Let DBIx::DBO::Query secretly inherit from DBIx::DBO::Common
     @_ = (@ISA, 'DBIx::DBO::Common') if not @_ and $class eq __PACKAGE__;
     $class->DBIx::DBO::Common::_set_dbd_inheritance($dbd, @_);
+}
+
+=head3 C<row_class>
+
+  $query->row_class('My::Subclassed::Row');
+
+Rows returned will be blessed into the specified class. This should be a subclass of C<DBIx::DBO::Row>.
+
+=cut
+
+sub row_class {
+    my $me = shift;
+    ouch 'No row class specified' unless defined $_[0];
+    $me->{RowClass} = shift;
 }
 
 =head3 C<reset>
@@ -793,7 +807,7 @@ Returns the L<DBIx::DBO::Row|DBIx::DBO::Row> object for the current row from the
 sub row {
     my $me = shift;
     $me->sql; # Build the SQL and detach the Row if needed
-    $me->{Row} ||= $me->{DBO}->row($me);
+    $me->{Row} ||= exists $me->{RowClass} ? $me->{RowClass}->new($me->{DBO}) : $me->{DBO}->row($me);
 }
 
 =head3 C<run>
