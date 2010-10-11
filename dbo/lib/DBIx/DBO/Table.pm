@@ -45,9 +45,9 @@ sub new {
     my ($proto, $dbo, $table) = @_;
     my $class = ref($proto) || $proto;
     blessed $dbo and $dbo->isa('DBIx::DBO') or ouch 'Invalid DBO Object';
-    (my $schema, $table, $_) = $dbo->table_info($table) or ouch 'No such table: '.$table;
+    (my $schema, $table, my $me) = $dbo->table_info($table) or ouch 'No such table: '.$table;
     $class = $class->_set_dbd_inheritance($dbo->{dbd});
-    bless { %$_, Schema => $schema, Name => $table, DBO => $dbo, LastInsertID => undef }, $class;
+    bless { %$me, Schema => $schema, Name => $table, DBO => $dbo, LastInsertID => undef }, $class;
 }
 
 sub _set_dbd_inheritance {
