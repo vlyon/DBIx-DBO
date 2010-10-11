@@ -325,6 +325,12 @@ sub query_methods {
     isa_ok $r, 'DBIx::DBO::Row', '$q->row';
     my $r_str = "$r";
 
+    # Alter the SQL to ensure the row is detached and rebuilt
+    $q->order_by('id');
+    $r = $q->row;
+    isnt $r_str, "$r", 'Row rebuilds SQL and detaches when a ref still exists';
+    $r_str = "$r";
+
     # Remove the reference so that the row wont detach
     undef $r;
 
