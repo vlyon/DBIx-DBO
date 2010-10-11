@@ -11,6 +11,7 @@ use DBIx::DBO::Row;
 
 our @ISA;
 my $need_c3_initialize;
+my @ConnectArgs;
 
 BEGIN {
     # The C3 method resolution order is required.
@@ -156,11 +157,11 @@ sub connect {
     if (blessed $me) {
         ouch 'DBO is already connected' if $me->{dbh};
         $me->_check_driver($_[0]) if @_;
-        $me->{dbh} = $me->_connect($me->{ConnectArgs} ||= [], @_) or return;
+        $me->{dbh} = $me->_connect($me->{ConnectArgs} ||= @ConnectArgs, @_) or return;
         return $me;
     }
     my %new;
-    my $dbh = $me->_connect($new{ConnectArgs} = [], @_) or return;
+    my $dbh = $me->_connect($new{ConnectArgs} = @ConnectArgs, @_) or return;
     $me->new($dbh, undef, \%new);
 }
 
@@ -169,11 +170,11 @@ sub connect_readonly {
     if (blessed $me) {
         $me->{rdbh}->disconnect if $me->{rdbh};
         $me->_check_driver($_[0]) if @_;
-        $me->{rdbh} = $me->_connect($me->{ConnectReadOnlyArgs} ||= [], @_) or return;
+        $me->{rdbh} = $me->_connect($me->{ConnectReadOnlyArgs} ||= @ConnectArgs, @_) or return;
         return $me;
     }
     my %new;
-    my $dbh = $me->_connect($new{ConnectReadOnlyArgs} = [], @_) or return;
+    my $dbh = $me->_connect($new{ConnectReadOnlyArgs} = @ConnectArgs, @_) or return;
     $me->new(undef, $dbh, \%new);
 }
 
@@ -191,12 +192,12 @@ sub _check_driver {
 
 sub _connect {
     my $me = shift;
-    my $conn = shift;
+    my $conn = $ConnectArgs[shift] ||= [];
     if (@_) {
         my ($dsn, $user, $auth, $attr) = @_;
         my %attr = %$attr if ref($attr) eq 'HASH';
 
-### Add a stack trace to PrintError & RaiseError
+        # Add a stack trace to PrintError & RaiseError
         $attr{HandleError} = sub {
             if ($Config{DebugSQL} > 1) {
                 $_[0] = Carp::longmess($_[0]);
@@ -207,7 +208,7 @@ sub _connect {
             return 1;
         } unless exists $attr{HandleError};
 
-### AutoCommit is always on
+        # AutoCommit is always on
         %attr = (PrintError => 0, RaiseError => 1, %attr, AutoCommit => 1);
         @$conn = ($dsn, $user, $auth, \%attr);
     }
