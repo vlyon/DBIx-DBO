@@ -66,18 +66,18 @@ our $VERSION = '0.06';
   
       # Update/delete rows
       $row->update(status => 'Fired!') if $row->{name} eq 'Harry';
-      $row->delete if $record->{id} == 27;
+      $row->delete if $row->{id} == 27;
   }
 
 =head1 DESCRIPTION
 
 This module provides a convenient and efficient way to access a database.  It can construct queries for you and returns the results in easy to use methods.
 
-Once you've created a C<DBIx::DBO> object using one or both of C<connect> or C<connect_readonly>, you can begin creating C<DBIx::DBO::Query> objects.  These are the "workhorse" objects, they encapsulate an entire query with JOINs, WHERE clauses, etc.  You need not have to know about what created the C<Query> to be able to use or modify it.  This makes it valuable in environments like mod_perl or large projects that prefer an object oriented approach to data.
+Once you've created a C<DBIx::DBO> object using one or both of C<connect> or C<connect_readonly>, you can begin creating L<DBIx::DBO::Query|DBIx::DBO::Query> objects.  These are the "workhorse" objects, they encapsulate an entire query with JOINs, WHERE clauses, etc.  You need not have to know about what created the C<Query> to be able to use or modify it.  This makes it valuable in environments like mod_perl or large projects that prefer an object oriented approach to data.
 
 The query is only automatically executed when the data is requested.  This is to make it possible to minimise lookups that may not be needed or to delay them as late as possible.
 
-The C<DBIx::DBO::Row> object returned can be treated as both an arrayref or a hashref.  The data is aliased for efficient use of memory.  C<Row> objects can be updated or deleted, even when created by JOINs (If the DB supports it).
+The L<DBIx::DBO::Row|DBIx::DBO::Row> object returned can be treated as both an arrayref or a hashref.  The data is aliased for efficient use of memory.  C<Row> objects can be updated or deleted, even when created by JOINs (If the DB supports it).
 
 =head1 METHODS
 
