@@ -86,11 +86,16 @@ sub _init {
     }
 }
 
+sub _copy {
+    my $val = shift;
+    ref $val eq 'ARRAY' ? [map _copy($_), @$val] : ref $val eq 'HASH' ? {map _copy($_), %$val} : $val;
+}
+
 sub _copy_build_data {
     my $me = shift;
     # Store needed build_data
-    for (qw(Showing from From_Bind Quick_Where Where_Data Where_Bind group Group_Bind order Order_Bind)) {
-        $$me->{build_data}{$_} = $$me->{Parent}{build_data}{$_} if exists $$me->{Parent}{build_data}{$_};
+    for my $f (qw(Showing from From_Bind Quick_Where Where_Data Where_Bind group Group_Bind order Order_Bind)) {
+        $$me->{build_data}{$f} = _copy($$me->{Parent}{build_data}{$f}) if exists $$me->{Parent}{build_data}{$f};
     }
 }
 

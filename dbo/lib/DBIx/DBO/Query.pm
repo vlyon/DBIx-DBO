@@ -807,7 +807,7 @@ Returns the L<DBIx::DBO::Row|DBIx::DBO::Row> object for the current row from the
 sub row {
     my $me = shift;
     $me->sql; # Build the SQL and detach the Row if needed
-    $me->{Row} ||= exists $me->{RowClass} ? $me->{RowClass}->new($me->{DBO}) : $me->{DBO}->row($me);
+    $me->{Row} ||= exists $me->{RowClass} ? $me->{RowClass}->new($me->{DBO}, $me) : $me->{DBO}->row($me);
 }
 
 =head3 C<run>
