@@ -200,7 +200,7 @@ sub _parse_val {
     my %c = (Check => '', @_);
 
     my $func;
-    my %opt;
+    my $opt;
     if (ref $fld eq 'SCALAR') {
         ouch 'Invalid '.($c{Check} eq 'Column' ? 'column' : 'field').' reference (scalar ref to undef)'
             unless defined $$fld;
@@ -208,12 +208,12 @@ sub _parse_val {
         $fld = [];
     } elsif (ref $fld eq 'HASH') {
         $func = $fld->{FUNC} if exists $fld->{FUNC};
-        $opt{AS} = $fld->{AS} if exists $fld->{AS};
+        $opt->{AS} = $fld->{AS} if exists $fld->{AS};
         if (exists $fld->{ORDER}) {
             ouch 'Invalid ORDER, must be ASC or DESC' if $fld->{ORDER} !~ /^(A|DE)SC$/i;
-            $opt{ORDER} = uc $fld->{ORDER};
+            $opt->{ORDER} = uc $fld->{ORDER};
         }
-        $opt{COLLATE} = $fld->{COLLATE} if exists $fld->{COLLATE};
+        $opt->{COLLATE} = $fld->{COLLATE} if exists $fld->{COLLATE};
         if (exists $fld->{COL}) {
             ouch 'Invalid HASH containing both COL and VAL' if exists $fld->{VAL};
             my @cols = ref $fld->{COL} eq 'ARRAY' ? @{$fld->{COL}} : $fld->{COL};
@@ -234,7 +234,7 @@ sub _parse_val {
     } elsif ($with != 1 and $c{Check} ne 'Auto') {
         ouch 'Invalid '.($c{Check} eq 'Column' ? 'column' : 'field')." reference (passed $with params instead of 1)";
     }
-    return ($fld, $func, \%opt);
+    return ($fld, $func, $opt);
 }
 
 sub _substitute_placeholders {
