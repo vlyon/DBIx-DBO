@@ -80,20 +80,6 @@ sub _set_dbd_inheritance {
     $class->DBIx::DBO::Common::_set_dbd_inheritance($dbd, @_);
 }
 
-=head3 C<row_class>
-
-  $query->row_class('My::Subclassed::Row');
-
-Rows returned will be blessed into the specified class. This should be a subclass of C<DBIx::DBO::Row>.
-
-=cut
-
-sub row_class {
-    my $me = shift;
-    ouch 'No row class specified' unless defined $_[0];
-    $me->{RowClass} = shift;
-}
-
 =head3 C<reset>
 
   $query->reset;
@@ -807,7 +793,11 @@ Returns the L<DBIx::DBO::Row|DBIx::DBO::Row> object for the current row from the
 sub row {
     my $me = shift;
     $me->sql; # Build the SQL and detach the Row if needed
-    $me->{Row} ||= exists $me->{RowClass} ? $me->{RowClass}->new($me->{DBO}, $me) : $me->{DBO}->row($me);
+    unless ($me->{Row}) {
+        my $row_class = $me->config('RowClass');
+        $me->{Row} = $row_class ? $row_class->new($me->{DBO}, $me) : $me->{DBO}->row($me);
+    }
+    return $me->{Row};
 }
 
 =head3 C<run>
@@ -997,16 +987,16 @@ The I<read-only> C<DBI> handle, or if there is no I<read-only> connection, the I
 
 =head3 C<do>
 
-  $dbo->do($statement)         or die $dbo->dbh->errstr;
-  $dbo->do($statement, \%attr) or die $dbo->dbh->errstr;
-  $dbo->do($statement, \%attr, @bind_values) or die ...
+  $query->do($statement)         or die $query->dbh->errstr;
+  $query->do($statement, \%attr) or die $query->dbh->errstr;
+  $query->do($statement, \%attr, @bind_values) or die ...
 
 This provides access to L<DBI-E<gt>do|DBI/"do"> method.  It defaults to using the I<read-write> C<DBI> handle.
 
 =head3 C<config>
 
-  $query_setting = $dbo->config($option);
-  $dbo->config($option => $query_setting);
+  $query_setting = $query->config($option);
+  $query->config($option => $query_setting);
 
 Get or set this C<Query> object's config settings.  When setting an option, the previous value is returned.  When getting an option's value, if the value is undefined, the L<DBIx::DBO|DBIx::DBO>'s value is returned.
 

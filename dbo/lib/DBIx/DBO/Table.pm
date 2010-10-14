@@ -95,6 +95,18 @@ sub column {
     $me->{Column}{$col} ||= bless [$me, $col], 'DBIx::DBO::Column';
 }
 
+=head3 C<row>
+
+Returns a new L<DBIx::DBO::Row|DBIx::DBO::Row> object for this table.
+
+=cut
+
+sub row {
+    my $me = shift;
+    my $row_class = $me->config('RowClass');
+    return $row_class ? $row_class->new($me->{DBO}, $me) : $me->{DBO}->row($me);
+}
+
 =head3 C<fetch_row>
 
   $table->fetch_row(%where);
@@ -109,7 +121,7 @@ The C<%where> is a hash of field/value pairs.  The value can be a SCALAR ref, wh
 
 sub fetch_row {
     my $me = shift;
-    $me->{DBO}->row($me)->load(@_);
+    $me->row->load(@_);
 }
 
 =head3 C<fetch_value>
@@ -230,9 +242,9 @@ The I<read-only> C<DBI> handle, or if there is no I<read-only> connection, the I
 
 =head3 C<do>
 
-  $dbo->do($statement)         or die $dbo->dbh->errstr;
-  $dbo->do($statement, \%attr) or die $dbo->dbh->errstr;
-  $dbo->do($statement, \%attr, @bind_values) or die ...
+  $table->do($statement)         or die $table->dbh->errstr;
+  $table->do($statement, \%attr) or die $table->dbh->errstr;
+  $table->do($statement, \%attr, @bind_values) or die ...
 
 This provides access to L<DBI-E<gt>do|DBI/"do"> method.  It defaults to using the I<read-write> C<DBI> handle.
 

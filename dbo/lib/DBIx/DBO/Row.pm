@@ -338,16 +338,16 @@ The I<read-only> C<DBI> handle, or if there is no I<read-only> connection, the I
 
 =head3 C<do>
 
-  $dbo->do($statement)         or die $dbo->dbh->errstr;
-  $dbo->do($statement, \%attr) or die $dbo->dbh->errstr;
-  $dbo->do($statement, \%attr, @bind_values) or die ...
+  $row->do($statement)         or die $row->dbh->errstr;
+  $row->do($statement, \%attr) or die $row->dbh->errstr;
+  $row->do($statement, \%attr, @bind_values) or die ...
 
 This provides access to the L<DBI-E<gt>do|DBI/"do"> method.  It defaults to using the I<read-write> C<DBI> handle.
 
 =head3 C<config>
 
-  $row_setting = $dbo->config($option);
-  $dbo->config($option => $row_setting);
+  $row_setting = $row->config($option);
+  $row->config($option => $row_setting);
 
 Get or set the C<Row> config settings.  When setting an option, the previous value is returned.  When getting an option's value, if the value is undefined, the C<Query> object (If the the C<Row> belongs to one) or L<DBIx::DBO|DBIx::DBO>'s value is returned.
 

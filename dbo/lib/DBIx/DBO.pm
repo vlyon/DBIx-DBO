@@ -320,7 +320,8 @@ Create and return a new L<DBIx::DBO::Row|DBIx::DBO::Row> object.
 =cut
 
 sub row {
-    (my $class = ref($_[0])) =~ s/(::DBD::\w+)$/::Row/;
+    my $class = $_[0]->config('RowClass');
+    ($class = ref($_[0])) =~ s/(::DBD::\w+)$/::Row/ unless $class;
     $class->new(@_);
 }
 
@@ -533,6 +534,10 @@ Boolean setting to control quoting of SQL identifiers (schema, table and column 
 
 Set to C<'read-write'> or C<'read-only'> to force using only that handle for all operations.
 Defaults to C<false> which chooses the I<read-only> handle for reads and the I<read-write> handle otherwise.
+
+=item C<RowClass>
+
+Set the class name for new C<Row> objects. C<Row> objects created will be blessed into this class, which should inhereit from C<DBIx::DBO::Row>.
 
 =item C<DebugSQL>
 
