@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 # Create the DBO (2 tests)
-use Test::DBO Sponge => 'Sponge', tests => 15;
+use Test::DBO Sponge => 'Sponge', tests => 19;
 
 # Empty Subclass
 @SubClass::ISA = ('DBIx::DBO');
@@ -24,17 +24,12 @@ my $table_info = {
         DBIx::DBO::DBD::Sponge;
     use DBIx::DBO::Common;
     sub _get_table_schema {
-        my $me = shift;
-        my $schema = shift; # Not used
-        my $table = shift;
-        ouch 'No table name supplied' unless defined $table and length $table;
         return;
     }
     sub _get_table_info {
         my $me = shift;
         my $schema = shift; # Not used
         my $table = shift;
-        ouch 'No table name supplied' unless defined $table and length $table;
         # Fake table info
         return $me->{TableInfo}{''}{$table} = $table_info;
     }
@@ -61,4 +56,41 @@ isa_ok $q, 'DBIx::DBO::Query::DBD::Sponge', '$q';
 isa_ok $r = MyRow->new($dbo, $t), 'MyRow::DBD::Sponge', '$r';
 isa_ok $r, 'MyRow', '$r';
 isa_ok $r, 'DBIx::DBO::Row::DBD::Sponge', '$r';
+
+
+# Create a Query and Row class for a table
+{
+    package # hide from PAUSE
+        My::Query;
+    use base 'DBIx::DBO::Query';
+    my @tables;
+    sub new {
+        my $me = shift;
+        my $dbo = shift;
+        @tables = map $dbo->table($_), $Test::DBO::test_tbl unless @tables;
+        $me = $me->SUPER::new($dbo, @tables, @_);
+        $me->config(RowClass => 'My::Row');
+        return $me;
+    }
+}
+{
+    package # hide from PAUSE
+        My::Row;
+    use base 'DBIx::DBO::Row';
+    my @tables;
+    sub new {
+        my $me = shift;
+        my $dbo = shift;
+        @tables = map $dbo->table($_), $Test::DBO::test_tbl unless @tables;
+        $me->SUPER::new($dbo, @tables, @_);
+    }
+}
+
+my $tbl = My::Query->new($dbo);
+isa_ok $tbl, 'My::Query', '$tbl';
+is $tbl->_build_from, $tbl->_qi($Test::DBO::test_tbl), 'Subclass represents the table automatically';
+
+my $row = My::Row->new($dbo);
+isa_ok $row, 'My::Row', '$row';
+is $row->_build_from, $row->_qi($Test::DBO::test_tbl), 'Subclass represents the table automatically';
 

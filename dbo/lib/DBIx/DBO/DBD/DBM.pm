@@ -21,7 +21,6 @@ sub _get_table_schema {
     my $me = shift;
     my $schema = shift; # Not used
     my $table = shift;
-    ouch 'No table name supplied' unless defined $table and length $table;
     return;
 }
 
@@ -29,17 +28,16 @@ sub _get_table_info {
     my $me = shift;
     my $schema = shift; # Not used
     my $table = my $q_table = shift;
-    ouch 'No table name supplied' unless defined $table and length $table;
 
-    unless (exists $me->rdbh->{dbm_tables}{$q_table}
-            and exists $me->rdbh->{dbm_tables}{$q_table}{c_cols}
-            and ref $me->rdbh->{dbm_tables}{$q_table}{c_cols} eq 'ARRAY') {
+    unless (exists $me->rdbh->{dbm_tables}{$q_table}) {
         $q_table = $me->_qi($table); # Try with the quoted table name
-        unless (exists $me->rdbh->{dbm_tables}{$q_table}
-                and exists $me->rdbh->{dbm_tables}{$q_table}{c_cols}
-                and ref $me->rdbh->{dbm_tables}{$q_table}{c_cols} eq 'ARRAY') {
+        unless (exists $me->rdbh->{dbm_tables}{$q_table}) {
             ouch 'Invalid table: '.$q_table;
         }
+    }
+    unless (exists $me->rdbh->{dbm_tables}{$q_table}{c_cols}
+            and ref $me->rdbh->{dbm_tables}{$q_table}{c_cols} eq 'ARRAY') {
+        ouch 'Invalid DBM table info, could be an incompatible version';
     }
 
     my %h;
