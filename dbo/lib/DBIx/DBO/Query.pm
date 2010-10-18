@@ -184,6 +184,8 @@ Returns the previous setting.
 
 sub distinct {
     my $me = shift;
+    undef $me->{sql};
+    undef $me->{build_data}{show};
     my $distinct = $me->{build_data}{Show_Distinct};
     $me->{build_data}{Show_Distinct} = shift() ? 1 : undef if @_;
     return $distinct;
