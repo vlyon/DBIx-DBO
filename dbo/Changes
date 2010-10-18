@@ -1,7 +1,12 @@
 Revision history for DBIx-DBO
 
+0.07	Oct 18, 2010
+	- Improved POD for subclassing.
+	- Minor bugfix when creating a new table.
+	- Obscure the ConnectArgs and ConnectReadOnlyArgs in the DBO.
+
 0.06	Aug 23, 2010
-	- Included missing Oracle files in MANIFEST
+	- Included missing Oracle files in MANIFEST.
 	- Added DISTINCT queries.
 	- Added COLLATE option.
 
