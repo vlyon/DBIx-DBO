@@ -371,6 +371,25 @@ sub DESTROY {
 
 __END__
 
+=head1 SUBCLASSING
+
+When subclassing C<DBIx::DBO::Row>, please note that C<Row> objects created with the L</new> method are blessed into a DBD driver specific module.
+For example, if using MySQL, a new C<Row> object will be blessed into C<DBIx::DBO::Row::DBD::mysql> which inherits from C<DBIx::DBO::Row>.
+However if objects are created from a subclass called C<MySubClass> the new object will be blessed into C<MySubClass::DBD::mysql> which will inherit from both C<MySubClass> and C<DBIx::DBO::Row::DBD::mysql>.
+
+Classes can easily be created for tables in your database.
+Assume you want to create a simple C<Row> class for a "Users" table:
+
+  package My::User;
+  use base 'DBIx::DBO::Row';
+  
+  sub new {
+      my $class = shift;
+      my $dbo = shift;
+      
+      $class->SUPER::new($dbo, 'Users'); # Create the Row for the "Users" table only
+  }
+
 =head1 SEE ALSO
 
 L<DBIx::DBO>

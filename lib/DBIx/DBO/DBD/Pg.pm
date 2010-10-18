@@ -9,7 +9,6 @@ sub _get_table_schema {
     my $me = shift;
     my $schema = my $q_schema = shift;
     my $table = my $q_table = shift;
-    ouch 'No table name supplied' unless defined $table and length $table;
 
     $q_schema =~ s/([\\_%])/\\$1/g if defined $q_schema;
     $q_table =~ s/([\\_%])/\\$1/g;
@@ -27,7 +26,6 @@ sub _get_table_info {
     my $me = shift;
     my $schema = my $q_schema = shift;
     my $table = my $q_table = shift;
-    ouch 'No table name supplied' unless defined $table and length $table;
 
     $q_schema =~ s/([\\_%])/\\$1/g if defined $q_schema;
     $q_table =~ s/([\\_%])/\\$1/g;
@@ -61,6 +59,7 @@ sub table_info {
     my $me = shift;
     my $schema = '';
     my $table = shift;
+    ouch 'No table name supplied' unless defined $table and length $table;
 
     if (blessed $table and $table->isa('DBIx::DBO::Table')) {
         ($schema, $table) = @$table{qw(Schema Name)};

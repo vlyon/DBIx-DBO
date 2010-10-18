@@ -378,7 +378,6 @@ sub _get_table_schema {
     my $me = shift;
     my $schema = my $q_schema = shift;
     my $table = my $q_table = shift;
-    ouch 'No table name supplied' unless defined $table and length $table;
 
     $q_schema =~ s/([\\_%])/\\$1/g if defined $q_schema;
     $q_table =~ s/([\\_%])/\\$1/g;
@@ -396,7 +395,6 @@ sub _get_table_info {
     my $me = shift;
     my $schema = shift;
     my $table = shift;
-    ouch 'No table name supplied' unless defined $table and length $table;
 
     my $cols = $me->rdbh->column_info(undef, $schema, $table, '%')->fetchall_arrayref({});
     ouch 'Invalid table: '.$me->_qi($table) unless @$cols;
@@ -425,6 +423,7 @@ sub table_info {
     my $me = shift;
     my $table = shift;
     my $schema;
+    ouch 'No table name supplied' unless defined $table and length $table;
 
     if (blessed $table and $table->isa('DBIx::DBO::Table')) {
         ($schema, $table) = @$table{qw(Schema Name)};
@@ -570,6 +569,21 @@ sub DESTROY {
 1;
 
 __END__
+
+=head1 SUBCLASSING
+
+C<DBIx::DBO> supports multiple inheritance.
+For this reason it's advisable that L<MRO::Compat|MRO::Compat> is installed if the perl version you are using is less than 5.9.5 as that module will ensure that the 'C3' method resolution order is used.
+
+When subclassing C<DBIx::DBO::xxx>, please note that the objects created with their C<new> methods are blessed into DBD driver specific modules.
+For details on subclassing the C<Query> or C<Row> objects see: L<DBIx::DBO::Query/"subclassing"> and L<DBIx::DBO::Row/"subclassing">.
+This is the simple (recommended) way to create objects representing a single query, table or row in your database.
+
+When you subclass C<DBIx::DBO>, it affects inheritance for all objects created by this C<DBO>.
+For example, if using MySQL and a subclass of C<DBIx::DBO> named C<MySubClass>, then the object returned from L</connect> would be blessed into C<MySubClass::DBD::mysql> which would inherit from both C<MySubClass> and C<DBIx::DBO::DBD::mysql>.
+Any objects created by this C<DBO> will have a similar inheritance path.
+For example, a new C<Query> object would be blessed into C<MySubClass::Query::DBD::mysql> which would in turn inherit from both C<MySubClass::Query> and C<DBIx::DBO::Query::DBD::mysql>.
+These classes are automatically created if they don't exist.
 
 =head1 AUTHOR
 
