@@ -22,15 +22,11 @@ package # hide from PAUSE
 use DBIx::DBO::Common;
 
 # Oracle doesn't allow the use of aliases in GROUP BY
-sub group_by {
+sub _alias_preference {
     my $me = shift;
-    undef $me->{sql};
-    undef $me->{build_data}{group};
-    undef @{$me->{build_data}{GroupBy}};
-    for my $col (@_) {
-        my @group = $me->_parse_col_val($col, Aliases => 0);
-        push @{$me->{build_data}{GroupBy}}, \@group;
-    }
+    my $method = shift;
+    return 0 if $method eq 'join_on' or $method eq 'group_by';
+    return 1;
 }
 
 sub limit {

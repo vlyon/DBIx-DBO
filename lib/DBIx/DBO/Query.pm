@@ -92,6 +92,7 @@ sub reset {
     $me->group_by;
     $me->order_by;
     $me->limit;
+    delete $me->{Config};
 }
 
 =head3 C<tables>
@@ -119,7 +120,9 @@ sub _table_alias {
     my $i = $me->_table_idx($tbl);
     ouch 'The table is not in this query' unless defined $i;
     # TODO: Use table aliases, when there's more than 1 table or column aliases are used
-    @{$me->{Tables}} > 1 || @{$me->{build_data}{Showing}} ? 't'.($i + 1) : ();
+#    @{$me->{Tables}} > 1 || @{$me->{build_data}{Showing}} ? 't'.($i + 1) : ();
+    # FIXME: Don't use aliases, when there's only 1 table - This breaks the Row 'from'
+    @{$me->{Tables}} > 1 ? 't'.($i + 1) : ();
 }
 
 =head3 C<column>
@@ -133,16 +136,21 @@ Returns a reference to a column for use with other methods.
 
 sub column {
     my ($me, $col, $_check_aliases) = @_;
-    if ($_check_aliases) {
-        for my $fld (@{$me->{build_data}{Showing}}) {
-            return $me->{Column}{$col} ||= bless [$me, $col], 'DBIx::DBO::Column'
-                if !blessed $fld and exists $fld->[2]{AS} and $col eq $fld->[2]{AS};
-        }
-    }
+    my $column;
+    return $column if $_check_aliases == 1 and $column = $me->_check_alias($col);
     for my $tbl ($me->tables) {
         return $tbl->column($col) if exists $tbl->{Column_Idx}{$col};
     }
+    return $column if $_check_aliases == 2 and $column = $me->_check_alias($col);
     ouch 'No such column'.($_check_aliases ? '/alias' : '').': '.$me->_qi($col);
+}
+
+sub _check_alias {
+    my ($me, $col) = @_;
+    for my $fld (@{$me->{build_data}{Showing}}) {
+        return $me->{Column}{$col} ||= bless [$me, $col], 'DBIx::DBO::Column'
+            if !blessed $fld and exists $fld->[2]{AS} and $col eq $fld->[2]{AS};
+    }
 }
 
 =head3 C<show>
@@ -168,7 +176,7 @@ sub show {
             next;
         }
         # If the $fld is just a scalar use it as a column name not a value
-        push @{$me->{build_data}{Showing}}, [ $me->_parse_col_val($fld) ];
+        push @{$me->{build_data}{Showing}}, [ $me->_parse_col_val($fld, Aliases => 0) ];
     }
 }
 
@@ -514,10 +522,24 @@ sub _add_where {
     push @{$ref}, [ $op, $fld, $fld_func, $fld_opt, $val, $val_func, $val_opt, $opt{FORCE} ];
 }
 
+# In some cases column aliases can be used, but this differs by DB and where in the statement it's used.
+# The $method is the method we were called from: (join_on|where|having|_del_where|order_by|group_by)
+# This method provides a way for DBs to override the default which is always 1 except for join_on.
+# Return values: 0 = Don't use aliases, 1 = Check aliases then columns, 2 = Check columns then aliases
+sub _alias_preference {
+    my $me = shift;
+    my $method = shift;
+    return $method eq 'join_on' ? 0 : 1;
+}
+
 sub _parse_col_val {
     my $me = shift;
     my $col = shift;
     my %c = (Check => 'Column', @_);
+    unless (defined $c{Aliases}) {
+        (my $method = (caller(1))[3]) =~ s/.*:://;
+        $c{Aliases} = $me->_alias_preference($method);
+    }
     return $me->_parse_val($col, %c) if ref $col;
     return [ $me->_parse_col($col, $c{Aliases}) ];
 }
@@ -585,7 +607,7 @@ sub group_by {
     undef $me->{build_data}{group};
     undef @{$me->{build_data}{GroupBy}};
     for my $col (@_) {
-        my @group = $me->_parse_col_val($col, Aliases => 1);
+        my @group = $me->_parse_col_val($col);
         push @{$me->{build_data}{GroupBy}}, \@group;
     }
 }
@@ -602,7 +624,7 @@ sub having {
     my $me = shift;
 
     # If the $fld is just a scalar use it as a column name not a value
-    my ($fld, $fld_func, $fld_opt) = $me->_parse_col_val(shift, Aliases => 1);
+    my ($fld, $fld_func, $fld_opt) = $me->_parse_col_val(shift);
     my $op = shift;
     my ($val, $val_func, $val_opt) = $me->_parse_val(shift, Check => 'Auto');
 
@@ -658,7 +680,7 @@ sub order_by {
     undef $me->{build_data}{order};
     undef @{$me->{build_data}{OrderBy}};
     for my $col (@_) {
-        my @order = $me->_parse_col_val($col, Aliases => 1);
+        my @order = $me->_parse_col_val($col);
         push @{$me->{build_data}{OrderBy}}, \@order;
     }
 }
