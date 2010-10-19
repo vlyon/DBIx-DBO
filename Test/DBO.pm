@@ -495,10 +495,6 @@ sub join_methods {
         }
     }
 
-    $q = $dbo->query($table, $table);
-#    $q->fetch;
-Test::DBO::Dump($q->_last_sql);
-
     $q->finish;
 }
 
