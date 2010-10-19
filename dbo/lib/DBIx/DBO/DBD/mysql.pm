@@ -65,6 +65,14 @@ package # hide from PAUSE
     DBIx::DBO::Query::DBD::mysql;
 use DBIx::DBO::Common;
 
+# MySQL doesn't allow the use of aliases in the WHERE clause
+sub _alias_preference {
+    my $me = shift;
+    my $method = shift;
+    return 0 if $method eq 'join_on' or $method eq 'where';
+    return 1;
+}
+
 sub found_rows {
     my $me = shift;
     my $sql = $me->sql;
