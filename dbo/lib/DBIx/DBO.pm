@@ -536,7 +536,7 @@ Defaults to C<false> which chooses the I<read-only> handle for reads and the I<r
 
 =item C<RowClass>
 
-Set the class name for new C<Row> objects. C<Row> objects created will be blessed into this class, which should inhereit from C<DBIx::DBO::Row>.
+Override the class name for new C<Row> objects. C<Row> objects created will be blessed into this class, which should inhereit from C<DBIx::DBO::Row>.
 
 =item C<DebugSQL>
 
@@ -576,7 +576,7 @@ C<DBIx::DBO> supports multiple inheritance.
 For this reason it's advisable that L<MRO::Compat|MRO::Compat> is installed if the perl version you are using is less than 5.9.5 as that module will ensure that the 'C3' method resolution order is used.
 
 When subclassing C<DBIx::DBO::xxx>, please note that the objects created with their C<new> methods are blessed into DBD driver specific modules.
-For details on subclassing the C<Query> or C<Row> objects see: L<DBIx::DBO::Query/"subclassing"> and L<DBIx::DBO::Row/"subclassing">.
+For details on subclassing the C<Query> or C<Row> objects see: L<DBIx::DBO::Query/"SUBCLASSING"> and L<DBIx::DBO::Row/"SUBCLASSING">.
 This is the simple (recommended) way to create objects representing a single query, table or row in your database.
 
 When you subclass C<DBIx::DBO>, it affects inheritance for all objects created by this C<DBO>.
