@@ -795,9 +795,14 @@ sub fetch {
     } else {
         $row = $me->row;
     }
-    $$row->{hash} = $me->{hash};
+
     # Fetch and store the data then return the Row on success and undef on failure or no more rows
-    ($$row->{array} = $me->{sth}->fetch) ? $me->{Row} : undef %$row;
+    if ($$row->{array} = $me->{sth}->fetch) {
+        $$row->{hash} = $me->{hash};
+        return $me->{Row};
+    }
+    $$row->{hash} = {};
+    return;
 }
 
 =head3 C<row>
@@ -831,8 +836,8 @@ sub run {
     my $me = shift;
     $me->sql; # Build the SQL and detach the Row if needed
     if (defined $me->{Row}) {
-        undef ${$me->{Row}}{array};
-        undef %{$me->{Row}};
+        undef ${$me->{Row}}->{array};
+        ${$me->{Row}}->{hash} = {};
     }
 
     my $rv = $me->_execute or return undef;

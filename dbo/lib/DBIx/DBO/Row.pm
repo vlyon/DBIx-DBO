@@ -218,7 +218,7 @@ sub load {
     $old_qw < 0 ? delete $$me->{build_data}{Quick_Where} : ($#{$$me->{build_data}{Quick_Where}} = $old_qw);
 
     undef $$me->{array};
-    undef %$me;
+    $$me->{hash} = {};
     $me->_sql($sql, $me->_bind_params_select($$me->{build_data}));
     my $sth = $me->rdbh->prepare($sql);
     return unless $sth and $sth->execute($me->_bind_params_select($$me->{build_data}));
@@ -277,7 +277,7 @@ sub _reset_on_update {
     # TODO: Reload/update instead of leaving the row empty?
     # To update the Row object is difficult because columns may have been aliased
     undef $$me->{array};
-    undef %$me;
+    $$me->{hash} = {};
 }
 
 =head3 C<delete>
@@ -301,7 +301,7 @@ sub delete {
     my $sql = $me->_build_sql_delete($build_data, @_);
 
     undef $$me->{array};
-    undef %$me;
+    $$me->{hash} = {};
     $me->do($sql, undef, $me->_bind_params_delete($build_data));
 }
 
