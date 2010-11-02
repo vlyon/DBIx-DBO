@@ -62,9 +62,9 @@ sub _carp_last_sql {
 }
 
 sub _sql {
-    my ($me, $sql) = splice @_, 0, 2;
+    my $me = shift;
     my $cmd = (caller(1))[3];
-    $me->_last_sql($cmd, $sql, @_);
+    $me->_last_sql($cmd, @_);
     $me->_carp_last_sql if $me->config('DebugSQL');
 }
 
