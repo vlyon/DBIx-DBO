@@ -8,14 +8,14 @@ BEGIN {
 }
 # Create the DBO (2 tests)
 my $dbo;
-use Test::DBO Oracle => 'Oracle', tests => 68, connect_ok => [\$dbo];
+use Test::DBO Oracle => 'Oracle', tests => 70, connect_ok => [\$dbo];
 
 # Use the default Schema
 undef $Test::DBO::test_db;
 undef $Test::DBO::test_sch;
 $Test::DBO::case_sensitivity_sql = 'SELECT COUNT(*) FROM DUAL WHERE ? LIKE ?';
 
-# Table methods: do, select* (15 tests)
+# Table methods: do, select* (17 tests)
 my $t = Test::DBO::basic_methods($dbo);
 
 # Advanced table methods: insert, update, delete (2 tests)

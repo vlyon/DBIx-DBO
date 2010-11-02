@@ -153,10 +153,15 @@ sub connect_ok {
 
 sub basic_methods {
     my $dbo = shift;
+
+    # Create a DBO from DBI handles
+    new_ok 'DBIx::DBO', [ $dbo->{dbh}, $dbo->{rdbh} ], 'Method DBIx::DBO->new, $dbo';
+
     my $quoted_table = $dbo->_qi($test_sch, $test_tbl);
     my @quoted_cols = map $dbo->_qi($_), qw(type id name);
     my $t;
-    my $create_table = "CREATE TABLE $quoted_table ($quoted_cols[1] INT, $quoted_cols[2] VARCHAR(20))";
+    my $create_table = "CREATE TABLE $quoted_table ($quoted_cols[1] ".
+        ($can{auto_increment_id} || 'INT NOT NULL').", $quoted_cols[2] VARCHAR(20))";
 
     # Create a test table with a multi-column primary key
     if ($dbo->do("CREATE TABLE $quoted_table ($quoted_cols[2] VARCHAR(20), $quoted_cols[1] INT, $quoted_cols[0] VARCHAR(8), PRIMARY KEY ($quoted_cols[0], $quoted_cols[1]))")) {
@@ -225,7 +230,7 @@ sub basic_methods {
 
     # Advanced insert using a column object
     $rv = $t->insert($c => {FUNC => '4'}, name => \"'James Bond'") or diag sql_err($t);
-    ok $rv, 'Method DBIx::DBO::Table->insert';
+    ok $rv, 'Method DBIx::DBO::Table->insert (complex values)';
 
     # Fetch one value from the Table
     is $t->fetch_value($t ** 'name', id => 3), 'Uncle Arnie', 'Method DBIx::DBO::Table->fetch_value';
@@ -244,6 +249,18 @@ sub basic_methods {
     $rv = $t->delete(id => 3) or diag sql_err($t);
     is $rv, 1, 'Method DBIx::DBO::Table->delete';
 
+    if ($can{auto_increment_id}) {
+        $t->insert(name => 'Vernon Lyon') or diag sql_err($t);
+    } else {
+        $t->insert(id => 5, name => 'Vernon Lyon') or diag sql_err($t);
+    }
+
+    SKIP: {
+        skip "No auto-increment $quoted_cols[1] column", 1 unless $can{auto_increment_id};
+        is $t->last_insert_id, 5, 'Method DBIx::DBO::Table->last_insert_id'
+            or $t->delete(name => 'Vernon Lyon'), $t->insert(id => 5, name => 'Vernon Lyon');
+    }
+
     return $t;
 }
 
@@ -255,10 +272,9 @@ sub advanced_table_methods {
         skip "No test table for advanced table tests", 2 unless $t;
 
         # Advanced insert
-        my $rv = $t->insert(id => { FUNC => '? + 3', VAL => 2 }, name => \"'Vernon Lyon'") or diag sql_err($t);
+        my $rv = $t->insert(id => { FUNC => '? + 3', VAL => 3 }, name => \"'Harry Harrelson'") or diag sql_err($t);
         ok $rv, 'Method DBIx::DBO::Table->insert (advanced)';
 
-        $t->insert(id => 6, name => 'Harry Harrelson') or diag sql_err($t);
         $t->insert(id => 7, name => 'Amanda Huggenkiss') or diag sql_err($t);
 
         # Advanced delete
@@ -272,7 +288,6 @@ sub skip_advanced_table_methods {
     my $t = shift;
 
     note "No advanced table tests for $dbd_name";
-    $t->insert(id => 5, name => 'Vernon Lyon') or diag sql_err($t);
     $t->insert(id => 6, name => 'Harry Harrelson') or diag sql_err($t);
     $t->insert(id => 7, name => 'Amanda Huggenkiss') or diag sql_err($t);
 }
