@@ -1,5 +1,10 @@
 Revision history for DBIx-DBO
 
+0.08	Nov 2, 2010
+	- Improve checking for aliases.
+	- Fix broken Query column bindings when its Row is modified.
+	- Added the DBIx::DBO::Table->last_insert_id method.
+
 0.07	Oct 18, 2010
 	- Improved POD for subclassing.
 	- Minor bugfix when creating a new table.
