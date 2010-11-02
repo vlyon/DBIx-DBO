@@ -52,4 +52,13 @@ sub rows {
     defined $me->{Row_Count} ? $me->{Row_Count} : -1;
 }
 
+package # hide from PAUSE
+    DBIx::DBO::Table::DBD::SQLite;
+
+sub _save_last_insert_id {
+    my $me = shift;
+    my $sth = shift;
+    $sth->{Database}->last_insert_id(undef, @$me{qw(Schema Name)}, undef);
+}
+
 1;

@@ -76,4 +76,13 @@ sub table_info {
     return ($schema, $table, $me->{TableInfo}{$schema}{$table});
 }
 
+package # hide from PAUSE
+    DBIx::DBO::Table::DBD::Pg;
+
+sub _save_last_insert_id {
+    my $me = shift;
+    my $sth = shift;
+    return $sth->{Database}->last_insert_id(undef, @$me{qw(Schema Name)}, undef);
+}
+
 1;
