@@ -594,4 +594,23 @@ sub _Find_Seen {
     elsif (reftype $val eq 'REF')  { _Find_Seen($seen, $$val) }
 }
 
+# When testing via Sponge, use fake tables
+package # hide from PAUSE
+    DBIx::DBO::DBD::Sponge;
+use DBIx::DBO::Common;
+sub _get_table_schema {
+    return;
+}
+my $fake_table_info = {
+    PrimaryKeys => [],
+    Columns => [ 'id', 'name', 'age' ],
+    Column_Idx => { id => 1, name => 2, age => 3 },
+};
+sub _get_table_info {
+    my $me = shift;
+    my ($schema, $table) = @_;
+    # Fake table info
+    return $me->{TableInfo}{''}{$table} = $fake_table_info;
+}
+
 1;
