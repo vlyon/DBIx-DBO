@@ -522,16 +522,6 @@ sub _add_where {
     push @{$ref}, [ $op, $fld, $fld_func, $fld_opt, $val, $val_func, $val_opt, $opt{FORCE} ];
 }
 
-# In some cases column aliases can be used, but this differs by DB and where in the statement it's used.
-# The $method is the method we were called from: (join_on|where|having|_del_where|order_by|group_by)
-# This method provides a way for DBs to override the default which is always 1 except for join_on.
-# Return values: 0 = Don't use aliases, 1 = Check aliases then columns, 2 = Check columns then aliases
-sub _alias_preference {
-    my $me = shift;
-    my $method = shift;
-    return $method eq 'join_on' ? 0 : 1;
-}
-
 sub _parse_col_val {
     my $me = shift;
     my $col = shift;
