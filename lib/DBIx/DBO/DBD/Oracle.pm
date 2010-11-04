@@ -17,10 +17,6 @@ sub _build_sql_select {
     return 'SELECT * FROM ('.$sql.') WHERE ROWNUM <= '.$h->{LimitOffset}[0];
 }
 
-package # hide from PAUSE
-    DBIx::DBO::Query::DBD::Oracle;
-use DBIx::DBO::Common;
-
 # Oracle doesn't allow the use of aliases in GROUP BY
 sub _alias_preference {
     my $me = shift;
@@ -28,6 +24,10 @@ sub _alias_preference {
     return 0 if $method eq 'join_on' or $method eq 'group_by';
     return 1;
 }
+
+package # hide from PAUSE
+    DBIx::DBO::Query::DBD::Oracle;
+use DBIx::DBO::Common;
 
 sub limit {
     my $me = shift;

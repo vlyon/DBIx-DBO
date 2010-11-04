@@ -178,19 +178,15 @@ sub _build_from {
 # Return values: 0 = Don't use aliases, 1 = Check aliases then columns, 2 = Check columns then aliases
 sub _alias_preference {
     my $me = shift;
-    my $method = shift || ((caller(2))[3] =~ /\b(\w+)$/);
+    my $method = shift;
     return $method eq 'join_on' ? 0 : 1;
 }
 
 sub _valid_col {
-    my ($me, $col, $_check_aliases) = @_;
-    $_check_aliases = $me->_alias_preference unless defined $_check_aliases;
+    my ($me, $col) = @_;
     # Check if the object is an alias
-    if ($col->[0] == $me) {
-        return $col if $_check_aliases;
-        ouch 'Invalid column, an alias is not valid here';
-    }
-    # TODO: Subqueries
+    return $col if $col->[0] == $me;
+    # TODO: Sub-queries
     # Check if the column is from one of our tables
     for my $tbl ($me->tables) {
         return $col if $col->[0] == $tbl;
@@ -204,7 +200,8 @@ sub _parse_col {
         return $me->_valid_col($col) if blessed $col and $col->isa('DBIx::DBO::Column');
         ouch 'Invalid column: '.$col;
     }
-    $me->column($col, $_check_aliases);
+    # If $_check_aliases is not defined dont accept an alias
+    $me->column($col, $_check_aliases || 0);
 }
 
 sub _build_col {
@@ -358,6 +355,7 @@ sub _build_quick_where {
     my ($me, $bind) = splice @_, 0, 2;
     my @where;
     while (my ($col, $val) = splice @_, 0, 2) {
+        # FIXME: What about aliases in quick_where?
         push @where, $me->_build_col($me->_parse_col($col)) .
             ( defined $val ? (ref $val ne 'SCALAR' or $$val !~ /^\s*(?:NOT\s+)NULL\s*$/is) ?
                 ' = '.$me->_build_val($bind, $me->_parse_val($val)) :

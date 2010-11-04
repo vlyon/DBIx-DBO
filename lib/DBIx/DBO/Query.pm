@@ -127,8 +127,7 @@ sub _table_alias {
 
 =head3 C<column>
 
-  $query->column($column_name);
-  $query->column($column_or_alias_name, 1);
+  $query->column($alias_or_column_name);
 
 Returns a reference to a column for use with other methods.
 
@@ -136,6 +135,7 @@ Returns a reference to a column for use with other methods.
 
 sub column {
     my ($me, $col, $_check_aliases) = @_;
+    $_check_aliases = $me->_alias_preference('column') unless defined $_check_aliases;
     my $column;
     return $column if $_check_aliases == 1 and $column = $me->_check_alias($col);
     for my $tbl ($me->tables) {
@@ -264,7 +264,7 @@ sub join_on {
     # Validate the fields
     for my $c (@$col1, @$col2) {
         if (blessed $c and $c->isa('DBIx::DBO::Column')) {
-            ouch 'Invalid table field' unless defined $me->_table_idx($c->[0]);
+            $me->_valid_col($c);
         } elsif (my $type = ref $c) {
             ouch 'Invalid value type: '.$type;
         }
@@ -394,7 +394,7 @@ sub where {
     # Validate the fields
     for my $f (@$fld, @$val) {
         if (blessed $f and $f->isa('DBIx::DBO::Column')) {
-            ouch 'Invalid table field' unless defined $me->_table_idx($f->[0]);
+            $me->_valid_col($f);
         } elsif (my $type = ref $f) {
             ouch 'Invalid value type: '.$type;
         }
@@ -621,7 +621,7 @@ sub having {
     # Validate the fields
     for my $f (@$fld, @$val) {
         if (blessed $f and $f->isa('DBIx::DBO::Column')) {
-            ouch 'Invalid table field' unless defined $me->_table_idx($f->[0]) or $f->[0] eq $me;
+            $me->_valid_col($f);
         } elsif (my $type = ref $f) {
             ouch 'Invalid value type: '.$type;
         }
