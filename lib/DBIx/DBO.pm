@@ -128,22 +128,22 @@ Both C<connect> & C<connect_readonly> can be called on a C<DBIx::DBO> object to 
 sub new {
     my $me = shift;
     ouch 'Too many arguments for '.(caller(0))[3] if @_ > 3;
-    my $new;
-    if (@_ == 3 and defined($new = pop) and not UNIVERSAL::isa($new, 'HASH')) {
+    my ($dbh, $rdbh, $new) = @_;
+
+    if (defined $new and not UNIVERSAL::isa($new, 'HASH')) {
         ouch '3rd argument to '.(caller(0))[3].' is not a HASH reference';
     }
-    if (defined($new->{dbh} = shift)) {
-        ouch 'Invalid read-write database handle' unless blessed $new->{dbh} and $new->{dbh}->isa('DBI::db');
-        $new->{dbd} = $new->{dbh}{Driver}{Name};
+    if (defined $dbh) {
+        ouch 'Invalid read-write database handle' unless blessed $dbh and $dbh->isa('DBI::db');
+        $new->{dbh} = $dbh;
+        $new->{dbd} ||= $dbh->{Driver}{Name};
     }
-    if (defined($new->{rdbh} = shift)) {
-        ouch 'Invalid read-only database handle' unless blessed $new->{rdbh} and $new->{rdbh}->isa('DBI::db');
-        if ($new->{dbh}) {
-            ouch 'The read-write and read-only connections must use the same DBI driver'
-                if $new->{dbd} ne $new->{rdbh}{Driver}{Name};
-        } else {
-            $new->{dbd} = $new->{rdbh}{Driver}{Name};
-        }
+    if (defined $rdbh) {
+        ouch 'Invalid read-only database handle' unless blessed $rdbh and $rdbh->isa('DBI::db');
+        ouch 'The read-write and read-only connections must use the same DBI driver'
+            if $dbh and $dbh->{Driver}{Name} ne $rdbh->{Driver}{Name};
+        $new->{rdbh} = $rdbh;
+        $new->{dbd} ||= $rdbh->{Driver}{Name};
     }
     ouch "Can't create the DBO, unknown database driver" unless $new->{dbd};
 
