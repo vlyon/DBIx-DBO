@@ -13,27 +13,6 @@ $dbo->connect_readonly('DBI:Sponge:'), 'Connect (read-only) to Sponge' or die $D
 
 my $quoted = $dbo->_qi($Test::DBO::test_db, $Test::DBO::test_tbl);
 is $quoted, qq{"$Test::DBO::test_db"."$Test::DBO::test_tbl"}, 'SubClass Method _qi';
-my $table_info = {
-    PrimaryKeys => [],
-    Columns => [ 'id', 'name', 'age' ],
-    Column_Idx => { id => 1, name => 2, age => 3 },
-};
-
-{
-    package # hide from PAUSE
-        DBIx::DBO::DBD::Sponge;
-    use DBIx::DBO::Common;
-    sub _get_table_schema {
-        return;
-    }
-    sub _get_table_info {
-        my $me = shift;
-        my $schema = shift; # Not used
-        my $table = shift;
-        # Fake table info
-        return $me->{TableInfo}{''}{$table} = $table_info;
-    }
-}
 
 isa_ok my $t = $dbo->table($Test::DBO::test_tbl), 'SubClass::Table::DBD::Sponge', '$t';
 isa_ok my $q = $dbo->query($t), 'SubClass::Query::DBD::Sponge', '$q';
