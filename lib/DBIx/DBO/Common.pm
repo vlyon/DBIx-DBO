@@ -172,8 +172,26 @@ sub _build_from {
     $h->{from};
 }
 
+# In some cases column aliases can be used, but this differs by DB and where in the statement it's used.
+# The $method is the method we were called from: (join_on|column|where|having|_del_where|order_by|group_by)
+# This method provides a way for DBs to override the default which is always 1 except for join_on.
+# Return values: 0 = Don't use aliases, 1 = Check aliases then columns, 2 = Check columns then aliases
+sub _alias_preference {
+    my $me = shift;
+    my $method = shift || ((caller(2))[3] =~ /\b(\w+)$/);
+    return $method eq 'join_on' ? 0 : 1;
+}
+
 sub _valid_col {
-    my ($me, $col) = @_;
+    my ($me, $col, $_check_aliases) = @_;
+    $_check_aliases = $me->_alias_preference unless defined $_check_aliases;
+    # Check if the object is an alias
+    if ($col->[0] == $me) {
+        return $col if $_check_aliases;
+        ouch 'Invalid column, an alias is not valid here';
+    }
+    # TODO: Subqueries
+    # Check if the column is from one of our tables
     for my $tbl ($me->tables) {
         return $col if $col->[0] == $tbl;
     }

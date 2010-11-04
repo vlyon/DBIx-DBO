@@ -65,7 +65,7 @@ Return a list of C<Table> objects, which will always be this C<Table> object.
 =cut
 
 sub tables {
-    $_[0];
+    wantarray ? $_[0] : 1;
 }
 
 sub _table_alias {
@@ -93,6 +93,11 @@ sub column {
     ouch 'Invalid column '.$me->_qi($col).' in table '.$me->_quoted_name
         unless exists $me->{Column_Idx}{$col};
     $me->{Column}{$col} ||= bless [$me, $col], 'DBIx::DBO::Column';
+}
+
+sub _valid_col {
+    my ($me, $col) = @_;
+    return $col if $col->[0] == $me;
 }
 
 =head3 C<row>
