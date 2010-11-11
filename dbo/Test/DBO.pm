@@ -597,7 +597,6 @@ sub _Find_Seen {
 # When testing via Sponge, use fake tables
 package # hide from PAUSE
     DBIx::DBO::DBD::Sponge;
-use DBIx::DBO::Common;
 sub _get_table_schema {
     return;
 }
