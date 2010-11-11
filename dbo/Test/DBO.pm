@@ -545,11 +545,11 @@ sub Dump {
             $var = 'r';
         }
     }
-    defined $var or $var = 'dump';
+    $var = 'dump' unless defined $var;
     require Data::Dumper;
     my $d = Data::Dumper->new([$val], [$var]);
     my %seen;
-    if (defined $val) {
+    if (ref $val) {
         @_no_recursion = ($val);
         if (reftype $val eq 'ARRAY')   { _Find_Seen(\%seen, $_) for @$val }
         elsif (reftype $val eq 'HASH') { _Find_Seen(\%seen, $_) for values %$val }
