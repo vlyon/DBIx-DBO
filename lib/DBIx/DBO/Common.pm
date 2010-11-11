@@ -374,10 +374,10 @@ sub _build_set {
     my @set;
     my %remove_duplicates;
     while (@_) {
-        my $val = $me->_parse_val(pop);
+        my @val = $me->_parse_val(pop);
         my $col = $me->_build_col($me->_parse_col(pop));
         next if $remove_duplicates{$col}++;
-        unshift @set, $col.' = '.$me->_build_val($h->{Set_Bind}, $val);
+        unshift @set, $col.' = '.$me->_build_val($h->{Set_Bind}, @val);
     }
     join ', ', @set;
 }
