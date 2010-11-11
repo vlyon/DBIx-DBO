@@ -95,10 +95,10 @@ sub _bind_params_select {
     } qw(Show_Bind From_Bind Where_Bind Group_Bind Having_Bind Order_Bind);
 }
 
-# TODO: Should we die if GROUP BY is set?
 sub _build_sql_update {
     my $me = shift;
     my $h = shift;
+    ouch 'Update is not valid with a GROUP BY clause' if $me->_build_group($h);
     my $sql = 'UPDATE '.$me->_build_from($h);
     $sql .= ' SET '.$me->_build_set($h, @_);
     $sql .= ' WHERE '.$_ if $_ = $me->_build_where($h);
@@ -118,6 +118,7 @@ sub _bind_params_update {
 sub _build_sql_delete {
     my $me = shift;
     my $h = shift;
+    ouch 'Delete is not valid with a GROUP BY clause' if $me->_build_group($h);
     my $sql = 'DELETE FROM '.$me->_build_from($h);
     $sql .= ' WHERE '.$_ if $_ = $me->_build_where($h);
     $sql .= ' ORDER BY '.$_ if $_ = $me->_build_order($h);
@@ -371,8 +372,12 @@ sub _build_set {
     my $h = shift;
     undef @{$h->{Set_Bind}};
     my @set;
-    while (my ($col, $val) = splice @_, 0, 2) {
-        push @set, $me->_build_col($me->_parse_col($col)).' = '.$me->_build_val($h->{Set_Bind}, $me->_parse_val($val));
+    my %remove_duplicates;
+    while (@_) {
+        my $val = $me->_parse_val(pop);
+        my $col = $me->_build_col($me->_parse_col(pop));
+        next if $remove_duplicates{$col}++;
+        unshift @set, $col.' = '.$me->_build_val($h->{Set_Bind}, $val);
     }
     join ', ', @set;
 }
