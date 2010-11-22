@@ -11,6 +11,8 @@ use Scalar::Util qw(blessed reftype);
 use Test::More;
 use DBIx::DBO;
 BEGIN {
+    require Carp::Heavy if $Carp::VERSION < 1.12;
+
     # If we are using a version of Test::More older than 0.82 ...
     unless (exists $Test::More::{note}) {
         eval q#
@@ -26,21 +28,30 @@ BEGIN {
     }
 
     # Set up DebugSQL if requested
-    require DBIx::DBO::Common;
-
     if ($ENV{DBO_DEBUG_SQL}) {
         diag "DBO_DEBUG_SQL=$ENV{DBO_DEBUG_SQL}";
-        package DBIx::DBO::Common;
-
         DBIx::DBO->config(DebugSQL => $ENV{DBO_DEBUG_SQL});
+    }
+
+    # Store the last SQL executed, and show debug info
+    {
+        package DBIx::DBO::Common;
         no warnings 'redefine';
-        *DBIx::DBO::Common::_carp_last_sql = sub {
+        *DBIx::DBO::Common::_sql = sub {
             my $me = shift;
-            my ($cmd, $sql, @bind) = @{$me->_last_sql};
-            local $Carp::Verbose = 1 if $me->config('DebugSQL') > 1;
-            my @mess = split /\n/, Carp::shortmess("\t$cmd called");
-            splice @mess, 0, 3 if $Carp::Verbose;
-            Test::More::diag join "\n", "DEBUG_SQL: $sql", 'DEBUG_SQL: ('.join(', ', map $me->rdbh->quote($_), @bind).')', @mess;
+            my $loc = Carp::short_error_loc();
+            my %i = Carp::caller_info($loc);
+            @{(Scalar::Util::reftype($me) eq 'REF' ? $$me : $me)->{LastSQL}} = ($i{'sub'}, @_);
+            my $dbg = $me->config('DebugSQL') or return;
+            my $trace;
+            if ($dbg > 1) {
+                $trace = "\t$i{sub_name} called at $i{file} line $i{line}\n";
+                $trace .= "\t$i{sub_name} called at $i{file} line $i{line}\n" while %i = Carp::caller_info(++$loc);
+            } else {
+                $trace = "\t$i{sub} called at $i{file} line $i{line}\n";
+            }
+            my $sql = shift;
+            Test::More::diag "DEBUG_SQL: $sql\nDEBUG_SQL: (".join(', ', map $me->rdbh->quote($_), @_).")\n".$trace;
         };
     }
 }
@@ -114,20 +125,14 @@ sub import {
 }
 
 sub sql_err {
-    my $obj = shift;
-    my ($cmd, $sql, @bind) = @{$obj->_last_sql};
+    my $me = shift;
+    my ($cmd, $sql, @bind) = @{(Scalar::Util::reftype($me) eq 'REF' ? $$me : $me)->{LastSQL}};
     $sql =~ s/^/  /mg;
-    my @err = ('SQL command failed:', $sql.';');
-    push @err, 'Bind Values: ('.join(', ', map $obj->rdbh->quote($_), @bind).')' if @bind;
-    push @err, $obj->rdbh->errstr || '???';
+    my @err = ("SQL command failed: $cmd", $sql.';');
+    push @err, 'Bind Values: ('.join(', ', map $me->rdbh->quote($_), @bind).')' if @bind;
+    push @err, $me->rdbh->errstr || '???';
     $err[-1] =~ s/ at line \d+$//;
     join "\n", @err;
-}
-
-sub last_sql {
-    my $me = shift;
-    my ($cmd, $sql, @bind) = @{$me->_last_sql};
-    print $sql, "\n(".join(', ', map $me->rdbh->quote($_), @bind).")\n";
 }
 
 sub connect_dbo {

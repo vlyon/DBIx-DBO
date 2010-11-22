@@ -45,27 +45,21 @@ sub _qi {
     join '.', @_;
 }
 
-sub _last_sql {
-    my $me = shift;
-    my $ref = (Scalar::Util::reftype($me) eq 'REF' ? $$me : $me)->{LastSQL} ||= [];
-    @$ref = @_ if @_;
-    $ref;
-}
-
-sub _carp_last_sql {
-    my $me = shift;
-    my ($cmd, $sql, @bind) = @{$me->_last_sql};
-    local $Carp::Verbose = 1 if $me->config('DebugSQL') > 1;
-    my @mess = split /\n/, Carp::shortmess("\t$cmd called");
-    splice @mess, 0, 3 if $Carp::Verbose;
-    warn join "\n", $sql, '('.join(', ', map $me->rdbh->quote($_), @bind).')', @mess;
-}
-
 sub _sql {
     my $me = shift;
-    my $cmd = (caller(1))[3];
-    $me->_last_sql($cmd, @_);
-    $me->_carp_last_sql if $me->config('DebugSQL');
+    my $dbg = $me->config('DebugSQL') or return;
+    my $sql = shift;
+    require Carp::Heavy if $Carp::VERSION < 1.12;
+    my $loc = Carp::short_error_loc();
+    my %i = Carp::caller_info($loc);
+    my $trace;
+    if ($dbg > 1) {
+        $trace = "\t$i{sub_name} called at $i{file} line $i{line}\n";
+        $trace .= "\t$i{sub_name} called at $i{file} line $i{line}\n" while %i = Carp::caller_info(++$loc);
+    } else {
+        $trace = "\t$i{sub} called at $i{file} line $i{line}\n";
+    }
+    warn $sql."\n(".join(', ', map $me->rdbh->quote($_), @_).")\n".$trace;
 }
 
 sub do {
