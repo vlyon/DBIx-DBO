@@ -87,15 +87,18 @@ sub _init {
 }
 
 sub _copy {
+    my $me = shift;
     my $val = shift;
-    ref $val eq 'ARRAY' ? [map _copy($_), @$val] : ref $val eq 'HASH' ? {map _copy($_), %$val} : $val;
+    return bless [$me, $val->[1]], 'DBIx::DBO::Column'
+        if blessed $val and $val->isa('DBIx::DBO::Column') and $val->[0] == $$me->{Parent};
+    ref $val eq 'ARRAY' ? [map $me->_copy($_), @$val] : ref $val eq 'HASH' ? {map $me->_copy($_), %$val} : $val;
 }
 
 sub _copy_build_data {
     my $me = shift;
     # Store needed build_data
     for my $f (qw(Showing from From_Bind Quick_Where Where_Data Where_Bind group Group_Bind order Order_Bind)) {
-        $$me->{build_data}{$f} = _copy($$me->{Parent}{build_data}{$f}) if exists $$me->{Parent}{build_data}{$f};
+        $$me->{build_data}{$f} = $me->_copy($$me->{Parent}{build_data}{$f}) if exists $$me->{Parent}{build_data}{$f};
     }
 }
 
@@ -120,6 +123,7 @@ sub _table_idx {
 
 sub _table_alias {
     my ($me, $tbl) = @_;
+    return undef if $tbl == $me;
     my $i = $me->_table_idx($tbl);
     ouch 'The table is not in this query' unless defined $i;
     @{$$me->{Tables}} > 1 ? 't'.($i + 1) : ();

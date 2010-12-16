@@ -160,7 +160,7 @@ sub basic_methods {
     my $dbo = shift;
 
     # Create a DBO from DBI handles
-    new_ok 'DBIx::DBO', [ $dbo->{dbh}, $dbo->{rdbh} ], 'Method DBIx::DBO->new, $dbo';
+    isa_ok(DBIx::DBO->new($dbo->{dbh}, $dbo->{rdbh}), 'DBIx::DBO', 'Method DBIx::DBO->new, $dbo');
 
     my $quoted_table = $dbo->_qi($test_sch, $test_tbl);
     my @quoted_cols = map $dbo->_qi($_), qw(type id name);
