@@ -86,6 +86,7 @@ B<NB>: This will not remove the JOINs or JOIN ON clauses.
 
 sub reset {
     my $me = shift;
+    $me->finish;
     $me->unwhere;
 #    $me->{IsDistinct} = 0;
     $me->show;

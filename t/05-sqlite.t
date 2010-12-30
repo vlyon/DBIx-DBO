@@ -3,7 +3,7 @@ use warnings;
 
 # Create the DBO (2 tests)
 my $dbo;
-use Test::DBO SQLite => 'SQLite', tests => 70, tempdir => 1, connect_ok => [\$dbo];
+use Test::DBO SQLite => 'SQLite', tests => 72, tempdir => 1, connect_ok => [\$dbo];
 
 # In SQLite there is no Schema
 undef $Test::DBO::test_db;

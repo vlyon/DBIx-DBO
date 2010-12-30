@@ -396,6 +396,13 @@ sub query_methods {
     ok(($q->group_by({FUNC => 'SUBSTR(?, 1, 1)', COL => 'name'}), $q->run),
         'Method DBIx::DBO::Query->group_by') or diag sql_err($q);
 
+    # Update & Load a Row with aliased columns
+    $q->show('name', {COL => 'id', AS => 'key'});
+    $q->group_by;
+    $r = $q->fetch;
+    ok $r->update(id => $r->{key}), 'Can update a Row using aliases' or diag sql_err($r);
+    ok $r->load(id => 5), 'Can load a Row using aliases' or diag sql_err($r);
+
     $q->finish;
     return $q;
 }
