@@ -119,9 +119,7 @@ sub _table_alias {
     return undef if $me == $tbl; # This means it's checking for an aliased column
     my $i = $me->_table_idx($tbl);
     ouch 'The table is not in this query' unless defined $i;
-    # TODO: Use table aliases, when there's more than 1 table or column aliases are used
-#    @{$me->{Tables}} > 1 || @{$me->{build_data}{Showing}} ? 't'.($i + 1) : ();
-    # FIXME: Don't use aliases, when there's only 1 table - This breaks the Row 'from'
+    # Don't use aliases, when there's only 1 table
     @{$me->{Tables}} > 1 ? 't'.($i + 1) : ();
 }
 
@@ -1048,7 +1046,7 @@ Assume you want to create a C<Query> and C<Row> class for a "Users" table:
       my $class = shift;
       my $dbo = shift;
       
-      my $self = $class->SUPER::new($dbo, 'Users'); # Create the Query for the "Users" table only
+      my $self = $class->SUPER::new($dbo, 'Users'); # Create the Query for the "Users" table
       
       # We could even add some JOINs or other clauses here
       
