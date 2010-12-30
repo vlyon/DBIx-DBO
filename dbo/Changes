@@ -1,5 +1,9 @@
 Revision history for DBIx-DBO
 
+0.09	Dec 30, 2010
+	- More alias improvements and tests.
+	- Added the AutoReconnect config option.
+
 0.08	Nov 2, 2010
 	- Improve checking for aliases.
 	- Fix broken Query column bindings when its Row is modified.
