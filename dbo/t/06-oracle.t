@@ -8,7 +8,7 @@ BEGIN {
 }
 # Create the DBO (2 tests)
 my $dbo;
-use Test::DBO Oracle => 'Oracle', tests => 70, connect_ok => [\$dbo];
+use Test::DBO Oracle => 'Oracle', tests => 72, connect_ok => [\$dbo];
 
 # Use the default Schema
 undef $Test::DBO::test_db;
