@@ -429,6 +429,13 @@ sub _set_table_key_info {
     }
 }
 
+sub _unquote_schema_table {
+    my $me = shift;
+    # TODO: Better splitting of: schema.table or `schema`.`table` or "schema"."table"@"catalog" or ...
+    return if $_[0] !~ /^(?:"(.+)"|(.+))\.(?:"(.+)"|(.+))$/;
+    return ($1 || $2, $3 || $4);
+}
+
 sub table_info {
     my $me = shift;
     my $table = shift;
@@ -440,9 +447,8 @@ sub table_info {
     } else {
         if (ref $table eq 'ARRAY') {
             ($schema, $table) = @$table;
-        } elsif ($table =~ /\./) {
-            # TODO: Better splitting of: schema.table or `schema`.`table` or "schema"."table"@"catalog" or ...
-            ($schema, $table) = split /\./, $table, 2;
+        } elsif (my @unquoted = $me->_unquote_schema_table($table)) {
+            ($schema, $table) = @unquoted;
         }
         defined $schema or $schema = $me->_get_table_schema($schema, $table);
 

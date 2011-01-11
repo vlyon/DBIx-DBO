@@ -28,6 +28,12 @@ sub _set_table_key_info {
     }
 }
 
+sub _unquote_schema_table {
+    my $me = shift;
+    return if $_[0] !~ /^(?:`(.+)`|"(.+)"|(.+))\.(?:`(.+)`|"(.+)"|(.+))$/;
+    return ($1 || $2, $3 || $4);
+}
+
 sub config {
     my $class = shift;
     my $val = $class->SUPER::config(@_);
