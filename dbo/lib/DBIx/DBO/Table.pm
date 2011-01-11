@@ -21,12 +21,20 @@ DBIx::DBO::Table - An OO interface to SQL queries and results.  Encapsulates a t
   
   # Quickly display my employee id
   print $table->fetch_value('employee_id', name => 'Vernon');
+
+  # Find the IDs of fired employees
+  my @fired = @{ $table->fetch_column('id', status => 'fired');
   
   # Insert a new row into the table
   $table->insert(employee_id => 007, name => 'James Bond');
   
   # Remove rows from the table where the name IS NULL
   $table->delete(name => undef);
+
+=head1 DESCRIPTION
+
+C<Table> objects are mostly used for column references in a C<Query>.
+They can also be used for INSERTs, DELETEs and simple lookups (fetch_*).
 
 =head1 METHODS
 
@@ -254,6 +262,19 @@ sub delete {
     $me->do($sql, undef, @bind);
 }
 
+=head3 C<truncate>
+
+  $table->truncate;
+
+Truncate the table.  Returns true on success or C<undef> on failure.
+
+=cut
+
+sub truncate {
+    my $me = shift;
+    $me->do('TRUNCATE TABLE '.$me->_quoted_name);
+}
+
 =head2 Common Methods
 
 These methods are accessible from all DBIx::DBO* objects.
@@ -313,7 +334,6 @@ Add a multi_insert method for extended INSERTs.
 =head1 SEE ALSO
 
 L<DBIx::DBO>
-
 
 =cut
 
