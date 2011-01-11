@@ -250,7 +250,7 @@ sub _parse_val {
 sub _substitute_placeholders {
     my $me = shift;
     my $num_placeholders = 0;
-    $_[0] =~ s/((?<!\\)(['"`]).*?[^\\]\2|\?)/$1 eq '?' ? ++$num_placeholders && PLACEHOLDER : $1/eg;
+    $_[0] =~ s/((?<!\\)(['"`]).*?[^\\]\2|\?)/$1 eq '?' ? (++$num_placeholders, PLACEHOLDER) : $1/eg;
     return $num_placeholders;
 }
 
@@ -316,7 +316,7 @@ sub _build_where_chunk {
                 for (my $i = $#whs; $i >= 0; $i--) {
                     # Right now this starts with the last @whs and works backwards
                     # It splices when the ag is the correct AND/OR and the funcs match and all flds match
-                    next if (ref $whs[$i][0] or $ag ne ($whs[$i][7] || _op_ag($whs[$i][0])));
+                    next if ref $whs[$i][0] or $ag ne ($whs[$i][7] || _op_ag($whs[$i][0]));
                     no warnings 'uninitialized';
                     next if $whs[$i][2] ne $fld_func;
                     use warnings 'uninitialized';
@@ -351,11 +351,18 @@ sub _build_quick_where {
     my @where;
     while (my ($col, $val) = splice @_, 0, 2) {
         # FIXME: What about aliases in quick_where?
-        push @where, $me->_build_col($me->_parse_col($col)) .
-            ( defined $val ? (ref $val ne 'SCALAR' or $$val !~ /^\s*(?:NOT\s+)NULL\s*$/is) ?
-                ' = '.$me->_build_val($bind, $me->_parse_val($val)) :
-                ' IS '.$$val :
-                ' IS NULL' );
+        push @where, $me->_build_col($me->_parse_col($col)) . do {
+                if (ref $val eq 'SCALAR' and $$val =~ /^\s*(?:NOT\s+)NULL\s*$/is) {
+                    ' IS ';
+                } elsif (ref $val eq 'ARRAY') {
+                    ' IN ';
+                } elsif (defined $val) {
+                    ' = ';
+                } else {
+                    $val = \'NULL';
+                    ' IS ';
+                }
+            } . $me->_build_val($bind, $me->_parse_val($val));
     }
     join ' AND ', @where;
 }
