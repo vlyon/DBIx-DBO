@@ -88,7 +88,7 @@ sub reset {
     my $me = shift;
     $me->finish;
     $me->unwhere;
-#    $me->{IsDistinct} = 0;
+    $me->distinct(0);
     $me->show;
     $me->group_by;
     $me->order_by;
@@ -261,13 +261,7 @@ sub join_on {
     my ($col2, $col2_func, $col2_opt) = $me->_parse_col_val(shift);
 
     # Validate the fields
-    for my $c (@$col1, @$col2) {
-        if (blessed $c and $c->isa('DBIx::DBO::Column')) {
-            $me->_valid_col($c);
-        } elsif (my $type = ref $c) {
-            ouch 'Invalid value type: '.$type;
-        }
-    }
+    $me->_validate_where_fields(@$col1, @$col2);
 
     # Force a new search
     undef $me->{sql};
@@ -391,13 +385,7 @@ sub where {
     my ($val, $val_func, $val_opt) = $me->_parse_val(shift, Check => 'Auto');
 
     # Validate the fields
-    for my $f (@$fld, @$val) {
-        if (blessed $f and $f->isa('DBIx::DBO::Column')) {
-            $me->_valid_col($f);
-        } elsif (my $type = ref $f) {
-            ouch 'Invalid value type: '.$type;
-        }
-    }
+    $me->_validate_where_fields(@$fld, @$val);
 
     # Force a new search
     undef $me->{sql};
@@ -423,6 +411,17 @@ If no column is provided, the I<whole> WHERE clause is removed.
 sub unwhere {
     my $me = shift;
     $me->_del_where('Where', @_);
+}
+
+sub _validate_where_fields {
+    my $me = shift;
+    for my $f (@_) {
+        if (blessed $f and $f->isa('DBIx::DBO::Column')) {
+            $me->_valid_col($f);
+        } elsif (my $type = ref $f) {
+            ouch 'Invalid value type: '.$type if $type ne 'SCALAR';
+        }
+    }
 }
 
 sub _del_where {
@@ -618,13 +617,7 @@ sub having {
     my ($val, $val_func, $val_opt) = $me->_parse_val(shift, Check => 'Auto');
 
     # Validate the fields
-    for my $f (@$fld, @$val) {
-        if (blessed $f and $f->isa('DBIx::DBO::Column')) {
-            $me->_valid_col($f);
-        } elsif (my $type = ref $f) {
-            ouch 'Invalid value type: '.$type;
-        }
-    }
+    $me->_validate_where_fields(@$fld, @$val);
 
     # Force a new search
     undef $me->{sql};
