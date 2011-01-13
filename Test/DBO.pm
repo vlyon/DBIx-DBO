@@ -130,7 +130,7 @@ sub sql_err {
     $sql =~ s/^/  /mg;
     my @err = ("SQL command failed: $cmd", $sql.';');
     push @err, 'Bind Values: ('.join(', ', map $me->rdbh->quote($_), @bind).')' if @bind;
-    push @err, $me->rdbh->errstr || '???';
+    push @err, $DBI::errstr || $me->rdbh->errstr || '???';
     $err[-1] =~ s/ at line \d+$//;
     join "\n", @err;
 }
@@ -241,10 +241,10 @@ sub basic_methods {
     is $t->fetch_value($t ** 'name', id => 3), 'Uncle Arnie', 'Method DBIx::DBO::Table->fetch_value';
 
     # Fetch one value from the Table
-    is_deeply $t->fetch_hash(id => 3), {id=>3,name=>'Uncle Arnie'}, 'Method DBIx::DBO::Table->fetch_hash';
+    is_deeply $t->fetch_hash(id => \3), {id=>3,name=>'Uncle Arnie'}, 'Method DBIx::DBO::Table->fetch_hash';
 
     # Fetch one value from the Table
-    my $r = $t->fetch_row(id => 3);
+    my $r = $t->fetch_row(id => 3, name => \'NOT NULL');
     is $r->{name}, 'Uncle Arnie', 'Method DBIx::DBO::Table->fetch_row';
 
     # Fetch a column arrayref from the Table
@@ -281,6 +281,7 @@ sub advanced_table_methods {
         ok $rv, 'Method DBIx::DBO::Table->insert (advanced)';
 
         $t->insert(id => 7, name => 'Amanda Huggenkiss') or diag sql_err($t);
+        $t->insert(id => 8, name => undef) or diag sql_err($t);
 
         # Advanced delete
         $rv = $t->delete(id => \'NOT NULL', name => undef) or diag sql_err($t);
@@ -384,8 +385,16 @@ sub query_methods {
     $q->open_bracket('OR');
     $q->where('name', 'LIKE', \"'%a%'");
     $q->where('id', '!=', \1);
+    $q->where('id', '=', undef);
+    $q->open_bracket('AND');
+    $q->where('name', '<>', 'abcde');
+    $q->where('name', '!=', undef);
+    $q->where('id', 'NOT IN', [1,22,333]);
+    $q->where('id', 'NOT BETWEEN', [123,456]);
     $q->close_bracket;
-    is_deeply $q->col_arrayref({ Columns => [1] }), [4,5,6], 'Method DBIx::DBO::Query->open_bracket';
+    $q->close_bracket;
+    my $got = $q->col_arrayref({ Columns => [1] });
+    is_deeply $got, [4,5,6], 'Method DBIx::DBO::Query->open_bracket';
 
     # Reset the Query
     $q->reset;
@@ -440,10 +449,10 @@ sub advanced_query_methods {
     ok $q->where('name', 'LIKE', '%a%'), 'Method DBIx::DBO::Query->where LIKE';
     my $a = $q->col_arrayref or diag sql_err($q);
     is_deeply $a, [2,4,6,7], 'Method DBIx::DBO::Query->col_arrayref';
-    ok $q->where('id', 'BETWEEN', [2, 6]), 'Method DBIx::DBO::Query->where BETWEEN';
+    ok $q->where('id', 'BETWEEN', [2, \6]), 'Method DBIx::DBO::Query->where BETWEEN';
     $a = $q->arrayref or diag sql_err($q);
     is_deeply $a, [[2],[4],[6]], 'Method DBIx::DBO::Query->arrayref';
-    ok $q->where('name', 'NOT LIKE', '%i%'), 'Method DBIx::DBO::Query->where NOT LIKE';
+    ok $q->where('name', 'IN', ['Harry Harrelson', 'James Bond']), 'Method DBIx::DBO::Query->where IN';
     $a = $q->hashref('id') or diag sql_err($q);
     is_deeply $a, {4 => {id => 4},6 => {id => 6}}, 'Method DBIx::DBO::Query->hashref';
 
@@ -470,7 +479,7 @@ sub join_methods {
     $q->distinct(1);
     is_deeply $q->arrayref, [[1],[2],[4],[5],[6],[7]], 'Method DBIx::DBO::Query->distinct';
     $q->distinct(0);
-    $q->show;
+    $q->show($t1, $t2);
 
     # Counting rows
     $q->limit(3);
@@ -483,6 +492,7 @@ sub join_methods {
     $q->order_by({ COL => $t1 ** 'name', ORDER => 'DESC' });
     $q->where($t1 ** 'name', '<', $t2 ** 'name', FORCE => 'OR');
     $q->where($t1 ** 'name', '>', $t2 ** 'name', FORCE => 'OR');
+    $q->where($t1 ** 'name', 'LIKE', '%');
     my $r;
     SKIP: {
         $q->run or diag sql_err($q) or fail 'JOIN ON' or skip 'No Left Join', 1;

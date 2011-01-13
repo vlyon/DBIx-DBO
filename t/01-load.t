@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 8;
+use Test::More tests => 11;
 
 BEGIN {
     if ($Test::More::VERSION < 0.84) {
@@ -36,7 +36,14 @@ DBIx::DBO->config(UseHandle => undef);
 my $dbo = DBIx::DBO->new(undef, undef, {dbd => 'xxx'});
 isa_ok $dbo, 'DBIx::DBO', '$dbo';
 
-$dbo->config(UseHandle => 0);
-is $dbo->config('UseHandle'), 0, 'Setting $dbo->config overrides DBIx::DBO->config';
+$dbo->config(UseHandle => 'read-write');
+is $dbo->config('UseHandle'), 'read-write', 'Setting $dbo->config overrides DBIx::DBO->config';
 is $dbo->config('QuoteIdentifier'), 456, '$dbo->config inherits from DBIx::DBO->config';
+
+$dbo->config(QuoteIdentifier => 0);
+is $dbo->_qi(undef, 'table', 'field'), 'table.field', 'Method $dbo->_qi';
+is $dbo->_qi(undef, ''), '', 'Method $dbo->_qi (empty)';
+
+eval { DBIx::DBO->config(UseHandle => 'invalid') };
+ok $@ =~ /^Invalid value for the 'UseHandle' setting/, 'UseHandle config must be valid';
 
