@@ -52,7 +52,7 @@ Tables can be specified by their name or an arrayref of schema and table name or
 sub new {
     my ($proto, $dbo, $table) = @_;
     my $class = ref($proto) || $proto;
-    blessed $dbo and $dbo->isa('DBIx::DBO') or ouch 'Invalid DBO Object';
+    UNIVERSAL::isa($dbo, 'DBIx::DBO') or ouch 'Invalid DBO Object';
     (my $schema, $table, my $me) = $dbo->table_info($table) or ouch 'No such table: '.$table;
     $class = $class->_set_dbd_inheritance($dbo->{dbd});
     bless { %$me, Schema => $schema, Name => $table, DBO => $dbo, LastInsertID => undef }, $class;

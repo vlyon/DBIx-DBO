@@ -5,7 +5,6 @@ use 5.008;
 use strict;
 use warnings;
 use Carp;
-use Scalar::Util 'blessed';
 use constant PLACEHOLDER => "\x{b1}\x{a4}\x{221e}";
 
 # Common routines and variables exported to all DBO classes.
@@ -29,7 +28,7 @@ sub import {
     no strict 'refs';
     *{$caller.'::Config'} = \%{__PACKAGE__.'::Config'};
     *{$caller.'::CARP_NOT'} = \@{__PACKAGE__.'::CARP_NOT'};
-    for (qw(oops ouch blessed)) {
+    for (qw(oops ouch)) {
         *{$caller.'::'.$_} = \&{$_};
     }
 }
@@ -145,7 +144,7 @@ sub _build_show {
     return $h->{show} = $distinct.'*' unless @{$h->{Showing}};
     my @flds;
     for my $fld (@{$h->{Showing}}) {
-        push @flds, (blessed $fld and $fld->isa('DBIx::DBO::Table'))
+        push @flds, UNIVERSAL::isa($fld, 'DBIx::DBO::Table')
             ? $me->_qi($me->_table_alias($fld) || $fld->{Name}).'.*'
             : $me->_build_val($h->{Show_Bind}, @$fld);
     }
@@ -192,7 +191,7 @@ sub _valid_col {
 sub _parse_col {
     my ($me, $col, $_check_aliases) = @_;
     if (ref $col) {
-        return $me->_valid_col($col) if blessed $col and $col->isa('DBIx::DBO::Column');
+        return $me->_valid_col($col) if UNIVERSAL::isa($col, 'DBIx::DBO::Column');
         ouch 'Invalid column: '.$col;
     }
     # If $_check_aliases is not defined dont accept an alias
@@ -231,7 +230,7 @@ sub _parse_val {
         } else {
             $fld = exists $fld->{VAL} ? $fld->{VAL} : [];
         }
-    } elsif (blessed $fld and $fld->isa('DBIx::DBO::Column')) {
+    } elsif (UNIVERSAL::isa($fld, 'DBIx::DBO::Column')) {
         return [ $me->_valid_col($fld) ];
     }
     $fld = [$fld] unless ref $fld eq 'ARRAY';
@@ -265,7 +264,7 @@ sub _build_val {
         if (!ref $_) {
             push @$bind, $_;
             '?';
-        } elsif (blessed $_ and $_->isa('DBIx::DBO::Column')) {
+        } elsif (UNIVERSAL::isa($_, 'DBIx::DBO::Column')) {
             $me->_build_col($_);
         } elsif (ref $_ eq 'SCALAR') {
             $$_;

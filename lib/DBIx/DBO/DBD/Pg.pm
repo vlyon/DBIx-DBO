@@ -61,7 +61,7 @@ sub table_info {
     my $table = shift;
     ouch 'No table name supplied' unless defined $table and length $table;
 
-    if (blessed $table and $table->isa('DBIx::DBO::Table')) {
+    if (UNIVERSAL::isa($table, 'DBIx::DBO::Table')) {
         ($schema, $table) = @$table{qw(Schema Name)};
         return ($schema, $table, $me->{TableInfo}{$schema}{$table});
     }

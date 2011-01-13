@@ -55,7 +55,7 @@ sub new {
     my $proto = shift;
     my $class = ref($proto) || $proto;
     my $me = { DBO => shift, sql => undef };
-    blessed $me->{DBO} and $me->{DBO}->isa('DBIx::DBO') or ouch 'Invalid DBO Object';
+    UNIVERSAL::isa($me->{DBO}, 'DBIx::DBO') or ouch 'Invalid DBO Object';
     ouch 'No table specified in new Query' unless @_;
     bless $me, $class->_set_dbd_inheritance($me->{DBO}{dbd});
 
@@ -148,16 +148,18 @@ sub _check_alias {
     my ($me, $col) = @_;
     for my $fld (@{$me->{build_data}{Showing}}) {
         return $me->{Column}{$col} ||= bless [$me, $col], 'DBIx::DBO::Column'
-            if !blessed $fld and exists $fld->[2]{AS} and $col eq $fld->[2]{AS};
+            if ref($fld) eq 'ARRAY' and exists $fld->[2]{AS} and $col eq $fld->[2]{AS};
     }
 }
 
 =head3 C<show>
 
   $query->show(@columns);
+  $query->show($table1, {COL => $table2 ** 'name', AS => 'name2'});
   $query->show($table1 ** 'id', {FUNC => 'UCASE(?)', COL => 'name', AS => 'alias'}, ...
 
 Specify which columns to show as an array.  If the array is empty all columns will be shown.
+If you use a Table object, all the columns from that table will be shown.
 
 =cut
 
@@ -169,7 +171,7 @@ sub show {
     undef $me->{build_data}{show};
     undef @{$me->{build_data}{Showing}};
     for my $fld (@_) {
-        if (blessed $fld and $fld->isa('DBIx::DBO::Table')) {
+        if (UNIVERSAL::isa($fld, 'DBIx::DBO::Table')) {
             ouch 'Invalid table field' unless defined $me->_table_idx($fld);
             push @{$me->{build_data}{Showing}}, $fld;
             next;
@@ -218,7 +220,7 @@ Returns the C<Table> object.
 ##
 sub join_table {
     my ($me, $tbl, $type) = @_;
-    if (blessed $tbl and $tbl->isa('DBIx::DBO::Table')) {
+    if (UNIVERSAL::isa($tbl, 'DBIx::DBO::Table')) {
         ouch 'This table is already in this query' if $me->_table_idx($tbl);
     } else {
         $tbl = $me->{DBO}->table($tbl);
@@ -416,7 +418,7 @@ sub unwhere {
 sub _validate_where_fields {
     my $me = shift;
     for my $f (@_) {
-        if (blessed $f and $f->isa('DBIx::DBO::Column')) {
+        if (UNIVERSAL::isa($f, 'DBIx::DBO::Column')) {
             $me->_valid_col($f);
         } elsif (my $type = ref $f) {
             ouch 'Invalid value type: '.$type if $type ne 'SCALAR';

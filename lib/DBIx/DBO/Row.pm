@@ -48,9 +48,9 @@ sub new {
     my $proto = shift;
     my $class = ref($proto) || $proto;
     my $me = \{ DBO => shift, Parent => shift, array => undef, hash => {} };
-    blessed $$me->{DBO} and $$me->{DBO}->isa('DBIx::DBO') or ouch 'Invalid DBO Object';
+    UNIVERSAL::isa($$me->{DBO}, 'DBIx::DBO') or ouch 'Invalid DBO Object';
     ouch 'Invalid Parent Object' unless defined $$me->{Parent};
-    $$me->{Parent} = $$me->{DBO}->table($$me->{Parent}) unless blessed $$me->{Parent};
+    $$me->{Parent} = $$me->{DBO}->table($$me->{Parent}) unless ref $$me->{Parent};
     bless $me, $class->_set_dbd_inheritance($$me->{DBO}{dbd});
     $me->_init;
     return wantarray ? ($me, $me->tables) : $me;
@@ -90,7 +90,7 @@ sub _copy {
     my $me = shift;
     my $val = shift;
     return bless [$me, $val->[1]], 'DBIx::DBO::Column'
-        if blessed $val and $val->isa('DBIx::DBO::Column') and $val->[0] == $$me->{Parent};
+        if UNIVERSAL::isa($val, 'DBIx::DBO::Column') and $val->[0] == $$me->{Parent};
     ref $val eq 'ARRAY' ? [map $me->_copy($_), @$val] : ref $val eq 'HASH' ? {map $me->_copy($_), %$val} : $val;
 }
 
@@ -134,7 +134,7 @@ sub _column_idx {
     my $col = shift;
     my $idx = -1;
     for my $shown (@{$$me->{build_data}{Showing}} ? @{$$me->{build_data}{Showing}} : @{$$me->{Tables}}) {
-        if (blessed $shown and $shown->isa('DBIx::DBO::Table')) {
+        if (UNIVERSAL::isa($shown, 'DBIx::DBO::Table')) {
             if ($col->[0] == $shown and exists $shown->{Column_Idx}{$col->[1]}) {
                 return $idx + $shown->{Column_Idx}{$col->[1]};
             }
@@ -161,7 +161,7 @@ sub column {
     if ($_check_aliases) {
         for my $fld (@{$$me->{build_data}{Showing}}) {
             return $$me->{Column}{$col} ||= bless [$me, $col], 'DBIx::DBO::Column'
-                if !blessed $fld and exists $fld->[2]{AS} and $col eq $fld->[2]{AS};
+                if ref($fld) eq 'ARRAY' and exists $fld->[2]{AS} and $col eq $fld->[2]{AS};
         }
     }
     for my $tbl ($me->tables) {
@@ -189,7 +189,7 @@ sub value {
     my $me = shift;
     my $col = shift;
     ouch 'The record is empty' unless $$me->{array};
-    if (blessed $col and $col->isa('DBIx::DBO::Column')) {
+    if (UNIVERSAL::isa($col, 'DBIx::DBO::Column')) {
         my $i = $me->_column_idx($col);
         return $$me->{array}[$i] if defined $i;
         ouch 'The field '.$me->_qi($col->[0]{Name}, $col->[1]).' was not included in this query';

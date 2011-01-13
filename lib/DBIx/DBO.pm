@@ -134,12 +134,12 @@ sub new {
         ouch '3rd argument to '.(caller(0))[3].' is not a HASH reference';
     }
     if (defined $dbh) {
-        ouch 'Invalid read-write database handle' unless blessed $dbh and $dbh->isa('DBI::db');
+        ouch 'Invalid read-write database handle' unless UNIVERSAL::isa($dbh, 'DBI::db');
         $new->{dbh} = $dbh;
         $new->{dbd} ||= $dbh->{Driver}{Name};
     }
     if (defined $rdbh) {
-        ouch 'Invalid read-only database handle' unless blessed $rdbh and $rdbh->isa('DBI::db');
+        ouch 'Invalid read-only database handle' unless UNIVERSAL::isa($rdbh, 'DBI::db');
         ouch 'The read-write and read-only connections must use the same DBI driver'
             if $dbh and $dbh->{Driver}{Name} ne $rdbh->{Driver}{Name};
         $new->{rdbh} = $rdbh;
@@ -155,7 +155,7 @@ sub new {
 sub connect {
     my $me = shift;
     my $conn;
-    if (blessed $me) {
+    if (ref $me) {
         ouch 'DBO is already connected' if $me->{dbh};
         $me->_check_driver($_[0]) if @_;
         $conn = $me->{ConnectArgs} ||= scalar @ConnectArgs if $me->config('AutoReconnect');
@@ -171,7 +171,7 @@ sub connect {
 sub connect_readonly {
     my $me = shift;
     my $conn;
-    if (blessed $me) {
+    if (ref $me) {
         $me->{rdbh}->disconnect if $me->{rdbh};
         $me->_check_driver($_[0]) if @_;
         $conn = $me->{ConnectReadOnlyArgs} ||= scalar @ConnectArgs if $me->config('AutoReconnect');
@@ -442,7 +442,7 @@ sub table_info {
     my $schema;
     ouch 'No table name supplied' unless defined $table and length $table;
 
-    if (blessed $table and $table->isa('DBIx::DBO::Table')) {
+    if (UNIVERSAL::isa($table, 'DBIx::DBO::Table')) {
         ($schema, $table) = @$table{qw(Schema Name)};
     } else {
         if (ref $table eq 'ARRAY') {
@@ -577,7 +577,7 @@ Global options can also be set when C<use>'ing the module:
 sub config {
     my $me = shift;
     my $opt = shift;
-    unless (blessed $me) {
+    unless (ref $me) {
         return DBIx::DBO::Common->_set_config(\%Config, $opt, shift) if @_;
         return $Config{$opt};
     }
