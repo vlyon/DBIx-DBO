@@ -19,6 +19,7 @@ my $builder = $class->new(
     build_requires => {
         'Test::More' => 0.62,
         'File::Temp' => 0,
+        'ExtUtils::CBuilder' => 0,
     },
     requires => {
         'perl' => 5.008_001,
