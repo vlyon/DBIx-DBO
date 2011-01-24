@@ -4,7 +4,10 @@ use strict;
 use warnings;
 use DBIx::DBO::Common;
 use Devel::Peek 'SvREFCNT';
+use XSLoader;
 our @ISA;
+
+BEGIN { XSLoader::load(__PACKAGE__, $DBIx::DBO::VERSION) }
 
 =head1 NAME
 
@@ -769,7 +772,7 @@ Returns a L<DBIx::DBO::Row|DBIx::DBO::Row> object or undefined if there are no m
 sub fetch {
     my $me = shift;
     # Prepare and/or execute the query if needed
-    $me->sth and ($me->{sth}{Active} or $me->run)
+    $me->sth and ($me->{sth}{Active} or exists $me->{store} or $me->run)
         or ouch $me->rdbh->errstr;
     # Detach the old record if there is still another reference to it
     my $row;
@@ -780,10 +783,23 @@ sub fetch {
         $row = $me->row;
     }
 
-    # Fetch and store the data then return the Row on success and undef on failure or no more rows
-    if ($$row->{array} = $me->{sth}->fetch) {
-        $$row->{hash} = $me->{hash};
-        return $me->{Row};
+    if ($me->{sth}{Active}) {
+        # Fetch and store the data then return the Row on success and undef on failure or no more rows
+        if ($$row->{array} = $me->{sth}->fetch) {
+            $$row->{hash} = $me->{hash};
+            return $me->{Row};
+        }
+    } else {
+        if ($me->{store}{idx} < @{$me->{store}{data}}) {
+            $$row->{array} = $me->{store}{data}[$me->{store}{idx}++];
+            while (my ($key, $idx) = each %{$me->{store}{hash_idx}}) {
+                _hv_store($me->{hash}, $key, $$row->{array}->[$idx]);
+            }
+            $$row->{hash} = $me->{hash};
+            return $me->{Row};
+        }
+        undef $$row->{array};
+        $me->{store}{idx} = 0;
     }
     $$row->{hash} = {};
     return;
@@ -826,6 +842,10 @@ sub run {
 
     my $rv = $me->_execute or return undef;
     $me->_bind_cols_to_hash;
+    if ($me->config('StoreRows')) {
+        $me->{store}{data} = $me->{sth}->fetchall_arrayref;
+        $me->{store}{idx} = 0;
+    }
     return $rv;
 }
 
@@ -840,10 +860,19 @@ sub _bind_cols_to_hash {
     my $me = shift;
     unless ($me->{hash}) {
         # Bind only to the first column of the same name
-        my $i = 1;
-        for (@{$me->{sth}{NAME}}) {
-            $me->{sth}->bind_col($i, \$me->{hash}{$_}) unless exists $me->{hash}{$_};
-            $i++;
+        if ($me->config('StoreRows')) {
+            $me->{hash} = {};
+            my $i = 0;
+            for (@{$me->{sth}{NAME}}) {
+                $me->{store}{hash_idx}{$_} = $i unless exists $me->{store}{hash_idx}{$_};
+                $i++;
+            }
+        } else {
+            my $i = 1;
+            for (@{$me->{sth}{NAME}}) {
+                $me->{sth}->bind_col($i, \$me->{hash}{$_}) unless exists $me->{hash}{$_};
+                $i++;
+            }
         }
     }
 }
@@ -935,6 +964,7 @@ sub _build_sql {
     undef $me->{hash};
     undef $me->{Row_Count};
     undef $me->{Found_Rows};
+    delete $me->{store};
     if (defined $me->{Row}) {
         if (SvREFCNT(${$me->{Row}}) > 1) {
             $me->{Row}->_detach;
@@ -972,11 +1002,23 @@ sub sth {
   $query->finish;
 
 Calls L<DBI-E<gt>finish|DBI/"finish"> on the statement handle, if it's active.
+Restarts stored queries from the first row (if created using the C<StoreRows> config).
 
 =cut
 
 sub finish {
     my $me = shift;
+    if (defined $me->{Row}) {
+        if (SvREFCNT(${$me->{Row}}) > 1) {
+            $me->{Row}->_detach;
+        } else {
+#            undef ${$me->{Row}}->{array};
+#            ${$me->{Row}}->{hash} = {};
+            undef ${$me->{Row}}{array};
+            undef %{$me->{Row}};
+        }
+    }
+    $me->{store}{idx} = 0 if exists $me->{store};
     $me->{sth}->finish if $me->{sth} and $me->{sth}{Active};
 }
 

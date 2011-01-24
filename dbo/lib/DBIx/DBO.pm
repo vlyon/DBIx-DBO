@@ -540,30 +540,37 @@ Get or set the global or C<DBIx::DBO> config settings.  When setting an option, 
 
 =over
 
-=item C<QuoteIdentifier>
-
-Boolean setting to control quoting of SQL identifiers (schema, table and column names).
-
-=item C<UseHandle>
-
-Set to C<'read-write'> or C<'read-only'> to force using only that handle for all operations.
-Defaults to C<false> which chooses the I<read-only> handle for reads and the I<read-write> handle otherwise.
-
-=item C<RowClass>
-
-Override the class name for new C<Row> objects. C<Row> objects created will be blessed into this class, which should inhereit from C<DBIx::DBO::Row>.
-
-=item C<DebugSQL>
-
-Set to C<1> or C<2> to warn about each SQL command executed.  C<2> adds a full stack trace.
-Defaults to C<0> (silent).
-
 =item C<AutoReconnect>
 
 Boolean setting to store the connection details for re-use.
 Before every operation the connection will be tested via ping() and reconnected automatically if needed.
 It has no effect after the connection has been made.
 Defaults to C<false>.
+
+=item C<DebugSQL>
+
+Set to C<1> or C<2> to warn about each SQL command executed.  C<2> adds a full stack trace.
+Defaults to C<0> (silent).
+
+=item C<QuoteIdentifier>
+
+Boolean setting to control quoting of SQL identifiers (schema, table and column names).
+
+=item C<RowClass>
+
+Override the class name for new C<Row> objects. C<Row> objects created will be blessed into this class, which should inhereit from C<DBIx::DBO::Row>.
+
+=item C<StoreRows>
+
+Boolean setting to cause C<Query> objects to store their entire result for re-use.
+The query will only be executed automatically once.
+To rerun the query, either explicitly call L<run|DBIx::DBO::Query/"run"> or alter the query.
+Defaults to C<false>.
+
+=item C<UseHandle>
+
+Set to C<'read-write'> or C<'read-only'> to force using only that handle for all operations.
+Defaults to C<false> which chooses the I<read-only> handle for reads and the I<read-write> handle otherwise.
 
 =back
 
@@ -595,7 +602,7 @@ __END__
 =head1 SUBCLASSING
 
 C<DBIx::DBO> supports multiple inheritance.
-For this reason it's advisable that L<MRO::Compat|MRO::Compat> is installed if the perl version you are using is less than 5.9.5 as that module will ensure that the 'C3' method resolution order is used.
+For this reason L<MRO::Compat|MRO::Compat> is required if the perl version you are using is less than 5.9.5 to ensure that the 'C3' method resolution order is used.
 
 When subclassing C<DBIx::DBO::xxx>, please note that the objects created with their C<new> methods are blessed into DBD driver specific modules.
 For details on subclassing the C<Query> or C<Row> objects see: L<DBIx::DBO::Query/"SUBCLASSING"> and L<DBIx::DBO::Row/"SUBCLASSING">.
