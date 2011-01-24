@@ -4,16 +4,14 @@ use 5.008;
 use strict;
 use warnings;
 use DBI;
-use DBIx::DBO::Common;
-use DBIx::DBO::Table;
-use DBIx::DBO::Query;
-use DBIx::DBO::Row;
 
+our $VERSION;
 our @ISA;
 my $need_c3_initialize;
 my @ConnectArgs;
 
 BEGIN {
+    $VERSION = '0.09';
     # The C3 method resolution order is required.
     if ($] < 5.009_005) {
         require MRO::Compat;
@@ -22,13 +20,14 @@ BEGIN {
     }
 }
 
+use DBIx::DBO::Common;
+use DBIx::DBO::Table;
+use DBIx::DBO::Query;
+use DBIx::DBO::Row;
+
 =head1 NAME
 
 DBIx::DBO - An OO interface to SQL queries and results.  Easily constructs SQL queries, and simplifies processing of the returned data.
-
-=cut
-
-our $VERSION = '0.09';
 
 =head1 SYNOPSIS
 
