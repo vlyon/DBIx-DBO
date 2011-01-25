@@ -12,7 +12,7 @@ BEGIN {
         XSLoader::load(__PACKAGE__, $DBIx::DBO::VERSION)
     } else {
         require Hash::Util;
-        Hash::Util->import('hv_store');
+        *_hv_store = \&Hash::Util::hv_store;
     }
 }
 
@@ -800,7 +800,7 @@ sub fetch {
         if ($me->{store}{idx} < @{$me->{store}{data}}) {
             $$row->{array} = $me->{store}{data}[$me->{store}{idx}++];
             while (my ($key, $idx) = each %{$me->{store}{hash_idx}}) {
-                hv_store(%{$me->{hash}}, $key, $$row->{array}->[$idx]);
+                _hv_store(%{$me->{hash}}, $key, $$row->{array}->[$idx]);
             }
             $$row->{hash} = $me->{hash};
             return $me->{Row};
