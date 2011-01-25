@@ -9,7 +9,7 @@ our @ISA;
 BEGIN {
     if ($] < 5.008_009) {
         require XSLoader;
-        XSLoader::load(__PACKAGE__, $DBIx::DBO::VERSION)
+        XSLoader::load(__PACKAGE__, $DBIx::DBO::VERSION);
     } else {
         require Hash::Util;
         *_hv_store = \&Hash::Util::hv_store;
