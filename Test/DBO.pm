@@ -128,9 +128,9 @@ sub sql_err {
     my $me = shift;
     my ($cmd, $sql, @bind) = @{(Scalar::Util::reftype($me) eq 'REF' ? $$me : $me)->{LastSQL}};
     $sql =~ s/^/  /mg;
-    my @err = ("SQL command failed: $cmd", $sql.';');
-    push @err, 'Bind Values: ('.join(', ', map $me->rdbh->quote($_), @bind).')' if @bind;
-    push @err, $DBI::errstr || $me->rdbh->errstr || '???';
+    my @err = ($DBI::errstr || $me->rdbh->errstr || '???');
+    unshift @err, 'Bind Values: ('.join(', ', map $me->rdbh->quote($_), @bind).')' if @bind;
+    unshift @err, "SQL command failed: $cmd", $sql.';';
     $err[-1] =~ s/ at line \d+$//;
     join "\n", @err;
 }
