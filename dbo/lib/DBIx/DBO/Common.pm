@@ -15,8 +15,11 @@ use subs qw(ouch oops);
 *ouch = \&Carp::croak;
 
 our %Config = (
-    QuoteIdentifier => 1,
+    AutoReconnect => 0,
     DebugSQL => 0,
+    QuoteIdentifier => 1,
+    RowClass => undef,
+    StoreRows => 0,
 );
 our @CARP_NOT;
 our $placeholder = PLACEHOLDER;

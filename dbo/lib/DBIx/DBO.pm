@@ -90,7 +90,7 @@ sub import {
     }
     while (my ($opt, $val) = splice @_, 0, 2) {
         if (exists $Config{$opt}) {
-            $Config{$opt} = $val;
+            DBIx::DBO::Common->_set_config(\%Config, $opt, $val);
         } else {
             oops "Unknown import option '$opt'";
         }
