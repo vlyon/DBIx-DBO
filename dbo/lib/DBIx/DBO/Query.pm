@@ -7,7 +7,7 @@ use Devel::Peek 'SvREFCNT';
 our @ISA;
 
 BEGIN {
-    if ($] < 5.008_009 or 1) {
+    if ($] < 5.008_009) {
         require XSLoader;
         XSLoader::load(__PACKAGE__, $DBIx::DBO::VERSION)
     } else {
