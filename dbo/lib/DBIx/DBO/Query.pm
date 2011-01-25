@@ -4,10 +4,17 @@ use strict;
 use warnings;
 use DBIx::DBO::Common;
 use Devel::Peek 'SvREFCNT';
-use XSLoader;
 our @ISA;
 
-BEGIN { XSLoader::load(__PACKAGE__, $DBIx::DBO::VERSION) }
+BEGIN {
+    if ($] < 5.008_009 or 1) {
+        require XSLoader;
+        XSLoader::load(__PACKAGE__, $DBIx::DBO::VERSION)
+    } else {
+        require Hash::Util;
+        Hash::Util->import('hv_store');
+    }
+}
 
 =head1 NAME
 
@@ -793,7 +800,7 @@ sub fetch {
         if ($me->{store}{idx} < @{$me->{store}{data}}) {
             $$row->{array} = $me->{store}{data}[$me->{store}{idx}++];
             while (my ($key, $idx) = each %{$me->{store}{hash_idx}}) {
-                _hv_store($me->{hash}, $key, $$row->{array}->[$idx]);
+                hv_store(%{$me->{hash}}, $key, $$row->{array}->[$idx]);
             }
             $$row->{hash} = $me->{hash};
             return $me->{Row};

@@ -6,11 +6,11 @@
 MODULE = DBIx::DBO::Query            PACKAGE = DBIx::DBO::Query
 
 void
-_hv_store(hvref, key, val)
+hv_store(hvref, key, val)
 	SV* hvref
 	SV* key
 	SV* val
-    PROTOTYPE: $$$
+    PROTOTYPE: \%$$
     PREINIT:
 	HV* hv;
     CODE:

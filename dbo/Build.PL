@@ -3,13 +3,13 @@ use warnings;
 use Module::Build;
 
 # Recommend MRO::Compat if using perl < 5.9.5
-my $class = $] < 5.009_005 ? 'Module::Build' : Module::Build->subclass(code => q{
+my $class = $] < 5.009_005 ? 'Module::Build' : Module::Build->subclass(code => q/
     sub write_metafile {
         my $self = shift;
         $self->{properties}{requires}{'MRO::Compat'} = 0;
         $self->SUPER::write_metafile(@_);
     }
-});
+/);
 
 my $builder = $class->new(
     module_name         => 'DBIx::DBO',
@@ -19,12 +19,15 @@ my $builder = $class->new(
     build_requires => {
         'Test::More' => 0.62,
         'File::Temp' => 0,
-        'ExtUtils::CBuilder' => 0,
     },
     requires => {
         'perl' => 5.008_001,
         'DBI' => 1.50,
         $] < 5.009_005 ? ('MRO::Compat' => 0) : (),
+    },
+    needs_compiler => $] < 5.008_009,
+    xs_files => {
+        $] < 5.008_009 ? ('QueryXS.xs' => 'lib/DBIx/DBO/Query.xs') : (),
     },
     meta_merge => {
         resources => {
