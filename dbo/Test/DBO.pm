@@ -488,14 +488,17 @@ sub join_methods {
     is $q->count_rows, 3, 'Method DBIx::DBO::Query->count_rows' or diag sql_err($q);
     is $q->found_rows, 36, 'Method DBIx::DBO::Query->found_rows' or diag sql_err($q);
 
+    # JOIN
     $q->join_on($t2, $t1 ** 'id', '=', { FUNC => '?/2.0', VAL => $t2 ** 'id' });
     $q->order_by({ COL => $t1 ** 'name', ORDER => 'DESC' });
     $q->where($t1 ** 'name', '<', $t2 ** 'name', FORCE => 'OR');
     $q->where($t1 ** 'name', '>', $t2 ** 'name', FORCE => 'OR');
     $q->where($t1 ** 'name', 'LIKE', '%');
     my $r;
+    # Oracle Can't do a SELECT * from a subquery that has "ambiguous" columns (two columns with the same name)
+    $q->show() if $dbd eq 'Oracle';
     SKIP: {
-        $q->run or diag sql_err($q) or fail 'JOIN ON' or skip 'No Left Join', 1;
+        $q->run or fail 'JOIN ON' or diag sql_err($q) or skip 'No Left Join', 1;
         $r = $q->fetch or fail 'JOIN ON' or skip 'No Left Join', 1;
 
         is_deeply \@$r, [ 1, 'John Doe', 2, 'Jane Smith' ], 'JOIN ON';
@@ -503,11 +506,11 @@ sub join_methods {
         is_deeply \@$r, [ 2, 'Jane Smith', 4, 'James Bond' ], 'Method DBIx::DBO::Row->load';
     }
 
+    # LEFT JOIN
     ($q, $t1) = $dbo->query($table);
     $t2 = $q->join_table($table, 'left');
     $q->join_on($t2, $t1 ** 'id', '=', { FUNC => '?/2.0', COL => $t2 ** 'id' });
     $q->order_by({ COL => $t1 ** 'name', ORDER => 'DESC' });
-
     if ($dbd eq 'Oracle') {
         # Oracle doesn't support LIMIT OFFSET
         $q->fetch;
