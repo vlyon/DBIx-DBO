@@ -2,18 +2,9 @@ use strict;
 use warnings;
 use Module::Build;
 
-# Require MRO::Compat if using perl < 5.9.5
-my $class = $] < 5.009_005 ? 'Module::Build' : Module::Build->subclass(code => q/
-    sub write_metafile {
-        my $self = shift;
-        $self->{properties}{requires}{'MRO::Compat'} = 0;
-        $self->SUPER::write_metafile(@_);
-    }
-/);
-
 my $needs_compiler = $] < 5.008_009;
 
-my $builder = $class->new(
+my $builder = Module::Build->new(
     module_name         => 'DBIx::DBO',
     license             => 'perl',
     dist_author         => 'Vernon Lyon <vlyon@cpan.org>',
@@ -31,7 +22,7 @@ my $builder = $class->new(
     requires => {
         'perl' => 5.008_001,
         'DBI' => 1.50,
-        $] < 5.009_005 ? ('MRO::Compat' => 0) : (),
+        $] < 5.009_005 ? ('MRO::Compat' => 0.09) : (),
     },
     needs_compiler => $needs_compiler,
     xs_files => {
