@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use DBIx::DBO::Common;
 use Scalar::Util 'weaken';
-our @ISA;
+our @ISA = qw(DBIx::DBO::Common);
 
 use overload '@{}' => sub {${$_[0]}->{array} || []}, '%{}' => sub {${$_[0]}->{hash}};
 use overload '**' => \&value, fallback => 1;
@@ -54,14 +54,6 @@ sub new {
     bless $me, $class->_set_dbd_inheritance($$me->{DBO}{dbd});
     $me->_init;
     return wantarray ? ($me, $me->tables) : $me;
-}
-
-sub _set_dbd_inheritance {
-    my $class = shift;
-    my $dbd = shift;
-    # Let DBIx::DBO::Row secretly inherit from DBIx::DBO::Common
-    @_ = (@ISA, 'DBIx::DBO::Common') if not @_ and $class eq __PACKAGE__;
-    $class->DBIx::DBO::Common::_set_dbd_inheritance($dbd, @_);
 }
 
 sub _init {

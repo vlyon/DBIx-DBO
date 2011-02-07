@@ -6,7 +6,7 @@ use warnings;
 use DBI;
 
 our $VERSION;
-our @ISA;
+our @ISA = qw(DBIx::DBO::Common);
 my $need_c3_initialize;
 my @ConnectArgs;
 
@@ -262,10 +262,7 @@ sub _set_dbd_inheritance {
     my $dbd = shift;
     no strict 'refs';
     my @isa = @_ ? @_ : @{$class.'::ISA'};
-    if ($class eq __PACKAGE__) {
-        # Let DBIx::DBO secretly inherit from DBIx::DBO::Common
-        push @isa, 'DBIx::DBO::Common' unless @_;
-    } else {
+    if ($class ne __PACKAGE__) {
         for my $obj (qw(Table Query Row)) {
             unless (@{$class.'::'.$obj.'::ISA'}) {
                 @{$class.'::'.$obj.'::ISA'} = map UNIVERSAL::isa($_, __PACKAGE__) ? $_.'::'.$obj : $_, @isa;
