@@ -432,20 +432,23 @@ sub _set_config {
     return $old;
 }
 
+my %inheritance;
 sub _set_dbd_inheritance {
     my $class = shift;
     my $dbd = shift;
     $class =~ s/::DBD::\w+$//;
-    # Inheritance
-    no strict 'refs';
-    unless (@{$class.'::DBD::'.$dbd.'::ISA'}) {
-        my @isa = grep $_->can('_set_dbd_inheritance'), @_ ? @_ : @{$class.'::ISA'};
-        $_->_set_dbd_inheritance($dbd) for @isa;
-        @{$class.'::DBD::'.$dbd.'::ISA'} = ($class, map $_.'::DBD::'.$dbd, @isa);
+
+    unless (exists $inheritance{$class}{$dbd}) {
+        no strict 'refs';
+        unless (@{$class.'::DBD::'.$dbd.'::ISA'}) {
+            my @isa = map $_->_set_dbd_inheritance($dbd), grep UNIVERSAL::isa($_, __PACKAGE__), @{$class.'::ISA'};
+            @{$class.'::DBD::'.$dbd.'::ISA'} = ($class, @isa);
+        }
         mro::set_mro($class.'::DBD::'.$dbd, 'c3');
         Class::C3::initialize() if $] < 5.009_005;
+        $inheritance{$class}{$dbd} = $class.'::DBD::'.$dbd;
     }
-    return $class.'::DBD::'.$dbd;
+    return $inheritance{$class}{$dbd};
 }
 
 1;

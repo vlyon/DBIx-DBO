@@ -3,7 +3,7 @@ package DBIx::DBO::Table;
 use strict;
 use warnings;
 use DBIx::DBO::Common;
-our @ISA;
+our @ISA = qw(DBIx::DBO::Common);
 
 use overload '**' => \&column, fallback => 1;
 
@@ -56,14 +56,6 @@ sub new {
     (my $schema, $table, my $me) = $dbo->table_info($table) or ouch 'No such table: '.$table;
     $class = $class->_set_dbd_inheritance($dbo->{dbd});
     bless { %$me, Schema => $schema, Name => $table, DBO => $dbo, LastInsertID => undef }, $class;
-}
-
-sub _set_dbd_inheritance {
-    my $class = shift;
-    my $dbd = shift;
-    # Let DBIx::DBO::Table secretly inherit from DBIx::DBO::Common
-    @_ = (@ISA, 'DBIx::DBO::Common') if not @_ and $class eq __PACKAGE__;
-    $class->DBIx::DBO::Common::_set_dbd_inheritance($dbd, @_);
 }
 
 =head3 C<tables>

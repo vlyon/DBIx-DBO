@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use DBIx::DBO::Common;
 use Devel::Peek 'SvREFCNT';
-our @ISA;
+our @ISA = qw(DBIx::DBO::Common);
 
 BEGIN {
     if ($] < 5.008_009) {
@@ -74,14 +74,6 @@ sub new {
     }
     $me->reset;
     return wantarray ? ($me, $me->tables) : $me;
-}
-
-sub _set_dbd_inheritance {
-    my $class = shift;
-    my $dbd = shift;
-    # Let DBIx::DBO::Query secretly inherit from DBIx::DBO::Common
-    @_ = (@ISA, 'DBIx::DBO::Common') if not @_ and $class eq __PACKAGE__;
-    $class->DBIx::DBO::Common::_set_dbd_inheritance($dbd, @_);
 }
 
 =head3 C<reset>
