@@ -140,7 +140,13 @@ sub sql_err {
 sub connect_dbo {
     my ($dsn, $user, $pass) = @_;
     defined $dsn or $dsn = '';
-    DBIx::DBO->connect("DBI:$dbd:$dsn", $user, $pass, {RaiseError => 0});
+    # Catch install_driver errors
+    my $dbh = eval { DBIx::DBO->connect("DBI:$dbd:$dsn", $user, $pass, {RaiseError => 0}) };
+    if ($@) {
+        die $@ if $@ !~ /\binstall_driver\b/;
+        plan skip_all => $@;
+    }
+    return $dbh;
 }
 
 sub try_to_connect {
