@@ -440,15 +440,20 @@ sub _set_dbd_inheritance {
 
     unless (exists $inheritance{$class}{$dbd}) {
         no strict 'refs';
-        unless (@{$class.'::DBD::'.$dbd.'::ISA'}) {
-            my @isa = map $_->_set_dbd_inheritance($dbd), grep UNIVERSAL::isa($_, __PACKAGE__), @{$class.'::ISA'};
+        my $dbd_exists = exists ${$class.'::'}{'DBD::'} && exists ${$class.'::DBD::'}{$dbd.'::'};
+        unless ($dbd_exists and @{$class.'::DBD::'.$dbd.'::ISA'}) {
+            my @isa = map $_->_set_dbd_inheritance($dbd), grep $_->isa(__PACKAGE__), @{$class.'::ISA'};
+            unless ($dbd_exists or @isa or not wantarray) {
+                $inheritance{$class}{$dbd} = undef;
+                return;
+            }
             @{$class.'::DBD::'.$dbd.'::ISA'} = ($class, @isa);
         }
         mro::set_mro($class.'::DBD::'.$dbd, 'c3');
         Class::C3::initialize() if $] < 5.009_005;
         $inheritance{$class}{$dbd} = $class.'::DBD::'.$dbd;
     }
-    return $inheritance{$class}{$dbd};
+    return $inheritance{$class}{$dbd} || (wantarray ? () : $class);
 }
 
 1;
