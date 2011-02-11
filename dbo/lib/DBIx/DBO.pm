@@ -228,6 +228,7 @@ sub _require_dbd_class {
     my $me = shift;
     my $dbd = shift;
     $me = ref $me if ref $me;
+    $me =~ s/::DBD::\w+$//;
     my $class = $me.'::DBD::'.$dbd;
 
     # Don't do Class::C3::initialize until later
@@ -260,19 +261,19 @@ sub _require_dbd_class {
 sub _set_dbd_inheritance {
     my $class = shift;
     my $dbd = shift;
-    no strict 'refs';
-    my @isa = @_ ? @_ : @{$class.'::ISA'};
+
     if ($class ne __PACKAGE__) {
+        no strict 'refs';
         for my $obj (qw(Table Query Row)) {
-            unless (@{$class.'::'.$obj.'::ISA'}) {
-                @{$class.'::'.$obj.'::ISA'} = map UNIVERSAL::isa($_, __PACKAGE__) ? $_.'::'.$obj : $_, @isa;
-            }
+            @{$class.'::'.$obj.'::ISA'} = map { $_->isa(__PACKAGE__) ? $_.'::'.$obj : () } @{$class.'::ISA'}
+                unless @{$class.'::'.$obj.'::ISA'};
         }
     }
     for my $class (map $class.'::'.$_, qw(Table Query Row)) {
         $class->_set_dbd_inheritance($dbd);
     }
-    $class->DBIx::DBO::Common::_set_dbd_inheritance($dbd, @isa);
+
+    $class->SUPER::_set_dbd_inheritance($dbd);
 }
 
 sub _bless_dbo {
@@ -293,7 +294,7 @@ Tables can be specified by their name or an arrayref of schema and table name or
 =cut
 
 sub table {
-    (my $class = ref($_[0])) =~ s/(::DBD::\w+)$/::Table/;
+    (my $class = ref($_[0])) =~ s/(::DBD::\w+)?$/::Table/;
     $class->new(@_);
 }
 
@@ -312,7 +313,7 @@ In list context, the C<Query> object and L<DBIx::DBO::Table|DBIx::DBO::Table> ob
 =cut
 
 sub query {
-    (my $class = ref($_[0])) =~ s/(::DBD::\w+)$/::Query/;
+    (my $class = ref($_[0])) =~ s/(::DBD::\w+)?$/::Query/;
     $class->new(@_);
 }
 
@@ -327,7 +328,7 @@ Create and return a new L<DBIx::DBO::Row|DBIx::DBO::Row> object.
 
 sub row {
     my $class = $_[0]->config('RowClass');
-    ($class = ref($_[0])) =~ s/(::DBD::\w+)$/::Row/ unless $class;
+    ($class = ref($_[0])) =~ s/(::DBD::\w+)?$/::Row/ unless $class;
     $class->new(@_);
 }
 
