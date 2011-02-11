@@ -1,5 +1,9 @@
 Revision history for DBIx-DBO
 
+0.10	Jan 27, 2011
+	- Added the table truncate() method.
+	- A Query can now store it's data for re-use (StoreRows config option).
+
 0.09	Dec 30, 2010
 	- More alias improvements and tests.
 	- Added the AutoReconnect config option.
@@ -20,23 +24,23 @@ Revision history for DBIx-DBO
 	- Added COLLATE option.
 
 0.05	May 27, 2010
-	- Added support for Oracle. [VLYON]
-	- Improved Query clause removal methods. [VLYON]
-	- Added a HAVING clause. [VLYON]
-	- Improved inheritance for subclasses under 5.8.x. [VLYON]
-	- Added the DBIx::DBO->new method. [VLYON]
+	- Added support for Oracle.
+	- Improved Query clause removal methods.
+	- Added a HAVING clause.
+	- Improved inheritance for subclasses under 5.8.x.
+	- Added the DBIx::DBO->new method.
 
 0.04	Mar 7, 2010
-	- Improved POD docs, tests and compatibility with other platforms. [VLYON]
-	- Added the DBIx::DBO::Query->open_bracket method. [VLYON]
-	- Added the UseHandle config option. [VLYON]
+	- Improved POD docs, tests and compatibility with other platforms.
+	- Added the DBIx::DBO::Query->open_bracket method.
+	- Added the UseHandle config option.
 
 0.03	Feb 12, 2010
-	- Make it compatible with perl 5.8.x. [VLYON]
+	- Make it compatible with perl 5.8.x.
 
 0.02	Feb 8, 2010
-	- First public release version. [VLYON]
+	- First public release version.
 
 0.01	Feb 1, 2010
-	- First public (development) version. [VLYON]
+	- First public (development) version.
 
