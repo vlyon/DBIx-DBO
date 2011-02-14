@@ -265,8 +265,9 @@ sub _set_dbd_inheritance {
     if ($class ne __PACKAGE__) {
         no strict 'refs';
         for my $obj (qw(Table Query Row)) {
-            @{$class.'::'.$obj.'::ISA'} = map { $_->isa(__PACKAGE__) ? $_.'::'.$obj : () } @{$class.'::ISA'}
-                unless @{$class.'::'.$obj.'::ISA'};
+            @{$class.'::'.$obj.'::ISA'} = map {
+                $_->isa(__PACKAGE__) ? $_.'::'.$obj : $_->isa('DBIx::DBO::Common') ? $_ : ()
+            } @{$class.'::ISA'} unless @{$class.'::'.$obj.'::ISA'};
         }
     }
     for my $class (map $class.'::'.$_, qw(Table Query Row)) {
