@@ -238,8 +238,8 @@ sub join_table {
     push @{$me->{Tables}}, $tbl;
     push @{$me->{build_data}{Join}}, $type;
     push @{$me->{build_data}{Join_On}}, undef;
-#    push @{$me->{Join_Bracket_Refs}}, [];
-#    push @{$me->{Join_Brackets}}, [];
+    push @{$me->{Join_Bracket_Refs}}, [];
+    push @{$me->{Join_Brackets}}, [];
     undef $me->{sql};
     undef $me->{build_data}{from};
     return $tbl;
