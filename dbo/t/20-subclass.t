@@ -2,60 +2,71 @@ use strict;
 use warnings;
 
 # Create the DBO (2 tests)
-use Test::DBO Sponge => 'Sponge', tests => 19;
+use Test::DBO Sponge => 'Sponge', tests => 21;
 
-# Empty Subclass
-@SubClass::ISA = ('DBIx::DBO');
-ok my $dbo = SubClass->connect('DBI:Sponge:'), 'Connect to Sponge' or die $DBI::errstr;
-isa_ok $dbo, 'SubClass::DBD::Sponge', '$dbo';
+# DBO-only Subclass
+@Only::DBO::ISA = qw(DBIx::DBO);
 
-$dbo->connect_readonly('DBI:Sponge:'), 'Connect (read-only) to Sponge' or die $DBI::errstr;
+ok my $dbo = Only::DBO->connect('DBI:Sponge:'), 'Connect to Sponge' or die $DBI::errstr;
+isa_ok $dbo, 'Only::DBO::DBD::Sponge', '$dbo';
 
 my $quoted = $dbo->_qi($Test::DBO::test_db, $Test::DBO::test_tbl);
-is $quoted, qq{"$Test::DBO::test_db"."$Test::DBO::test_tbl"}, 'SubClass Method _qi';
+is $quoted, qq{"$Test::DBO::test_db"."$Test::DBO::test_tbl"}, 'Only::DBO Method _qi';
+
+# Empty Subclasses
+@SubClass::Common::ISA = qw(DBIx::DBO::Common);
+sub SubClass::Common::_table_class { 'SubClass::Table' }
+sub SubClass::Common::_query_class { 'SubClass::Query' }
+sub SubClass::Common::_row_class   { 'SubClass::Row' }
+@SubClass::ISA = qw(DBIx::DBO SubClass::Common);
+@SubClass::Table::ISA = qw(DBIx::DBO::Table SubClass::Common);
+@SubClass::Query::ISA = qw(DBIx::DBO::Query SubClass::Common);
+@SubClass::Row::ISA = qw(DBIx::DBO::Row SubClass::Common);
+
+$dbo = SubClass->connect('DBI:Sponge:') or die $DBI::errstr;
+isa_ok $dbo, 'SubClass::DBD::Sponge', '$dbo';
 
 isa_ok my $t = $dbo->table($Test::DBO::test_tbl), 'SubClass::Table::DBD::Sponge', '$t';
 isa_ok my $q = $dbo->query($t), 'SubClass::Query::DBD::Sponge', '$q';
 isa_ok my $r = $q->row, 'SubClass::Row::DBD::Sponge', '$r';
 
 # Empty Table Subclass
-@MyTable::ISA = ('DBIx::DBO::Table');
+@MyTable::ISA = qw(DBIx::DBO::Table);
 isa_ok $t = MyTable->new($dbo, $t), 'MyTable::DBD::Sponge', '$t';
 isa_ok $t, 'MyTable', '$t';
 isa_ok $t, 'DBIx::DBO::Table::DBD::Sponge', '$t';
 
 # Empty Query Subclass
-@MyQuery::ISA = ('DBIx::DBO::Query');
+@MyQuery::ISA = qw(DBIx::DBO::Query);
 isa_ok $q = MyQuery->new($dbo, $t), 'MyQuery::DBD::Sponge', '$q';
 isa_ok $q, 'MyQuery', '$q';
 isa_ok $q, 'DBIx::DBO::Query::DBD::Sponge', '$q';
 
 # Empty Row Subclass
-@MyRow::ISA = ('DBIx::DBO::Row');
+@MyRow::ISA = qw(DBIx::DBO::Row);
 isa_ok $r = MyRow->new($dbo, $t), 'MyRow::DBD::Sponge', '$r';
 isa_ok $r, 'MyRow', '$r';
 isa_ok $r, 'DBIx::DBO::Row::DBD::Sponge', '$r';
-
 
 # Create a Query and Row class for a table
 {
     package # hide from PAUSE
         My::Query;
-    use base 'DBIx::DBO::Query';
+    use base 'SubClass::Query';
     my @tables;
     sub new {
         my $me = shift;
         my $dbo = shift;
         @tables = map $dbo->table($_), $Test::DBO::test_tbl unless @tables;
         $me = $me->SUPER::new($dbo, @tables, @_);
-        $me->config(RowClass => 'My::Row');
         return $me;
     }
+    sub _row_class { 'My::Row' }
 }
 {
     package # hide from PAUSE
         My::Row;
-    use base 'DBIx::DBO::Row';
+    use base 'SubClass::Row';
     my @tables;
     sub new {
         my $me = shift;
@@ -72,4 +83,7 @@ is $tbl->_build_from, $tbl->_qi($Test::DBO::test_tbl), 'Subclass represents the 
 my $row = My::Row->new($dbo);
 isa_ok $row, 'My::Row', '$row';
 is $row->_build_from, $row->_qi($Test::DBO::test_tbl), 'Subclass represents the table automatically';
+
+$row = $tbl->row;
+isa_ok $row, 'My::Row', '$tbl->row';
 

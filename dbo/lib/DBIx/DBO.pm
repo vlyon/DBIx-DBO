@@ -231,10 +231,6 @@ sub _require_dbd_class {
     $me =~ s/::DBD::\w+$//;
     my $class = $me.'::DBD::'.$dbd;
 
-    # Don't do Class::C3::initialize until later
-    local *Class::C3::initialize;
-    *Class::C3::initialize = sub { $need_c3_initialize = 1 };
-
     __PACKAGE__->_require_dbd_class($dbd) if $me ne __PACKAGE__;
 
     my @warn;
@@ -262,16 +258,15 @@ sub _set_dbd_inheritance {
     my $class = shift;
     my $dbd = shift;
 
-    if ($class ne __PACKAGE__) {
-        no strict 'refs';
-        for my $obj (qw(Table Query Row)) {
-            @{$class.'::'.$obj.'::ISA'} = map {
-                $_->isa(__PACKAGE__) ? $_.'::'.$obj : $_->isa('DBIx::DBO::Common') ? $_ : ()
-            } @{$class.'::ISA'} unless @{$class.'::'.$obj.'::ISA'};
-        }
-    }
-    for my $class (map $class.'::'.$_, qw(Table Query Row)) {
-        $class->_set_dbd_inheritance($dbd);
+    mro::set_mro($class, 'c3');
+    Class::C3::initialize() if $] < 5.009_005;
+
+    # Don't do Class::C3::initialize until later
+    local *Class::C3::initialize;
+    *Class::C3::initialize = sub { $need_c3_initialize = 1 };
+
+    for my $obj_class (map $class->$_, qw(_table_class _query_class _row_class)) {
+        $obj_class->_set_dbd_inheritance($dbd);
     }
 
     $class->SUPER::_set_dbd_inheritance($dbd);
@@ -295,8 +290,7 @@ Tables can be specified by their name or an arrayref of schema and table name or
 =cut
 
 sub table {
-    (my $class = ref($_[0])) =~ s/(::DBD::\w+)?$/::Table/;
-    $class->new(@_);
+    $_[0]->_table_class->new(@_);
 }
 
 =head3 C<query>
@@ -314,8 +308,7 @@ In list context, the C<Query> object and L<DBIx::DBO::Table|DBIx::DBO::Table> ob
 =cut
 
 sub query {
-    (my $class = ref($_[0])) =~ s/(::DBD::\w+)?$/::Query/;
-    $class->new(@_);
+    $_[0]->_query_class->new(@_);
 }
 
 =head3 C<row>
@@ -328,9 +321,7 @@ Create and return a new L<DBIx::DBO::Row|DBIx::DBO::Row> object.
 =cut
 
 sub row {
-    my $class = $_[0]->config('RowClass');
-    ($class = ref($_[0])) =~ s/(::DBD::\w+)?$/::Row/ unless $class;
-    $class->new(@_);
+    $_[0]->_row_class->new(@_);
 }
 
 =head3 C<selectrow_array>
@@ -555,10 +546,6 @@ Defaults to C<0> (silent).
 
 Boolean setting to control quoting of SQL identifiers (schema, table and column names).
 
-=item C<RowClass>
-
-Override the class name for new C<Row> objects. C<Row> objects created will be blessed into this class, which should inhereit from C<DBIx::DBO::Row>.
-
 =item C<StoreRows>
 
 Boolean setting to cause C<Query> objects to store their entire result for re-use.
@@ -600,18 +587,54 @@ __END__
 
 =head1 SUBCLASSING
 
-C<DBIx::DBO> supports multiple inheritance.
-For this reason L<MRO::Compat|MRO::Compat> is required if the perl version you are using is less than 5.9.5 to ensure that the 'C3' method resolution order is used.
-
-When subclassing C<DBIx::DBO::xxx>, please note that the objects created with their C<new> methods are blessed into DBD driver specific modules.
 For details on subclassing the C<Query> or C<Row> objects see: L<DBIx::DBO::Query/"SUBCLASSING"> and L<DBIx::DBO::Row/"SUBCLASSING">.
 This is the simple (recommended) way to create objects representing a single query, table or row in your database.
 
-When you subclass C<DBIx::DBO>, it affects inheritance for all objects created by this C<DBO>.
-For example, if using MySQL and a subclass of C<DBIx::DBO> named C<MySubClass>, then the object returned from L</connect> would be blessed into C<MySubClass::DBD::mysql> which would inherit from both C<MySubClass> and C<DBIx::DBO::DBD::mysql>.
-Any objects created by this C<DBO> will have a similar inheritance path.
-For example, a new C<Query> object would be blessed into C<MySubClass::Query::DBD::mysql> which would in turn inherit from both C<MySubClass::Query> and C<DBIx::DBO::Query::DBD::mysql>.
+C<DBIx::DBO> can be subclassed like any other object oriented module.
+
+  package MySubClass;
+  our @ISA = qw(DBIx::DBO);
+  ...
+
+The C<DBIx::DBO> modules use multiple inheritance, because objects created are blessed into DBD driver specific classes.
+For this to function correctly they must use the 'C3' method resolution order.
+To simplify subclassing this is automatically set for you when the objects are first created.
+
+For example, if using MySQL and a subclass of C<DBIx::DBO> named C<MySubClass>, then the object returned from the L</connect>, L</connect_readonly> or L</new> method would be blessed into C<MySubClass::DBD::mysql> which would inherit from both C<MySubClass> and C<DBIx::DBO::DBD::mysql>.
 These classes are automatically created if they don't exist.
+
+In this way it is fairly trivial to override most of the methods, but not all of them.
+This is because some methods are common to all the classes and are defined in C<DBIx::DBO::Common>.
+And new C<Table>, C<Query> and C<Row> objects created will still be blessed into C<DBIx::DBO::*> classes.
+The classes these new objects are blessed into are provided by C<_table_class>, C<_query_class> and C<_row_class> methods.
+To override these methods and subclass the whole of C<DBIx::DBO::*>, we need to provide our own C<MySubClass::Common> package with new class names for our objects.
+
+  package MySubClass::Common;
+  our @ISA = qw(DBIx::DBO::Common);
+  
+  sub _table_class { 'MySubClass::Table' }
+  sub _query_class { 'MySubClass::Query' }
+  sub _row_class   { 'MySubClass::Row' }
+
+Also ensure that we inherit from this common class.
+
+  package MySubClass;
+  our @ISA = qw(DBIx::DBO MySubClass::Common);
+  ...
+
+  package MySubClass::Table;
+  our @ISA = qw(DBIx::DBO::Table MySubClass::Common);
+  ...
+
+  package MySubClass::Query;
+  our @ISA = qw(DBIx::DBO::Query MySubClass::Common);
+  ...
+
+  package MySubClass::Row;
+  our @ISA = qw(DBIx::DBO::Row MySubClass::Common);
+  ...
+
+In this example we will have subclassed all the modules.
 
 =head1 AUTHOR
 

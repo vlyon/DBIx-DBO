@@ -108,8 +108,7 @@ Returns a new L<DBIx::DBO::Row|DBIx::DBO::Row> object for this table.
 
 sub row {
     my $me = shift;
-    my $row_class = $me->config('RowClass');
-    return $row_class ? $row_class->new($me->{DBO}, $me) : $me->{DBO}->row($me);
+    $me->_row_class->new($me->{DBO}, $me);
 }
 
 =head3 C<fetch_row>
