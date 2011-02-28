@@ -456,4 +456,8 @@ sub _set_dbd_inheritance {
     return $inheritance{$class}{$dbd} || (wantarray ? () : $class);
 }
 
+sub _table_class { 'DBIx::DBO::Table' }
+sub _query_class { 'DBIx::DBO::Query' }
+sub _row_class   { 'DBIx::DBO::Row' }
+
 1;

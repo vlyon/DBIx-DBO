@@ -815,11 +815,7 @@ Returns the L<DBIx::DBO::Row|DBIx::DBO::Row> object for the current row from the
 sub row {
     my $me = shift;
     $me->sql; # Build the SQL and detach the Row if needed
-    unless ($me->{Row}) {
-        my $row_class = $me->config('RowClass');
-        $me->{Row} = $row_class ? $row_class->new($me->{DBO}, $me) : $me->{DBO}->row($me);
-    }
-    return $me->{Row};
+    $me->{Row} ||= $me->_row_class->new($me->{DBO}, $me);
 }
 
 =head3 C<run>
@@ -1087,9 +1083,9 @@ Assume you want to create a C<Query> and C<Row> class for a "Users" table:
       
       # We could even add some JOINs or other clauses here
       
-      $self->config(RowClass => 'My::User'); # Rows are blessed into this class
       return $self;
   }
+  sub _row_class { 'My::User' } # Rows are blessed into this class
 
   package My::User;
   use base 'DBIx::DBO::Row';
