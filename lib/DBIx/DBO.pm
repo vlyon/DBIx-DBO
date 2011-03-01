@@ -241,11 +241,10 @@ sub _require_dbd_class {
 
     (my $file = $class.'.pm') =~ s'::'/'g;
     if ($@ !~ / \Q$file\E in \@INC /) {
-        # Set $DBI::errstr
         (my $err = $@) =~ s/\n.*$//; # Remove the last line
         chomp @warn;
         chomp $err;
-        die join "\n", "Can't load $dbd driver", @warn, $err;
+        ouch join "\n", @warn, $err, "Can't load $dbd driver";
     }
 
     $@ = '';
