@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::DBO Sponge => 'Sponge', tests => 5;
+use Test::DBO Sponge => 'Sponge', tests => 8;
 
 {
     my $warn = '';
@@ -25,9 +25,24 @@ eval { DBIx::DBO->new(1, 2, 3, 4) };
 like $@, qr/^Too many arguments for /, 'DBIx::DBO->new takes only 3 args';
 
 eval { DBIx::DBO->new(1, 2, \3) };
-like $@, qr/^3rd argument to DBIx::DBO::new is not a HASH reference/, 'DBIx::DBO->new 3rd arg must be a HASH';
+like $@, qr/^3rd argument to DBIx::DBO::new is not a HASH reference /, 'DBIx::DBO->new 3rd arg must be a HASH';
 
-my $dbo = DBIx::DBO->connect('DBI:Sponge:'), 'Connect to Sponge' or die $DBI::errstr;
+my $dbh1 = DBI->connect('DBI:Sponge:') or die $DBI::errstr;
+my $dbh2 = DBI->connect('DBI:DBM:') or die $DBI::errstr;
+
+eval { DBIx::DBO->new($dbh1, $dbh1, {dbd => 'NoDBD'}) };
+is $@, '', 'DBD class is overridable';
+
+eval { DBIx::DBO->new($dbh1, $dbh2, {dbd => 'NoDBD'}) };
+like $@, qr/^The read-write and read-only connections must use the same DBI driver /, 'Validate both $dbh drivers';
+
+#my $dbo = DBIx::DBO->new(undef, $dbh2, {dbd => 'NoDBD'}) or die $DBI::errstr;
+#eval { $dbo->connect('DBI:Sponge:') };
+my $dbo = DBIx::DBO->new($dbh2, undef, {dbd => 'NoDBD'}) or die $DBI::errstr;
+eval { $dbo->connect_readonly('DBI:Sponge:') };
+like $@, qr/^The read-write and read-only connections must use the same DBI driver /m, 'Check extra connection driver';
+
+$dbo = DBIx::DBO->new($dbh1, $dbh1);
 my ($q, $t) = $dbo->query($Test::DBO::test_tbl);
 
 eval { $q->where('id', '=', {FUNC => '(?,?)', VAL => [1,2,3]}) };
