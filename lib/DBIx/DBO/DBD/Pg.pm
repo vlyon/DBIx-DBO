@@ -1,6 +1,9 @@
 use strict;
 use warnings;
 
+push @DBIx::DBO::Common::CARP_NOT,
+    qw(DBIx::DBO::DBD::Pg DBIx::DBO::Table::DBD::Pg);
+
 package # hide from PAUSE
     DBIx::DBO::DBD::Pg;
 use DBIx::DBO::Common;

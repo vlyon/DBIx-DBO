@@ -1,9 +1,11 @@
 use strict;
 use warnings;
 
+push @DBIx::DBO::Common::CARP_NOT,
+    qw(DBIx::DBO::DBD::mysql DBIx::DBO::Table::DBD::mysql DBIx::DBO::Query::DBD::mysql DBIx::DBO::Common::DBD::mysql);
+
 package # hide from PAUSE
     DBIx::DBO::DBD::mysql;
-use DBIx::DBO::Common;
 
 sub _get_table_schema {
     my $me = shift;
@@ -43,7 +45,6 @@ sub config {
 
 package # hide from PAUSE
     DBIx::DBO::Common::DBD::mysql;
-use DBIx::DBO::Common;
 
 sub _build_sql_select {
     my $me = shift;
@@ -62,7 +63,6 @@ sub _alias_preference {
 
 package # hide from PAUSE
     DBIx::DBO::Table::DBD::mysql;
-use DBIx::DBO::Common;
 
 sub _save_last_insert_id {
     my $me = shift;
@@ -72,7 +72,6 @@ sub _save_last_insert_id {
 
 package # hide from PAUSE
     DBIx::DBO::Query::DBD::mysql;
-use DBIx::DBO::Common;
 
 sub found_rows {
     my $me = shift;
