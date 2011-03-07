@@ -4,15 +4,11 @@ package # hide from PAUSE
 use 5.008;
 use strict;
 use warnings;
-use Carp;
+use Carp 'croak';
 use constant PLACEHOLDER => "\x{b1}\x{a4}\x{221e}";
 
 # Common routines and variables exported to all DBO classes.
 # This module automatically exports ALL the methods and variables for use in the other DBO modules.
-
-use subs qw(ouch oops);
-*oops = \&Carp::carp;
-*ouch = \&Carp::croak;
 
 our %Config = (
     AutoReconnect => 0,
@@ -24,15 +20,6 @@ our %Config = (
 our @CARP_NOT = qw(DBIx::DBO DBIx::DBO::Table DBIx::DBO::Query DBIx::DBO::Row DBIx::DBO::Common);
 our $placeholder = PLACEHOLDER;
 $placeholder = qr/\Q$placeholder/;
-
-sub import {
-    return if $_[0] ne __PACKAGE__;
-    my $caller = caller;
-    no strict 'refs';
-    for (qw(oops ouch)) {
-        *{$caller.'::'.$_} = \&{$_};
-    }
-}
 
 sub dbh { $_[0]{DBO}->dbh }
 sub rdbh { $_[0]{DBO}->rdbh }
@@ -92,7 +79,7 @@ sub _bind_params_select {
 sub _build_sql_update {
     my $me = shift;
     my $h = shift;
-    ouch 'Update is not valid with a GROUP BY clause' if $me->_build_group($h);
+    croak 'Update is not valid with a GROUP BY clause' if $me->_build_group($h);
     my $sql = 'UPDATE '.$me->_build_from($h);
     $sql .= ' SET '.$me->_build_set($h, @_);
     $sql .= ' WHERE '.$_ if $_ = $me->_build_where($h);
@@ -112,7 +99,7 @@ sub _bind_params_update {
 sub _build_sql_delete {
     my $me = shift;
     my $h = shift;
-    ouch 'Delete is not valid with a GROUP BY clause' if $me->_build_group($h);
+    croak 'Delete is not valid with a GROUP BY clause' if $me->_build_group($h);
     my $sql = 'DELETE FROM '.$me->_build_from($h);
     $sql .= ' WHERE '.$_ if $_ = $me->_build_where($h);
     $sql .= ' ORDER BY '.$_ if $_ = $me->_build_order($h);
@@ -186,14 +173,14 @@ sub _valid_col {
     for my $tbl ($me->tables) {
         return $col if $col->[0] == $tbl;
     }
-    ouch 'Invalid column, the column is from a table not included in this query';
+    croak 'Invalid column, the column is from a table not included in this query';
 }
 
 sub _parse_col {
     my ($me, $col, $_check_aliases) = @_;
     if (ref $col) {
         return $me->_valid_col($col) if UNIVERSAL::isa($col, 'DBIx::DBO::Column');
-        ouch 'Invalid column: '.$col;
+        croak 'Invalid column: '.$col;
     }
     # If $_check_aliases is not defined dont accept an alias
     $me->column($col, $_check_aliases || 0);
@@ -212,7 +199,7 @@ sub _parse_val {
     my $func;
     my $opt;
     if (ref $fld eq 'SCALAR') {
-        ouch 'Invalid '.($c{Check} eq 'Column' ? 'column' : 'field').' reference (scalar ref to undef)'
+        croak 'Invalid '.($c{Check} eq 'Column' ? 'column' : 'field').' reference (scalar ref to undef)'
             unless defined $$fld;
         $func = $$fld;
         $fld = [];
@@ -220,12 +207,12 @@ sub _parse_val {
         $func = $fld->{FUNC} if exists $fld->{FUNC};
         $opt->{AS} = $fld->{AS} if exists $fld->{AS};
         if (exists $fld->{ORDER}) {
-            ouch 'Invalid ORDER, must be ASC or DESC' if $fld->{ORDER} !~ /^(A|DE)SC$/i;
+            croak 'Invalid ORDER, must be ASC or DESC' if $fld->{ORDER} !~ /^(A|DE)SC$/i;
             $opt->{ORDER} = uc $fld->{ORDER};
         }
         $opt->{COLLATE} = $fld->{COLLATE} if exists $fld->{COLLATE};
         if (exists $fld->{COL}) {
-            ouch 'Invalid HASH containing both COL and VAL' if exists $fld->{VAL};
+            croak 'Invalid HASH containing both COL and VAL' if exists $fld->{VAL};
             my @cols = ref $fld->{COL} eq 'ARRAY' ? @{$fld->{COL}} : $fld->{COL};
             $fld = [ map $me->_parse_col($_, $c{Aliases}), @cols ];
         } else {
@@ -240,9 +227,9 @@ sub _parse_val {
     my $with = @$fld;
     if (defined $func) {
         my $need = $me->_substitute_placeholders($func);
-        ouch "The number of params ($with) does not match the number of placeholders ($need)" if $need != $with;
+        croak "The number of params ($with) does not match the number of placeholders ($need)" if $need != $with;
     } elsif ($with != 1 and $c{Check} ne 'Auto') {
-        ouch 'Invalid '.($c{Check} eq 'Column' ? 'column' : 'field')." reference (passed $with params instead of 1)";
+        croak 'Invalid '.($c{Check} eq 'Column' ? 'column' : 'field')." reference (passed $with params instead of 1)";
     }
     return ($fld, $func, $opt);
 }
@@ -270,7 +257,7 @@ sub _build_val {
         } elsif (ref $_ eq 'SCALAR') {
             $$_;
         } else {
-            ouch 'Invalid field: '.$_;
+            croak 'Invalid field: '.$_;
         }
     } @$fld;
     unless (defined $func) {
@@ -346,7 +333,7 @@ sub _build_where_piece {
 
 # Construct one WHERE expression (simple)
 sub _build_quick_where {
-    ouch 'Wrong number of arguments' if @_ & 1;
+    croak 'Wrong number of arguments' if @_ & 1;
     my ($me, $bind) = splice @_, 0, 2;
     my @where;
     while (my ($col, $val) = splice @_, 0, 2) {
@@ -368,7 +355,7 @@ sub _build_quick_where {
 }
 
 sub _build_set {
-    ouch 'Wrong number of arguments' if @_ & 1;
+    croak 'Wrong number of arguments' if @_ & 1;
     my $me = shift;
     my $h = shift;
     undef @{$h->{Set_Bind}};
@@ -423,7 +410,7 @@ sub _build_limit {
 sub _set_config {
     my $me = shift;
     my ($ref, $opt, $val) = @_;
-    ouch "Invalid value for the 'UseHandle' setting"
+    croak "Invalid value for the 'UseHandle' setting"
         if $opt eq 'UseHandle' and $val and $val ne 'read-only' and $val ne 'read-write';
     my $old = $ref->{$opt};
     $ref->{$opt} = $val;
