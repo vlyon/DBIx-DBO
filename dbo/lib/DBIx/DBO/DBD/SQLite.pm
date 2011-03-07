@@ -7,7 +7,7 @@ push @DBIx::DBO::Common::CARP_NOT,
 
 package # hide from PAUSE
     DBIx::DBO::DBD::SQLite;
-use DBIx::DBO::Common;
+use Carp 'croak';
 
 sub _get_table_schema {
     my $me = shift;
@@ -20,7 +20,7 @@ sub _get_table_schema {
     # Try just these types
     my $info = $me->rdbh->table_info(undef, $q_schema, $q_table,
         'TABLE,VIEW,GLOBAL TEMPORARY,LOCAL TEMPORARY,SYSTEM TABLE', {Escape => '\\'})->fetchall_arrayref;
-    ouch 'Invalid table: '.$me->_qi($table) unless $info and @$info == 1 and $info->[0][2] eq $table;
+    croak 'Invalid table: '.$me->_qi($table) unless $info and @$info == 1 and $info->[0][2] eq $table;
     return $info->[0][1];
 }
 

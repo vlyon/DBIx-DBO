@@ -4,6 +4,7 @@ use 5.008;
 use strict;
 use warnings;
 use DBI;
+use Carp qw(carp croak);
 
 our $VERSION;
 our @ISA = qw(DBIx::DBO::Common);
@@ -89,13 +90,13 @@ sub import {
     my $class = shift;
     if (@_ & 1) {
         my $opt = pop;
-        oops "Import option '$opt' passed without a value";
+        carp "Import option '$opt' passed without a value";
     }
     while (my ($opt, $val) = splice @_, 0, 2) {
         if (exists $Config{$opt}) {
             DBIx::DBO::Common->_set_config(\%Config, $opt, $val);
         } else {
-            oops "Unknown import option '$opt'";
+            carp "Unknown import option '$opt'";
         }
     }
 }
@@ -129,25 +130,25 @@ Both C<connect> & C<connect_readonly> can be called on a C<DBIx::DBO> object to 
 
 sub new {
     my $me = shift;
-    ouch 'Too many arguments for '.(caller(0))[3] if @_ > 3;
+    croak 'Too many arguments for '.(caller(0))[3] if @_ > 3;
     my ($dbh, $rdbh, $new) = @_;
 
     if (defined $new and not UNIVERSAL::isa($new, 'HASH')) {
-        ouch '3rd argument to '.(caller(0))[3].' is not a HASH reference';
+        croak '3rd argument to '.(caller(0))[3].' is not a HASH reference';
     }
     if (defined $dbh) {
-        ouch 'Invalid read-write database handle' unless UNIVERSAL::isa($dbh, 'DBI::db');
+        croak 'Invalid read-write database handle' unless UNIVERSAL::isa($dbh, 'DBI::db');
         $new->{dbh} = $dbh;
         $new->{dbd} ||= $dbh->{Driver}{Name};
     }
     if (defined $rdbh) {
-        ouch 'Invalid read-only database handle' unless UNIVERSAL::isa($rdbh, 'DBI::db');
-        ouch 'The read-write and read-only connections must use the same DBI driver'
+        croak 'Invalid read-only database handle' unless UNIVERSAL::isa($rdbh, 'DBI::db');
+        croak 'The read-write and read-only connections must use the same DBI driver'
             if $dbh and $dbh->{Driver}{Name} ne $rdbh->{Driver}{Name};
         $new->{rdbh} = $rdbh;
         $new->{dbd} ||= $rdbh->{Driver}{Name};
     }
-    ouch "Can't create the DBO, unknown database driver" unless $new->{dbd};
+    croak "Can't create the DBO, unknown database driver" unless $new->{dbd};
 
     my $class = $me->_require_dbd_class($new->{dbd});
     Class::C3::initialize() if $need_c3_initialize;
@@ -158,7 +159,7 @@ sub connect {
     my $me = shift;
     my $conn;
     if (ref $me) {
-        ouch 'DBO is already connected' if $me->{dbh};
+        croak 'DBO is already connected' if $me->{dbh};
         $me->_check_driver($_[0]) if @_;
         $conn = $me->{ConnectArgs} ||= scalar @ConnectArgs if $me->config('AutoReconnect');
         $me->{dbh} = $me->_connect($conn, @_) or return;
@@ -190,11 +191,11 @@ sub _check_driver {
     my $me = shift;
     my $dsn = shift;
     my $driver = (DBI->parse_dsn($dsn))[1] or
-        ouch "Can't connect to data source '$dsn' because I can't work out what driver to use " .
+        croak "Can't connect to data source '$dsn' because I can't work out what driver to use " .
             "(it doesn't seem to contain a 'dbi:driver:' prefix and the DBI_DRIVER env var is not set)";
     ref($me) =~ /::DBD::\Q$driver\E$/ or
     $driver eq $me->{dbd} or
-        ouch "Can't connect to the data source '$dsn'\n" .
+        croak "Can't connect to the data source '$dsn'\n" .
             "The read-write and read-only connections must use the same DBI driver";
 }
 
@@ -215,8 +216,8 @@ sub _connect {
                 $_[0] = Carp::longmess($_[0]);
                 return 0;
             }
-            oops $_[1]->errstr if $_[1]->{PrintError};
-            ouch $_[1]->errstr if $_[1]->{RaiseError};
+            carp $_[1]->errstr if $_[1]->{PrintError};
+            croak $_[1]->errstr if $_[1]->{RaiseError};
             return 1;
         } unless exists $attr{HandleError};
 
@@ -247,7 +248,7 @@ sub _require_dbd_class {
         (my $err = $@) =~ s/\n.*$//; # Remove the last line
         chomp @warn;
         chomp $err;
-        ouch join "\n", @warn, $err, "Can't load $dbd driver";
+        croak join "\n", @warn, $err, "Can't load $dbd driver";
     }
 
     $@ = '';
@@ -388,7 +389,7 @@ sub _get_table_schema {
         'TABLE,VIEW,GLOBAL TEMPORARY,LOCAL TEMPORARY,SYSTEM TABLE')->fetchall_arrayref;
     # Then if we found nothing, try any type
     $info = $me->rdbh->table_info(undef, $q_schema, $q_table)->fetchall_arrayref if $info and @$info == 0;
-    ouch 'Invalid table: '.$me->_qi($table) unless $info and @$info == 1 and $info->[0][2] eq $table;
+    croak 'Invalid table: '.$me->_qi($table) unless $info and @$info == 1 and $info->[0][2] eq $table;
     return $info->[0][1];
 }
 
@@ -398,7 +399,7 @@ sub _get_table_info {
     my $table = shift;
 
     my $cols = $me->rdbh->column_info(undef, $schema, $table, '%')->fetchall_arrayref({});
-    ouch 'Invalid table: '.$me->_qi($table) unless @$cols;
+    croak 'Invalid table: '.$me->_qi($table) unless @$cols;
 
     my %h;
     $h{Column_Idx}{$_->{COLUMN_NAME}} = $_->{ORDINAL_POSITION} for @$cols;
@@ -431,7 +432,7 @@ sub table_info {
     my $me = shift;
     my $table = shift;
     my $schema;
-    ouch 'No table name supplied' unless defined $table and length $table;
+    croak 'No table name supplied' unless defined $table and length $table;
 
     if (UNIVERSAL::isa($table, 'DBIx::DBO::Table')) {
         ($schema, $table) = @$table{qw(Schema Name)};
@@ -495,7 +496,7 @@ sub _handle {
     my $me = shift;
     my $handle = shift;
     my ($d, $c) = $handle ne 'read-only' ? qw(dbh ConnectArgs) : qw(rdbh ConnectReadOnlyArgs);
-    ouch "No $handle handle connected" unless defined $me->{$d};
+    croak "No $handle handle connected" unless defined $me->{$d};
     # Automatically reconnect, but only if possible and needed
     $me->{$d} = $me->_connect($me->{$c}) if exists $me->{$c} and not $me->{$d}->ping;
     return $me->{$d};
@@ -506,7 +507,7 @@ sub dbh {
     if (my $handle = $me->config('UseHandle')) {
         return $me->_handle($handle);
     }
-    ouch 'Invalid action for a read-only connection' unless $me->{dbh};
+    croak 'Invalid action for a read-only connection' unless $me->{dbh};
     $me->_handle('read-write');
 }
 

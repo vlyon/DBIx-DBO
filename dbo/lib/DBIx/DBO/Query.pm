@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use DBIx::DBO::Common;
 use Devel::Peek 'SvREFCNT';
+use Carp 'croak';
 our @ISA = qw(DBIx::DBO::Common);
 
 BEGIN {
@@ -65,8 +66,8 @@ sub new {
     my $proto = shift;
     my $class = ref($proto) || $proto;
     my $me = { DBO => shift, sql => undef };
-    UNIVERSAL::isa($me->{DBO}, 'DBIx::DBO') or ouch 'Invalid DBO Object';
-    ouch 'No table specified in new Query' unless @_;
+    UNIVERSAL::isa($me->{DBO}, 'DBIx::DBO') or croak 'Invalid DBO Object';
+    croak 'No table specified in new Query' unless @_;
     bless $me, $class->_set_dbd_inheritance($me->{DBO}{dbd});
 
     for my $table (@_) {
@@ -121,7 +122,7 @@ sub _table_alias {
     my ($me, $tbl) = @_;
     return undef if $me == $tbl; # This means it's checking for an aliased column
     my $i = $me->_table_idx($tbl);
-    ouch 'The table is not in this query' unless defined $i;
+    croak 'The table is not in this query' unless defined $i;
     # Don't use aliases, when there's only 1 table
     @{$me->{Tables}} > 1 ? 't'.($i + 1) : ();
 }
@@ -143,7 +144,7 @@ sub column {
         return $tbl->column($col) if exists $tbl->{Column_Idx}{$col};
     }
     return $column if $_check_aliases == 2 and $column = $me->_check_alias($col);
-    ouch 'No such column'.($_check_aliases ? '/alias' : '').': '.$me->_qi($col);
+    croak 'No such column'.($_check_aliases ? '/alias' : '').': '.$me->_qi($col);
 }
 
 sub _check_alias {
@@ -174,7 +175,7 @@ sub show {
     undef @{$me->{build_data}{Showing}};
     for my $fld (@_) {
         if (UNIVERSAL::isa($fld, 'DBIx::DBO::Table')) {
-            ouch 'Invalid table field' unless defined $me->_table_idx($fld);
+            croak 'Invalid table field' unless defined $me->_table_idx($fld);
             push @{$me->{build_data}{Showing}}, $fld;
             next;
         }
@@ -223,7 +224,7 @@ Returns the C<Table> object.
 sub join_table {
     my ($me, $tbl, $type) = @_;
     if (UNIVERSAL::isa($tbl, 'DBIx::DBO::Table')) {
-        ouch 'This table is already in this query' if $me->_table_idx($tbl);
+        croak 'This table is already in this query' if $me->_table_idx($tbl);
     } else {
         $tbl = $me->{DBO}->table($tbl);
     }
@@ -258,7 +259,7 @@ Then a JOIN ON condition follows, which uses the same arguments as L</where>.
 sub join_on {
     my $me = shift;
     my $t2 = shift;
-    my $i = $me->_table_idx($t2) or ouch 'Invalid table object to join onto';
+    my $i = $me->_table_idx($t2) or croak 'Invalid table object to join onto';
 
     my ($col1, $col1_func, $col1_opt) = $me->_parse_col_val(shift);
     my $op = shift;
@@ -289,13 +290,13 @@ The first argument is the table being joined onto.
 
 sub open_join_on_bracket {
     my $me = shift;
-    my $i = $me->_table_idx(shift) or ouch 'No such table object in the join';
+    my $i = $me->_table_idx(shift) or croak 'No such table object in the join';
     $me->_open_bracket($me->{Join_Brackets}[$i], $me->{Join_Bracket_Refs}[$i], $me->{build_data}{Join_On}[$i] ||= [], @_);
 }
 
 sub close_join_on_bracket {
     my $me = shift;
-    my $i = $me->_table_idx(shift) or ouch 'No such table object in the join';
+    my $i = $me->_table_idx(shift) or croak 'No such table object in the join';
     $me->_close_bracket($me->{Join_Brackets}[$i], $me->{Join_Bracket_Refs}[$i]);
 }
 
@@ -423,7 +424,7 @@ sub _validate_where_fields {
         if (UNIVERSAL::isa($f, 'DBIx::DBO::Column')) {
             $me->_valid_col($f);
         } elsif (my $type = ref $f) {
-            ouch 'Invalid value type: '.$type if $type ne 'SCALAR';
+            croak 'Invalid value type: '.$type if $type ne 'SCALAR';
         }
     }
 }
@@ -481,7 +482,7 @@ sub _add_where {
     my $me = shift;
     my ($ref, $op, $fld, $fld_func, $fld_opt, $val, $val_func, $val_opt, %opt) = @_;
 
-    ouch 'Invalid option, FORCE must be AND or OR'
+    croak 'Invalid option, FORCE must be AND or OR'
         if defined $opt{FORCE} and $opt{FORCE} ne 'AND' and $opt{FORCE} ne 'OR';
 
     # Deal with NULL values
@@ -493,12 +494,12 @@ sub _add_where {
     # Deal with array values: BETWEEN & IN
     unless (defined $val_func) {
         if ($op eq 'BETWEEN' or $op eq 'NOT BETWEEN') {
-            ouch 'Invalid value argument, BETWEEN requires 2 values'
+            croak 'Invalid value argument, BETWEEN requires 2 values'
                 if ref $val ne 'ARRAY' or @$val != 2;
             $val_func = $me->PLACEHOLDER.' AND '.$me->PLACEHOLDER;
         } elsif ($op eq 'IN' or $op eq 'NOT IN') {
             if (ref $val eq 'ARRAY') {
-                ouch 'Invalid value argument, IN requires at least 1 value' if @$val == 0;
+                croak 'Invalid value argument, IN requires at least 1 value' if @$val == 0;
             } else {
                 $val = [ $val ];
             }
@@ -517,7 +518,7 @@ sub _add_where {
             $val_func = '('.join(',', ($me->PLACEHOLDER) x @$val).')';
         } elsif (@$val != 1) {
             # Check that there is only 1 placeholder
-            ouch 'Wrong number of fields/values, called with '.@$val.' while needing 1';
+            croak 'Wrong number of fields/values, called with '.@$val.' while needing 1';
         }
     }
 
@@ -557,7 +558,7 @@ sub open_bracket {
 
 sub _open_bracket {
     my ($me, $brackets, $bracket_refs, $ref, $ag) = @_;
-    ouch 'Invalid argument MUST be AND or OR' if !$ag or $ag !~ /^(AND|OR)$/;
+    croak 'Invalid argument MUST be AND or OR' if !$ag or $ag !~ /^(AND|OR)$/;
     my $last = @$brackets ? $brackets->[-1] : 'AND';
     if ($ag ne $last) {
         # Find the current data reference
@@ -576,7 +577,7 @@ sub close_bracket {
 
 sub _close_bracket {
     my ($me, $brackets, $bracket_refs) = @_;
-    my $ag = pop @{$brackets} or ouch "Can't close bracket with no open bracket!";
+    my $ag = pop @{$brackets} or croak "Can't close bracket with no open bracket!";
     my $last = @$brackets ? $brackets->[-1] : 'AND';
     pop @$bracket_refs if $last ne $ag;
     return $ag;
@@ -687,7 +688,7 @@ sub limit {
     undef $me->{sql};
     undef $me->{build_data}{limit};
     return undef $me->{build_data}{LimitOffset} unless defined $rows;
-    /^\d+$/ or ouch "Invalid argument '$_' in limit" for grep defined, $rows, $offset;
+    /^\d+$/ or croak "Invalid argument '$_' in limit" for grep defined, $rows, $offset;
     @{$me->{build_data}{LimitOffset}} = ($rows, $offset);
 }
 
@@ -772,7 +773,7 @@ sub fetch {
     my $me = shift;
     # Prepare and/or execute the query if needed
     $me->sth and ($me->{sth}{Active} or exists $me->{store} or $me->run)
-        or ouch $me->rdbh->errstr;
+        or croak $me->rdbh->errstr;
     # Detach the old record if there is still another reference to it
     my $row;
     if (defined $me->{Row} and SvREFCNT(${$me->{Row}}) > 1) {
@@ -886,7 +887,7 @@ sub rows {
     $me->sql; # Ensure the Row_Count is cleared if needed
     unless (defined $me->{Row_Count}) {
         $me->sth and ($me->{sth}{Executed} or $me->run)
-            or ouch $me->rdbh->errstr;
+            or croak $me->rdbh->errstr;
         $me->{Row_Count} = $me->sth->rows;
         $me->{Row_Count} = $me->count_rows if $me->{Row_Count} == -1;
     }

@@ -9,7 +9,7 @@ use SQL::Statement;
 
 package # hide from PAUSE
     DBIx::DBO::DBD::DBM;
-use DBIx::DBO::Common;
+use Carp 'croak';
 
 sub _bless_dbo {
     my $class = shift;
@@ -34,12 +34,12 @@ sub _get_table_info {
     unless (exists $me->rdbh->{dbm_tables}{$q_table}) {
         $q_table = $me->_qi($table); # Try with the quoted table name
         unless (exists $me->rdbh->{dbm_tables}{$q_table}) {
-            ouch 'Invalid table: '.$q_table;
+            croak 'Invalid table: '.$q_table;
         }
     }
     unless (exists $me->rdbh->{dbm_tables}{$q_table}{c_cols}
             and ref $me->rdbh->{dbm_tables}{$q_table}{c_cols} eq 'ARRAY') {
-        ouch 'Invalid DBM table info, could be an incompatible version';
+        croak 'Invalid DBM table info, could be an incompatible version';
     }
 
     my %h;
