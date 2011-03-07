@@ -266,7 +266,7 @@ sub _build_val {
     }
     # Add one value to @ary to make sure the number of placeholders & values match
     push @ary, 'Error';
-    $func =~ s/$placeholder/shift @ary/eg;
+    $func =~ s/$placeholder/shift @ary/ego;
     # At this point all the values should have been used and @ary must only have 1 item!
     die "Number of placeholders and values don't match @ary!" if @ary != 1;
     return $func.$extra;
@@ -434,6 +434,7 @@ sub _set_dbd_inheritance {
             }
             @{$class.'::DBD::'.$dbd.'::ISA'} = ($class, @isa);
         }
+        { no warnings 'once'; push @{$class.'::CARP_NOT'}, $class.'::DBD::'.$dbd }
         mro::set_mro($class.'::DBD::'.$dbd, 'c3');
         Class::C3::initialize() if $] < 5.009_005;
         $inheritance{$class}{$dbd} = $class.'::DBD::'.$dbd;

@@ -4,9 +4,6 @@ use warnings;
 BEGIN { die "DBM is not yet supported!\n" unless $ENV{DBO_ALLOW_DBM} }
 use SQL::Statement;
 
-#push @DBIx::DBO::Common::CARP_NOT,
-#    qw(DBIx::DBO::DBD::DBM);
-
 package # hide from PAUSE
     DBIx::DBO::DBD::DBM;
 use Carp 'croak';
