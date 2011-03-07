@@ -29,7 +29,6 @@ sub import {
     return if $_[0] ne __PACKAGE__;
     my $caller = caller;
     no strict 'refs';
-    *{$caller.'::Config'} = \%{__PACKAGE__.'::Config'};
     for (qw(oops ouch)) {
         *{$caller.'::'.$_} = \&{$_};
     }

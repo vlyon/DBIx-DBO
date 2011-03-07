@@ -7,6 +7,7 @@ use DBI;
 
 our $VERSION;
 our @ISA = qw(DBIx::DBO::Common);
+our %Config;
 my $need_c3_initialize;
 my @ConnectArgs;
 
@@ -18,6 +19,8 @@ BEGIN {
     } else {
         require mro;
     }
+    # Import %Config
+    *Config = \%DBIx::DBO::Common::Config;
 }
 
 use DBIx::DBO::Common;
@@ -568,12 +571,11 @@ Global options can also be set when C<use>'ing the module:
 sub config {
     my $me = shift;
     my $opt = shift;
-    unless (ref $me) {
-        return DBIx::DBO::Common->_set_config(\%Config, $opt, shift) if @_;
-        return $Config{$opt};
+    if (@_) {
+        my $cfg = ref $me ? $me->{Config} ||= {} : \%Config;
+        return $me->_set_config($cfg, $opt, shift);
     }
-    return $me->_set_config($me->{Config} ||= {}, $opt, shift) if @_;
-    return defined $me->{Config}{$opt} ? $me->{Config}{$opt} : $Config{$opt};
+    return (ref $me and defined $me->{Config}{$opt}) ? $me->{Config}{$opt} : $Config{$opt};
 }
 
 sub DESTROY {
