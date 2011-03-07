@@ -1,9 +1,6 @@
 use strict;
 use warnings;
 
-push @DBIx::DBO::Common::CARP_NOT,
-    qw(DBIx::DBO::DBD::mysql DBIx::DBO::Table::DBD::mysql DBIx::DBO::Query::DBD::mysql DBIx::DBO::Common::DBD::mysql);
-
 package # hide from PAUSE
     DBIx::DBO::DBD::mysql;
 
