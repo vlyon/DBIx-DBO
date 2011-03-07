@@ -1,9 +1,11 @@
 use strict;
 use warnings;
 
+push @DBIx::DBO::Common::CARP_NOT,
+    qw(DBIx::DBO::Query::DBD::Oracle DBIx::DBO::Common::DBD::Oracle);
+
 package # hide from PAUSE
     DBIx::DBO::Common::DBD::Oracle;
-use DBIx::DBO::Common;
 
 sub _build_limit {
     '';

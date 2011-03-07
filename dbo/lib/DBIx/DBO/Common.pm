@@ -21,16 +21,15 @@ our %Config = (
     RowClass => undef,
     StoreRows => 0,
 );
-our @CARP_NOT;
+our @CARP_NOT = qw(DBIx::DBO DBIx::DBO::Table DBIx::DBO::Query DBIx::DBO::Row DBIx::DBO::Common);
 our $placeholder = PLACEHOLDER;
 $placeholder = qr/\Q$placeholder/;
 
 sub import {
+    return if $_[0] ne __PACKAGE__;
     my $caller = caller;
-    push @CARP_NOT, $caller;
     no strict 'refs';
     *{$caller.'::Config'} = \%{__PACKAGE__.'::Config'};
-    *{$caller.'::CARP_NOT'} = \@{__PACKAGE__.'::CARP_NOT'};
     for (qw(oops ouch)) {
         *{$caller.'::'.$_} = \&{$_};
     }

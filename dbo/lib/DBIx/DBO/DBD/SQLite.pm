@@ -2,6 +2,9 @@ use strict;
 use warnings;
 use DBD::SQLite 1.27;
 
+push @DBIx::DBO::Common::CARP_NOT,
+    qw(DBIx::DBO::DBD::SQLite DBIx::DBO::Table::DBD::SQLite DBIx::DBO::Query::DBD::SQLite);
+
 package # hide from PAUSE
     DBIx::DBO::DBD::SQLite;
 use DBIx::DBO::Common;
@@ -35,7 +38,6 @@ if ($DBD::SQLite::VERSION < 1.30) {
 
 package # hide from PAUSE
     DBIx::DBO::Query::DBD::SQLite;
-use DBIx::DBO::Common;
 
 sub fetch {
     my $me = shift;
