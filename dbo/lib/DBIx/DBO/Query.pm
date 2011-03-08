@@ -64,11 +64,17 @@ In list context, the C<Query> object and L<DBIx::DBO::Table|DBIx::DBO::Table> ob
 
 sub new {
     my $proto = shift;
+    UNIVERSAL::isa($_[0], 'DBIx::DBO') or croak 'Invalid DBO Object';
     my $class = ref($proto) || $proto;
+    $class = $class->_set_dbd_inheritance($_[0]{dbd});
+    $class->_init(@_);
+}
+
+sub _init {
+    my $class = shift;
     my $me = { DBO => shift, sql => undef };
-    UNIVERSAL::isa($me->{DBO}, 'DBIx::DBO') or croak 'Invalid DBO Object';
     croak 'No table specified in new Query' unless @_;
-    bless $me, $class->_set_dbd_inheritance($me->{DBO}{dbd});
+    bless $me, $class;
 
     for my $table (@_) {
         $me->join_table($table);
