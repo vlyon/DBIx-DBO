@@ -243,10 +243,15 @@ sub _require_dbd_class {
 
     __PACKAGE__->_require_dbd_class($dbd) if $me ne __PACKAGE__;
 
+    my $rv;
     my @warn;
     {
         local $SIG{__WARN__} = sub { push @warn, join '', @_ };
-        return $me->_set_dbd_inheritance($dbd) if eval "require $class";
+        $rv = eval "require $class";
+    }
+    if ($rv) {
+        warn @warn if @warn;
+        return $me->_set_dbd_inheritance($dbd);
     }
 
     (my $file = $class.'.pm') =~ s'::'/'g;
