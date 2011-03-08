@@ -47,18 +47,20 @@ sub rdbh { ${$_[0]}->{DBO}->rdbh }
 
 sub new {
     my $proto = shift;
+    UNIVERSAL::isa($_[0], 'DBIx::DBO') or croak 'Invalid DBO Object';
     my $class = ref($proto) || $proto;
-    my $me = \{ DBO => shift, Parent => shift, array => undef, hash => {} };
-    UNIVERSAL::isa($$me->{DBO}, 'DBIx::DBO') or croak 'Invalid DBO Object';
-    croak 'Invalid Parent Object' unless defined $$me->{Parent};
-    $$me->{Parent} = $$me->{DBO}->table($$me->{Parent}) unless ref $$me->{Parent};
-    bless $me, $class->_set_dbd_inheritance($$me->{DBO}{dbd});
-    $me->_init;
-    return wantarray ? ($me, $me->tables) : $me;
+    $class = $class->_set_dbd_inheritance($_[0]{dbd});
+    $class->_init(@_);
 }
 
 sub _init {
-    my $me = shift;
+    my $class = shift;
+
+    my $me = \{ DBO => shift, Parent => shift, array => undef, hash => {} };
+    croak 'Invalid Parent Object' unless defined $$me->{Parent};
+    $$me->{Parent} = $$me->{DBO}->table($$me->{Parent}) unless ref $$me->{Parent};
+    bless $me, $class;
+
     $$me->{build_data}{LimitOffset} = [1];
     if ($$me->{Parent}->isa('DBIx::DBO::Query')) {
         $$me->{Tables} = [ @{$$me->{Parent}{Tables}} ];
@@ -77,6 +79,7 @@ sub _init {
     } else {
         croak 'Invalid Parent Object';
     }
+    return wantarray ? ($me, $me->tables) : $me;
 }
 
 sub _copy {

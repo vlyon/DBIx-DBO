@@ -152,7 +152,13 @@ sub new {
 
     my $class = $me->_require_dbd_class($new->{dbd});
     Class::C3::initialize() if $need_c3_initialize;
-    $class->_bless_dbo($new);
+    $class->_init($new);
+}
+
+sub _init {
+    my $class = shift;
+    my $new = shift;
+    bless $new, $class;
 }
 
 sub connect {
@@ -273,12 +279,6 @@ sub _set_dbd_inheritance {
     }
 
     $class->SUPER::_set_dbd_inheritance($dbd);
-}
-
-sub _bless_dbo {
-    my $class = shift;
-    my $new = shift;
-    bless $new, $class;
 }
 
 =head3 C<table>
