@@ -17,7 +17,7 @@ our %Config = (
     RowClass => undef,
     StoreRows => 0,
 );
-our @CARP_NOT = qw(DBIx::DBO DBIx::DBO::Table DBIx::DBO::Query DBIx::DBO::Row DBIx::DBO::Common);
+our @CARP_NOT = qw(DBIx::DBO DBIx::DBO::Table DBIx::DBO::Query DBIx::DBO::Row);
 our $placeholder = PLACEHOLDER;
 $placeholder = qr/\Q$placeholder/;
 
@@ -434,7 +434,7 @@ sub _set_dbd_inheritance {
             }
             @{$class.'::DBD::'.$dbd.'::ISA'} = ($class, @isa);
         }
-        { no warnings 'once'; push @{$class.'::CARP_NOT'}, $class.'::DBD::'.$dbd }
+        push @CARP_NOT, $class.'::DBD::'.$dbd;
         mro::set_mro($class.'::DBD::'.$dbd, 'c3');
         Class::C3::initialize() if $] < 5.009_005;
         $inheritance{$class}{$dbd} = $class.'::DBD::'.$dbd;

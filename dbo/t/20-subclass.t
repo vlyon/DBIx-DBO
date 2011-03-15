@@ -22,7 +22,6 @@ sub SubClass::Common::_row_class   { 'SubClass::Row' }
 @SubClass::Table::ISA = qw(DBIx::DBO::Table SubClass::Common);
 @SubClass::Query::ISA = qw(DBIx::DBO::Query SubClass::Common);
 @SubClass::Row::ISA = qw(DBIx::DBO::Row SubClass::Common);
-{ no warnings 'once'; @SubClass::Common::CARP_NOT = qw(SubClass SubClass::Table SubClass::Query) }
 
 $dbo = SubClass->connect('DBI:Sponge:') or die $DBI::errstr;
 isa_ok $dbo, 'SubClass::DBD::Sponge', '$dbo';
