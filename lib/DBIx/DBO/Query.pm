@@ -232,7 +232,7 @@ sub join_table {
     if (UNIVERSAL::isa($tbl, 'DBIx::DBO::Table')) {
         croak 'This table is already in this query' if $me->_table_idx($tbl);
     } else {
-        $tbl = $me->{DBO}->table($tbl);
+        $tbl = $me->_table_class->new($me->{DBO}, $tbl);
     }
     if (defined $type) {
         $type =~ s/^\s*/ /;

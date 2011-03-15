@@ -58,7 +58,7 @@ sub _init {
 
     my $me = \{ DBO => shift, Parent => shift, array => undef, hash => {} };
     croak 'Invalid Parent Object' unless defined $$me->{Parent};
-    $$me->{Parent} = $$me->{DBO}->table($$me->{Parent}) unless ref $$me->{Parent};
+    $$me->{Parent} = $$me->_table_class->new($$me->{DBO}, $$me->{Parent}) unless ref $$me->{Parent};
     bless $me, $class;
 
     $$me->{build_data}{LimitOffset} = [1];
