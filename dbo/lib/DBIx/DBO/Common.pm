@@ -418,19 +418,29 @@ sub _set_config {
 }
 
 my %inheritance;
+for my $class (qw(DBIx::DBO DBIx::DBO::Table DBIx::DBO::Query DBIx::DBO::Row DBIx::DBO::Common)) {
+    mro::set_mro($class, 'c3');
+    $inheritance{$class} = {};
+}
 sub _set_dbd_inheritance {
     my $class = shift;
     my $dbd = shift;
     $class =~ s/::DBD::\w+$//;
 
+    my $need_c3_initialize;
+    unless (exists $inheritance{$class}) {
+        mro::set_mro($class, 'c3');
+        $need_c3_initialize = 1 if $] < 5.009_005;
+    }
     unless (exists $inheritance{$class}{$dbd}) {
         no strict 'refs';
         my $dbd_exists = exists ${$class.'::'}{'DBD::'} && exists ${$class.'::DBD::'}{$dbd.'::'};
         unless ($dbd_exists and @{$class.'::DBD::'.$dbd.'::ISA'}) {
             my @isa = map $_->_set_dbd_inheritance($dbd), grep $_->isa(__PACKAGE__), @{$class.'::ISA'};
-            unless ($dbd_exists or @isa or not wantarray) {
+            unless ($dbd_exists or @isa) {
                 $inheritance{$class}{$dbd} = undef;
-                return;
+                Class::C3::initialize() if $need_c3_initialize;
+                return wantarray ? () : $class;
             }
             @{$class.'::DBD::'.$dbd.'::ISA'} = ($class, @isa);
         }
