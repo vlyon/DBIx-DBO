@@ -272,18 +272,17 @@ sub _set_dbd_inheritance {
     my $class = shift;
     my $dbd = shift;
 
-    mro::set_mro($class, 'c3');
-    Class::C3::initialize() if $] < 5.009_005;
+    my $dbd_class = $class->SUPER::_set_dbd_inheritance($dbd);
 
-    # Don't do Class::C3::initialize until later
+    # Delay Class::C3::initialize until later
     local *Class::C3::initialize;
     *Class::C3::initialize = sub { $need_c3_initialize = 1 };
 
-    for my $obj_class (map $class->$_, qw(_table_class _query_class _row_class)) {
+    for my $obj_class (map $dbd_class->$_, qw(_table_class _query_class _row_class)) {
         $obj_class->_set_dbd_inheritance($dbd);
     }
 
-    $class->SUPER::_set_dbd_inheritance($dbd);
+    return $dbd_class;
 }
 
 =head3 C<table>

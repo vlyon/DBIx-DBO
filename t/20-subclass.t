@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 # Create the DBO (2 tests)
-use Test::DBO Sponge => 'Sponge', tests => 21;
+use Test::DBO Sponge => 'Sponge', tests => 16;
 
 # DBO-only Subclass
 @Only::DBO::ISA = qw(DBIx::DBO);
@@ -22,9 +22,15 @@ sub SubClass::Common::_row_class   { 'SubClass::Row' }
 @SubClass::Table::ISA = qw(DBIx::DBO::Table SubClass::Common);
 @SubClass::Query::ISA = qw(DBIx::DBO::Query SubClass::Common);
 @SubClass::Row::ISA = qw(DBIx::DBO::Row SubClass::Common);
+BEGIN { # Fake existence of package
+    package # Hide from PAUSE
+    SubClass::Common::DBD::Sponge;
+}
 
 $dbo = SubClass->connect('DBI:Sponge:') or die $DBI::errstr;
 isa_ok $dbo, 'SubClass::DBD::Sponge', '$dbo';
+
+is _table_class SubClass, 'SubClass::Table', 'SubClass mro is C3';
 
 isa_ok my $t = $dbo->table($Test::DBO::test_tbl), 'SubClass::Table::DBD::Sponge', '$t';
 isa_ok my $q = $dbo->query($t), 'SubClass::Query::DBD::Sponge', '$q';
@@ -32,21 +38,15 @@ isa_ok my $r = $q->row, 'SubClass::Row::DBD::Sponge', '$r';
 
 # Empty Table Subclass
 @MyTable::ISA = qw(DBIx::DBO::Table);
-isa_ok $t = MyTable->new($dbo, $t), 'MyTable::DBD::Sponge', '$t';
-isa_ok $t, 'MyTable', '$t';
-isa_ok $t, 'DBIx::DBO::Table::DBD::Sponge', '$t';
+isa_ok $t = MyTable->new($dbo, $t), 'MyTable', '$t';
 
 # Empty Query Subclass
 @MyQuery::ISA = qw(DBIx::DBO::Query);
-isa_ok $q = MyQuery->new($dbo, $t), 'MyQuery::DBD::Sponge', '$q';
-isa_ok $q, 'MyQuery', '$q';
-isa_ok $q, 'DBIx::DBO::Query::DBD::Sponge', '$q';
+isa_ok $q = MyQuery->new($dbo, $t), 'MyQuery', '$q';
 
 # Empty Row Subclass
 @MyRow::ISA = qw(DBIx::DBO::Row);
-isa_ok $r = MyRow->new($dbo, $t), 'MyRow::DBD::Sponge', '$r';
-isa_ok $r, 'MyRow', '$r';
-isa_ok $r, 'DBIx::DBO::Row::DBD::Sponge', '$r';
+isa_ok $r = MyRow->new($dbo, $t), 'MyRow', '$r';
 
 # Create a Query and Row class for a table
 {

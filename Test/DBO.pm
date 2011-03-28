@@ -644,7 +644,7 @@ sub _get_table_info {
     my $me = shift;
     my ($schema, $table) = @_;
     # Fake table info
-    return $me->{TableInfo}{''}{$table} = $fake_table_info;
+    return $me->{TableInfo}{''}{$table} ||= $fake_table_info;
 }
 
 1;
