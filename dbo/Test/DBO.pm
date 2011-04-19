@@ -74,15 +74,22 @@ sub import {
     grep $_ eq $dbd, DBI->available_drivers
         or plan skip_all => "No $dbd driver available!";
 
+    # Catch install_driver errors
+    eval { DBI->install_driver($dbd) };
+    if ($@) {
+        die $@ if $@ !~ /\binstall_driver\b/;
+        plan skip_all => $@;
+    }
+
     # Skip tests with missing module requirements
     unless (eval { DBIx::DBO->_require_dbd_class($dbd) }) {
-        if ($@ =~ /^Can't locate ([\w\/]+)\.pm in \@INC /) {
+        if ($@ =~ /^Can't locate ([\w\/]+)\.pm in \@INC /m) {
             # Module is not installed
             ($_ = $1) =~ s'/'::'g;
-        } elsif ($@ =~ /^([\w:]+ version [\d\.]+) required/) {
+        } elsif ($@ =~ /^([\w:]+ version [\d\.]+) required/m) {
             # Module is not correct version
             ($_ = $1);
-        } elsif ($@ =~ /^\Q$dbd_name\E is not yet supported/) {
+        } elsif ($@ =~ /^\Q$dbd_name\E is not yet supported/m) {
             # DBM is not yet supported
             plan skip_all => "Can't load $dbd driver: $dbd_name is not yet supported";
         } else {
@@ -140,13 +147,7 @@ sub sql_err {
 sub connect_dbo {
     my ($dsn, $user, $pass) = @_;
     defined $dsn or $dsn = '';
-    # Catch install_driver errors
-    my $dbh = eval { DBIx::DBO->connect("DBI:$dbd:$dsn", $user, $pass, {RaiseError => 0}) };
-    if ($@) {
-        die $@ if $@ !~ /\binstall_driver\b/;
-        plan skip_all => $@;
-    }
-    return $dbh;
+    DBIx::DBO->connect("DBI:$dbd:$dsn", $user, $pass, {RaiseError => 0});
 }
 
 sub try_to_connect {
