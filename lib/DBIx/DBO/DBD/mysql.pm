@@ -3,6 +3,7 @@ use warnings;
 
 package # hide from PAUSE
     DBIx::DBO::DBD::mysql;
+use Carp qw(croak);
 
 sub _get_table_schema {
     my $me = shift;
@@ -27,10 +28,10 @@ sub _set_table_key_info {
     }
 }
 
-sub _unquote_schema_table {
+sub _unquote_table {
     my $me = shift;
-    return if $_[0] !~ /^(?:`(.+)`|"(.+)"|(.+))\.(?:`(.+)`|"(.+)"|(.+))$/;
-    return ($1 || $2, $3 || $4);
+    $_[0] =~ /^(?:(`|"|)(.+)\1\.|)(`|"|)(.+)\3$/ or croak "Invalid table: \"$_[0]\"";
+    return ($4, $2);
 }
 
 sub config {

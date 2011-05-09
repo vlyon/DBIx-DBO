@@ -67,6 +67,8 @@ sub table_info {
     }
     if (ref $table eq 'ARRAY') {
         ($schema, $table) = @$table;
+    } else {
+        ($table, $schema) = $me->_unquote_table($table);
     }
     $schema = $me->_get_table_schema($schema, $table) unless defined $schema and length $schema;
 
