@@ -23,7 +23,7 @@ my %build = (
     meta_merge => {
         resources => {
             bugtracker => 'http://rt.cpan.org/Public/Dist/Display.html?Name=DBIx-DBO',
-            repository => 'http://vlyon.svn.beanstalkapp.com/src/dbo',
+            repository => 'https://vlyon.svn.beanstalkapp.com/src/dbo',
         },
     },
 );
