@@ -221,6 +221,11 @@ sub basic_methods {
 
     pass 'Method DBIx::DBO->do';
 
+    ok my $table_info = $dbo->table_info([$test_sch, $test_tbl]), 'Method DBIx::DBO->table_info';
+    is $table_info, $dbo->table_info($quoted_table), 'Method DBIx::DBO->table_info (quoted)';
+    is $table_info, $dbo->table_info(defined $test_sch ? "$test_sch.$test_tbl" : $test_tbl),
+        'Method DBIx::DBO->table_info (unquoted)';
+
     # Insert data
     $dbo->do("INSERT INTO $quoted_table VALUES (1, 'John Doe')") or diag sql_err($dbo);
     $dbo->do("INSERT INTO $quoted_table VALUES (?, ?)", undef, 2, 'Jane Smith') or diag sql_err($dbo);
