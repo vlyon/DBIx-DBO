@@ -318,8 +318,14 @@ sub row_methods {
     my $dbo = shift;
     my $t = shift;
 
-    my $r = $dbo->row($t);
-    isa_ok $r, 'DBIx::DBO::Row', '$r';
+    my $r = DBIx::DBO::Row->new($dbo, $t->_quoted_name);
+    isa_ok $r, 'DBIx::DBO::Row', '$r (using quoted table name)';
+
+    $r = $dbo->row([ @$t{qw(Schema  Name)} ]);
+    isa_ok $r, 'DBIx::DBO::Row', '$r (using table name array)';
+
+    $r = $dbo->row($t);
+    isa_ok $r, 'DBIx::DBO::Row', '$r (using Table object)';
 
     is $$r->{array}, undef, 'Row is empty';
 
