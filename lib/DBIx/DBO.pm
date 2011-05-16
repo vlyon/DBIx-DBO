@@ -76,11 +76,11 @@ DBIx::DBO - An OO interface to SQL queries and results.  Easily constructs SQL q
 
 This module provides a convenient and efficient way to access a database.  It can construct queries for you and returns the results in easy to use methods.
 
-Once you've created a C<DBIx::DBO> object using one or both of C<connect> or C<connect_readonly>, you can begin creating L<DBIx::DBO::Query|DBIx::DBO::Query> objects.  These are the "workhorse" objects, they encapsulate an entire query with JOINs, WHERE clauses, etc.  You need not have to know about what created the C<Query> to be able to use or modify it.  This makes it valuable in environments like mod_perl or large projects that prefer an object oriented approach to data.
+Once you've created a C<DBIx::DBO> object using one or both of C<connect> or C<connect_readonly>, you can begin creating L<Query|DBIx::DBO::Query> objects.  These are the "workhorse" objects, they encapsulate an entire query with JOINs, WHERE clauses, etc.  You need not have to know about what created the C<Query> to be able to use or modify it.  This makes it valuable in environments like mod_perl or large projects that prefer an object oriented approach to data.
 
 The query is only automatically executed when the data is requested.  This is to make it possible to minimise lookups that may not be needed or to delay them as late as possible.
 
-The L<DBIx::DBO::Row|DBIx::DBO::Row> object returned can be treated as both an arrayref or a hashref.  The data is aliased for efficient use of memory.  C<Row> objects can be updated or deleted, even when created by JOINs (If the DB supports it).
+The L<Row|DBIx::DBO::Row> object returned can be treated as both an arrayref or a hashref.  The data is aliased for efficient use of memory.  C<Row> objects can be updated or deleted, even when created by JOINs (If the DB supports it).
 
 =head1 METHODS
 
@@ -291,8 +291,8 @@ sub _set_dbd_inheritance {
   $dbo->table([$schema, $table]);
   $dbo->table($table_object);
 
-Create and return a new L<DBIx::DBO::Table|DBIx::DBO::Table> object.
-Tables can be specified by their name or an arrayref of schema and table name or another L<DBIx::DBO::Table|DBIx::DBO::Table> object.
+Create and return a new L<Table|DBIx::DBO::Table> object.
+Tables can be specified by their name or an arrayref of schema and table name or another L<Table|DBIx::DBO::Table> object.
 
 =cut
 
@@ -306,9 +306,9 @@ sub table {
   $dbo->query([$schema, $table], ...);
   $dbo->query($table_object, ...);
 
-Create a new L<DBIx::DBO::Query|DBIx::DBO::Query> object from the tables specified.
+Create a new L<Query|DBIx::DBO::Query> object from the tables specified.
 In scalar context, just the C<Query> object will be returned.
-In list context, the C<Query> object and L<DBIx::DBO::Table|DBIx::DBO::Table> objects will be returned for each table specified.
+In list context, the C<Query> object and L<Table|DBIx::DBO::Table> objects will be returned for each table specified.
 
   my ($query, $table1, $table2) = $dbo->query(['my_schema', 'my_table'], 'my_other_table');
 
@@ -323,7 +323,7 @@ sub query {
   $dbo->row($table_object);
   $dbo->row($query_object);
 
-Create and return a new L<DBIx::DBO::Row|DBIx::DBO::Row> object.
+Create and return a new L<Row|DBIx::DBO::Row> object.
 
 =cut
 

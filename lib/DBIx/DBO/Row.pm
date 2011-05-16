@@ -100,7 +100,7 @@ sub _copy_build_data {
 
 =head3 C<tables>
 
-Return a list of L<DBIx::DBO::Table|DBIx::DBO::Table> objects for this row.
+Return a list of L<Table|DBIx::DBO::Table> objects for this row.
 
 =cut
 
