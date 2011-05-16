@@ -3,7 +3,7 @@ package DBIx::DBO::Row;
 use strict;
 use warnings;
 use DBIx::DBO::Common;
-use Scalar::Util 'weaken';
+use Scalar::Util qw(blessed weaken);
 use Carp 'croak';
 our @ISA = qw(DBIx::DBO::Common);
 
@@ -35,10 +35,12 @@ DBIx::DBO::Row - An OO interface to SQL queries and results.  Encapsulates a fet
 
 =head3 C<new>
 
-  DBIx::DBO::Row->new($dbo, $table_object);
+  DBIx::DBO::Row->new($dbo, $table);
   DBIx::DBO::Row->new($dbo, $query_object);
 
 Create and return a new C<Row> object.
+The object returned represents rows in the given table/query.
+Can take the same arguments as L<DBIx::DBO::Table/new> or a L<Query|DBIx::DBO::Query> object can be used.
 
 =cut
 
@@ -58,8 +60,8 @@ sub _init {
 
     my $me = \{ DBO => shift, Parent => shift, array => undef, hash => {} };
     croak 'Invalid Parent Object' unless defined $$me->{Parent};
-    $$me->{Parent} = $$me->_table_class->new($$me->{DBO}, $$me->{Parent}) unless ref $$me->{Parent};
     bless $me, $class;
+    $$me->{Parent} = $me->_table_class->new($$me->{DBO}, $$me->{Parent}) unless blessed $$me->{Parent};
 
     $$me->{build_data}{LimitOffset} = [1];
     if ($$me->{Parent}->isa('DBIx::DBO::Query')) {
