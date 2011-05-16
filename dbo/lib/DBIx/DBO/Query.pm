@@ -58,7 +58,7 @@ A C<Query> object represents rows from a database (from one or more tables). Thi
 
 Create a new C<Query> object from the tables specified.
 In scalar context, just the C<Query> object will be returned.
-In list context, the C<Query> object and L<DBIx::DBO::Table|DBIx::DBO::Table> objects will be returned for each table specified.
+In list context, the C<Query> object and L<Table|DBIx::DBO::Table> objects will be returned for each table specified.
 
 =cut
 
@@ -107,7 +107,7 @@ sub reset {
 
 =head3 C<tables>
 
-Return a list of L<DBIx::DBO::Table|DBIx::DBO::Table> objects for this query.
+Return a list of L<Table|DBIx::DBO::Table> objects for this query.
 
 =cut
 
@@ -215,7 +215,7 @@ sub distinct {
   $query->join_table([$schema, $table], $join_type);
   $query->join_table($table_object, $join_type);
 
-Join a table onto the query, creating a L<DBIx::DBO::Table|DBIx::DBO::Table> object if needed.
+Join a table onto the query, creating a L<Table|DBIx::DBO::Table> object if needed.
 This will perform a comma (", ") join unless $join_type is specified.
 
 Valid join types are any accepted by the DB.  Eg: C<'JOIN'>, C<'LEFT'>, C<'RIGHT'>, C<undef> (for comma join), C<'INNER'>, C<'OUTER'>, ...
@@ -377,7 +377,7 @@ C<ORDER> => To order by a column (Used only in C<group_by> and C<order_by>).
 
 =back
 
-Multiple C<where> expressions are combined I<cleverly> using the preferred aggregator C<'AND'> (unless L<open_bracket|/open_bracket__close_bracket> was used to change this).  So that when you add where expressions to the query, they will be C<AND>ed together.  However some expressions that refer to the same column will automatically be C<OR>ed instead where this makes sense, currently: C<'='>, C<'IS NULL'>, C<E<lt>=E<gt>>, C<IN> and C<'BETWEEN'>.  Similarly, when the preferred aggregator is C<'OR'> the following operators will be C<AND>ed together: C<'!='>, C<'IS NOT NULL'>, C<E<lt>E<gt>>, C<NOT IN> and C<'NOT BETWEEN'>.
+Multiple C<where> expressions are combined I<cleverly> using the preferred aggregator C<'AND'> (unless L<open_bracket|/open_bracket__close_bracket> was used to change this).  So that when you add where expressions to the query, they will be C<AND>ed together.  However some expressions that refer to the same column will automatically be C<OR>ed instead where this makes sense, currently: C<'='>, C<'IS NULL'>, C<'E<lt>=E<gt>'>, C<'IN'> and C<'BETWEEN'>.  Similarly, when the preferred aggregator is C<'OR'> the following operators will be C<AND>ed together: C<'!='>, C<'IS NOT NULL'>, C<'E<lt>E<gt>'>, C<'NOT IN'> and C<'NOT BETWEEN'>.
 
   $query->where('id', '=', 5);
   $query->where('name', '=', 'Bob');
@@ -771,7 +771,7 @@ sub col_arrayref {
 
 Fetch the next row from the query.  This will run/rerun the query if needed.
 
-Returns a L<DBIx::DBO::Row|DBIx::DBO::Row> object or undefined if there are no more rows.
+Returns a L<Row|DBIx::DBO::Row> object or undefined if there are no more rows.
 
 =cut
 
@@ -815,7 +815,7 @@ sub fetch {
 
   my $row = $query->row;
 
-Returns the L<DBIx::DBO::Row|DBIx::DBO::Row> object for the current row from the query or an empty L<DBIx::DBO::Row|DBIx::DBO::Row> object if there is no current row.
+Returns the L<Row|DBIx::DBO::Row> object for the current row from the query or an empty L<Row|DBIx::DBO::Row> object if there is no current row.
 
 =cut
 
