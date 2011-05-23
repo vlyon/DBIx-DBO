@@ -780,20 +780,17 @@ sub fetch {
     # Prepare and/or execute the query if needed
     $me->sth and ($me->{sth}{Active} or exists $me->{store} or $me->run)
         or croak $me->rdbh->errstr;
-    # Detach the old record if there is still another reference to it
-    my $row;
+    # Detach the old row if there is still another reference to it
     if (defined $me->{Row} and SvREFCNT(${$me->{Row}}) > 1) {
         $me->{Row}->_detach;
-        $row = $me->row;
-    } else {
-        $row = $me->row;
     }
 
+    my $row = $me->row;
     if ($me->{sth}{Active}) {
         # Fetch and store the data then return the Row on success and undef on failure or no more rows
         if ($$row->{array} = $me->{sth}->fetch) {
             $$row->{hash} = $me->{hash};
-            return $me->{Row};
+            return $row;
         }
     } else {
         if ($me->{store}{idx} < @{$me->{store}{data}}) {
@@ -802,7 +799,7 @@ sub fetch {
                 _hv_store(%{$me->{hash}}, $key, $$row->{array}->[$idx]);
             }
             $$row->{hash} = $me->{hash};
-            return $me->{Row};
+            return $row;
         }
         undef $$row->{array};
         $me->{store}{idx} = 0;
