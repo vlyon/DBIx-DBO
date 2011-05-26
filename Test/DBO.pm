@@ -114,7 +114,8 @@ sub import {
         }
     }
 
-    DBIx::DBO->config(StoreRows => int rand 2);
+    # Query tests must produce the same result regardless of caching
+    DBIx::DBO->config(CacheQuery => int rand 2);
 
     if (exists $opt{try_connect}) {
         try_to_connect($opt{try_connect});
@@ -168,7 +169,7 @@ sub connect_ok {
 sub basic_methods {
     my $dbo = shift;
 
-    note 'Testing with: StoreRows => '.DBIx::DBO->config('StoreRows');
+    note 'Testing with: CacheQuery => '.DBIx::DBO->config('CacheQuery');
 
     # Create a DBO from DBI handles
     isa_ok(DBIx::DBO->new($dbo->{dbh}, $dbo->{rdbh}), 'DBIx::DBO', 'Method DBIx::DBO->new, $dbo');

@@ -841,7 +841,7 @@ sub run {
 
     my $rv = $me->_execute or return undef;
     $me->_bind_cols_to_hash;
-    if ($me->config('StoreRows')) {
+    if ($me->config('CacheQuery')) {
         $me->{store}{data} = $me->{sth}->fetchall_arrayref;
         $me->{store}{idx} = 0;
     }
@@ -859,7 +859,7 @@ sub _bind_cols_to_hash {
     my $me = shift;
     unless ($me->{hash}) {
         # Bind only to the first column of the same name
-        if ($me->config('StoreRows')) {
+        if ($me->config('CacheQuery')) {
             $me->{hash} = {};
             my $i = 0;
             for (@{$me->{sth}{NAME}}) {
@@ -1001,7 +1001,7 @@ sub sth {
   $query->finish;
 
 Calls L<DBI-E<gt>finish|DBI/"finish"> on the statement handle, if it's active.
-Restarts stored queries from the first row (if created using the C<StoreRows> config).
+Restarts stored queries from the first row (if created using the C<CacheQuery> config).
 
 =cut
 
