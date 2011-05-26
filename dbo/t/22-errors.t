@@ -13,7 +13,7 @@ use Test::DBO Sponge => 'Sponge', tests => 8;
         DebugSQL => 0,
         QuoteIdentifier => 1,
         RowClass => undef,
-        StoreRows => 0,
+        CacheQuery => 0,
         UseHandle => 0,
         xyz => 123,
     );

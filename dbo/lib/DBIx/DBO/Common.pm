@@ -15,7 +15,7 @@ our %Config = (
     DebugSQL => 0,
     QuoteIdentifier => 1,
     RowClass => undef,
-    StoreRows => 0,
+    CacheQuery => 0,
 );
 our @CARP_NOT = qw(DBIx::DBO DBIx::DBO::Table DBIx::DBO::Query DBIx::DBO::Row);
 our $placeholder = PLACEHOLDER;

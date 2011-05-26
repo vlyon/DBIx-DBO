@@ -541,7 +541,7 @@ Get or set the global or C<DBIx::DBO> config settings.  When setting an option, 
 
 Boolean setting to store the connection details for re-use.
 Before every operation the connection will be tested via ping() and reconnected automatically if needed.
-It has no effect after the connection has been made.
+Changing this has no effect after the connection has been made.
 Defaults to C<false>.
 
 =item C<DebugSQL>
@@ -553,9 +553,9 @@ Defaults to C<0> (silent).
 
 Boolean setting to control quoting of SQL identifiers (schema, table and column names).
 
-=item C<StoreRows>
+=item C<CacheQuery>
 
-Boolean setting to cause C<Query> objects to store their entire result for re-use.
+Boolean setting to cause C<Query> objects to cache their entire result for re-use.
 The query will only be executed automatically once.
 To rerun the query, either explicitly call L<run|DBIx::DBO::Query/"run"> or alter the query.
 Defaults to C<false>.
