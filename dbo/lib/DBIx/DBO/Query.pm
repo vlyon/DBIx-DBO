@@ -778,7 +778,7 @@ Returns a L<Row|DBIx::DBO::Row> object or undefined if there are no more rows.
 sub fetch {
     my $me = shift;
     # Prepare and/or execute the query if needed
-    $me->sth and ($me->{sth}{Active} or exists $me->{store} or $me->run)
+    $me->sth and ($me->{sth}{Active} or exists $me->{cache} or $me->run)
         or croak $me->rdbh->errstr;
     # Detach the old row if there is still another reference to it
     if (defined $me->{Row} and SvREFCNT(${$me->{Row}}) > 1) {
@@ -793,16 +793,16 @@ sub fetch {
             return $row;
         }
     } else {
-        if ($me->{store}{idx} < @{$me->{store}{data}}) {
-            $$row->{array} = $me->{store}{data}[$me->{store}{idx}++];
-            while (my ($key, $idx) = each %{$me->{store}{hash_idx}}) {
+        if ($me->{cache}{idx} < @{$me->{cache}{data}}) {
+            $$row->{array} = $me->{cache}{data}[$me->{cache}{idx}++];
+            while (my ($key, $idx) = each %{$me->{cache}{hash_idx}}) {
                 _hv_store(%{$me->{hash}}, $key, $$row->{array}->[$idx]);
             }
             $$row->{hash} = $me->{hash};
             return $row;
         }
         undef $$row->{array};
-        $me->{store}{idx} = 0;
+        $me->{cache}{idx} = 0;
     }
     $$row->{hash} = {};
     return;
@@ -835,15 +835,17 @@ sub run {
     my $me = shift;
     $me->sql; # Build the SQL and detach the Row if needed
     if (defined $me->{Row}) {
-        undef ${$me->{Row}}->{array};
-        ${$me->{Row}}->{hash} = {};
+        undef ${$me->{Row}}{array};
+        undef %{$me->{Row}};
     }
 
     my $rv = $me->_execute or return undef;
     $me->_bind_cols_to_hash;
     if ($me->config('CacheQuery')) {
-        $me->{store}{data} = $me->{sth}->fetchall_arrayref;
-        $me->{store}{idx} = 0;
+        $me->{cache}{data} = $me->{sth}->fetchall_arrayref;
+        $me->{cache}{idx} = 0;
+    } else {
+        delete $me->{cache};
     }
     return $rv;
 }
@@ -863,14 +865,14 @@ sub _bind_cols_to_hash {
             $me->{hash} = {};
             my $i = 0;
             for (@{$me->{sth}{NAME}}) {
-                $me->{store}{hash_idx}{$_} = $i unless exists $me->{store}{hash_idx}{$_};
+                $me->{cache}{hash_idx}{$_} = $i unless exists $me->{cache}{hash_idx}{$_};
                 $i++;
             }
         } else {
-            my $i = 1;
+            my $i;
             for (@{$me->{sth}{NAME}}) {
-                $me->{sth}->bind_col($i, \$me->{hash}{$_}) unless exists $me->{hash}{$_};
                 $i++;
+                $me->{sth}->bind_col($i, \$me->{hash}{$_}) unless exists $me->{hash}{$_};
             }
         }
     }
@@ -954,7 +956,7 @@ Returns the SQL query statement string.
 
 sub sql {
     my $me = shift;
-    $me->{sql} ||= $me->_build_sql;
+    $me->{sql} || $me->_build_sql;
 }
 
 sub _build_sql {
@@ -963,7 +965,7 @@ sub _build_sql {
     undef $me->{hash};
     undef $me->{Row_Count};
     undef $me->{Found_Rows};
-    delete $me->{store};
+    delete $me->{cache};
     if (defined $me->{Row}) {
         if (SvREFCNT(${$me->{Row}}) > 1) {
             $me->{Row}->_detach;
@@ -1011,13 +1013,11 @@ sub finish {
         if (SvREFCNT(${$me->{Row}}) > 1) {
             $me->{Row}->_detach;
         } else {
-#            undef ${$me->{Row}}->{array};
-#            ${$me->{Row}}->{hash} = {};
             undef ${$me->{Row}}{array};
             undef %{$me->{Row}};
         }
     }
-    $me->{store}{idx} = 0 if exists $me->{store};
+    $me->{cache}{idx} = 0 if exists $me->{cache};
     $me->{sth}->finish if $me->{sth} and $me->{sth}{Active};
 }
 

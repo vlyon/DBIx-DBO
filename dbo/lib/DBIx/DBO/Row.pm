@@ -84,20 +84,19 @@ sub _init {
     return wantarray ? ($me, $me->tables) : $me;
 }
 
-sub _copy {
-    my $me = shift;
-    my $val = shift;
-    return bless [$me, $val->[1]], 'DBIx::DBO::Column'
-        if UNIVERSAL::isa($val, 'DBIx::DBO::Column') and $val->[0] == $$me->{Parent};
-    ref $val eq 'ARRAY' ? [map $me->_copy($_), @$val] : ref $val eq 'HASH' ? {map $me->_copy($_), %$val} : $val;
-}
-
 sub _copy_build_data {
-    my $me = shift;
+    my $me = $_[0];
     # Store needed build_data
     for my $f (qw(Showing from From_Bind Quick_Where Where_Data Where_Bind group Group_Bind order Order_Bind)) {
         $$me->{build_data}{$f} = $me->_copy($$me->{Parent}{build_data}{$f}) if exists $$me->{Parent}{build_data}{$f};
     }
+}
+
+sub _copy {
+    my($me, $val) = @_;
+    return bless [$me, $val->[1]], 'DBIx::DBO::Column'
+        if UNIVERSAL::isa($val, 'DBIx::DBO::Column') and $val->[0] == $$me->{Parent};
+    ref $val eq 'ARRAY' ? [map $me->_copy($_), @$val] : ref $val eq 'HASH' ? {map $me->_copy($_), %$val} : $val;
 }
 
 =head3 C<tables>
@@ -107,12 +106,11 @@ Return a list of L<Table|DBIx::DBO::Table> objects for this row.
 =cut
 
 sub tables {
-    my $me = shift;
-    @{$$me->{Tables}};
+    @{${$_[0]}->{Tables}};
 }
 
 sub _table_idx {
-    my ($me, $tbl) = @_;
+    my($me, $tbl) = @_;
     for my $i (0 .. $#{$$me->{Tables}}) {
         return $i if $tbl == $$me->{Tables}[$i];
     }
@@ -120,7 +118,7 @@ sub _table_idx {
 }
 
 sub _table_alias {
-    my ($me, $tbl) = @_;
+    my($me, $tbl) = @_;
     return undef if $tbl == $me;
     my $i = $me->_table_idx($tbl);
     croak 'The table is not in this query' unless defined $i;
@@ -128,8 +126,7 @@ sub _table_alias {
 }
 
 sub _column_idx {
-    my $me = shift;
-    my $col = shift;
+    my($me, $col) = @_;
     my $idx = -1;
     for my $shown (@{$$me->{build_data}{Showing}} ? @{$$me->{build_data}{Showing}} : @{$$me->{Tables}}) {
         if (UNIVERSAL::isa($shown, 'DBIx::DBO::Table')) {
@@ -155,7 +152,7 @@ Returns a reference to a column for use with other methods.
 =cut
 
 sub column {
-    my ($me, $col, $_check_aliases) = @_;
+    my($me, $col, $_check_aliases) = @_;
     if ($_check_aliases) {
         for my $fld (@{$$me->{build_data}{Showing}}) {
             return $$me->{Column}{$col} ||= bless [$me, $col], 'DBIx::DBO::Column'
@@ -184,8 +181,7 @@ Values in the C<Row> can also be obtained by using the object as an array/hash r
 =cut
 
 sub value {
-    my $me = shift;
-    my $col = shift;
+    my($me, $col) = @_;
     croak 'The record is empty' unless $$me->{array};
     if (UNIVERSAL::isa($col, 'DBIx::DBO::Column')) {
         my $i = $me->_column_idx($col);
@@ -235,7 +231,7 @@ sub load {
 }
 
 sub _detach {
-    my $me = shift;
+    my $me = $_[0];
     if ($$me->{Parent}) {
         $$me->{array} = [ @$me ];
         $$me->{hash} = { %$me };
