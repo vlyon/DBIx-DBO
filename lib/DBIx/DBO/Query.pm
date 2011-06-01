@@ -778,7 +778,7 @@ Returns a L<Row|DBIx::DBO::Row> object or undefined if there are no more rows.
 sub fetch {
     my $me = shift;
     # Prepare and/or execute the query if needed
-    $me->sth and ($me->{sth}{Active} or exists $me->{cache} or $me->run)
+    $me->_sth and ($me->{sth}{Active} or exists $me->{cache} or $me->run)
         or croak $me->rdbh->errstr;
     # Detach the old row if there is still another reference to it
     if (defined $me->{Row} and SvREFCNT(${$me->{Row}}) > 1) {
@@ -853,7 +853,7 @@ sub run {
 sub _execute {
     my $me = shift;
     $me->_sql($me->sql, $me->_bind_params_select($me->{build_data}));
-    $me->sth or return;
+    $me->_sth or return;
     $me->{sth}->execute($me->_bind_params_select($me->{build_data}));
 }
 
@@ -891,9 +891,9 @@ sub rows {
     my $me = shift;
     $me->sql; # Ensure the Row_Count is cleared if needed
     unless (defined $me->{Row_Count}) {
-        $me->sth and ($me->{sth}{Executed} or $me->run)
+        $me->_sth and ($me->{sth}{Executed} or $me->run)
             or croak $me->rdbh->errstr;
-        $me->{Row_Count} = $me->sth->rows;
+        $me->{Row_Count} = $me->_sth->rows;
         $me->{Row_Count} = $me->count_rows if $me->{Row_Count} == -1;
     }
     $me->{Row_Count};
@@ -950,7 +950,7 @@ sub found_rows {
 
   my $sql = $query->sql;
 
-Returns the SQL query statement string.
+Returns the SQL statement string.
 
 =cut
 
@@ -982,16 +982,9 @@ sub _build_sql {
     $me->{sql} = $me->_build_sql_select($me->{build_data});
 }
 
-=head3 C<sth>
-
-  my $sth = $query->sth;
-
-Reutrns the C<DBI> statement handle from the query.
-This will run/rerun the query if needed.
-
-=cut
-
-sub sth {
+# Get the DBI statement handle for the query.
+# It may not have been executed yet.
+sub _sth {
     my $me = shift;
     # Ensure the sql is rebuilt if needed
     my $sql = $me->sql;
@@ -1003,7 +996,7 @@ sub sth {
   $query->finish;
 
 Calls L<DBI-E<gt>finish|DBI/"finish"> on the statement handle, if it's active.
-Restarts stored queries from the first row (if created using the C<CacheQuery> config).
+Restarts cached queries from the first row (if created using the C<CacheQuery> config).
 
 =cut
 

@@ -362,7 +362,7 @@ sub query_methods {
     pass 'Method DBIx::DBO::Query->order_by';
 
     # Get a valid sth
-    isa_ok $q->sth, 'DBI::st', '$q->sth';
+    isa_ok $q->_sth, 'DBI::st', '$q->_sth';
 
     # Get a Row object
     my $r = $q->row;
@@ -544,7 +544,7 @@ sub join_methods {
     }
 
     SKIP: {
-        $q->sth or diag sql_err($q) or fail 'LEFT JOIN' or skip 'No Left Join', 3;
+        $q->_sth or diag sql_err($q) or fail 'LEFT JOIN' or skip 'No Left Join', 3;
         $r = $q->fetch or fail 'LEFT JOIN' or skip 'No Left Join', 3;
 
         is_deeply \@$r, [ 4, 'James Bond', undef, undef ], 'LEFT JOIN';
