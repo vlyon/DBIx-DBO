@@ -379,7 +379,6 @@ sub query_methods {
     undef $r;
 
     # Fetch the first row
-Dump($q);
     $r = $q->fetch;
     ok $r->isa('DBIx::DBO::Row'), 'Method DBIx::DBO::Query->fetch';
     SKIP: {
