@@ -776,9 +776,9 @@ Returns a L<Row|DBIx::DBO::Row> object or undefined if there are no more rows.
 =cut
 
 sub fetch {
-    my $me = shift;
+    my $me = $_[0];
     # Prepare and/or execute the query if needed
-    $me->_sth and ($me->{sth}{Active} or exists $me->{cache} or $me->run)
+    $me->_sth and ($me->{Active} or $me->run)
         or croak $me->rdbh->errstr;
     # Detach the old row if there is still another reference to it
     if (defined $me->{Row} and SvREFCNT(${$me->{Row}}) > 1) {
@@ -786,13 +786,7 @@ sub fetch {
     }
 
     my $row = $me->row;
-    if ($me->{sth}{Active}) {
-        # Fetch and store the data then return the Row on success and undef on failure or no more rows
-        if ($$row->{array} = $me->{sth}->fetch) {
-            $$row->{hash} = $me->{hash};
-            return $row;
-        }
-    } else {
+    if (exists $me->{cache}) {
         if ($me->{cache}{idx} < @{$me->{cache}{data}}) {
             $$row->{array} = $me->{cache}{data}[$me->{cache}{idx}++];
             while (my ($key, $idx) = each %{$me->{cache}{hash_idx}}) {
@@ -803,6 +797,13 @@ sub fetch {
         }
         undef $$row->{array};
         $me->{cache}{idx} = 0;
+    } else {
+        # Fetch and store the data then return the Row on success and undef on failure or no more rows
+        if ($$row->{array} = $me->{sth}->fetch) {
+            $$row->{hash} = $me->{hash};
+            return $row;
+        }
+        $me->{Active} = 0;
     }
     $$row->{hash} = {};
     return;
@@ -840,6 +841,7 @@ sub run {
     }
 
     my $rv = $me->_execute or return undef;
+    $me->{Active} = 1;
     $me->_bind_cols_to_hash;
     if ($me->config('CacheQuery')) {
         $me->{cache}{data} = $me->{sth}->fetchall_arrayref;
@@ -966,6 +968,7 @@ sub _build_sql {
     undef $me->{Row_Count};
     undef $me->{Found_Rows};
     delete $me->{cache};
+    $me->{Active} = 0;
     if (defined $me->{Row}) {
         if (SvREFCNT(${$me->{Row}}) > 1) {
             $me->{Row}->_detach;
@@ -997,6 +1000,7 @@ sub _sth {
 
 Calls L<DBI-E<gt>finish|DBI/"finish"> on the statement handle, if it's active.
 Restarts cached queries from the first row (if created using the C<CacheQuery> config).
+This ensures that the next call to L</fetch> will return the first row from the query.
 
 =cut
 
@@ -1010,8 +1014,12 @@ sub finish {
             undef %{$me->{Row}};
         }
     }
-    $me->{cache}{idx} = 0 if exists $me->{cache};
-    $me->{sth}->finish if $me->{sth} and $me->{sth}{Active};
+    if (exists $me->{cache}) {
+        $me->{cache}{idx} = 0;
+    } else {
+        $me->{sth}->finish if $me->{sth} and $me->{sth}{Active};
+        $me->{Active} = 0;
+    }
 }
 
 =head2 Common Methods
