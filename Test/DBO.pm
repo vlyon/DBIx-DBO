@@ -115,7 +115,7 @@ sub import {
     }
 
     # Query tests must produce the same result regardless of caching
-    DBIx::DBO->config(CacheQuery => int rand 2);
+    DBIx::DBO->config(CacheQuery => $ENV{DBO_CACHE_QUERY} || int rand 2);
 
     if (exists $opt{try_connect}) {
         try_to_connect($opt{try_connect});
@@ -379,6 +379,7 @@ sub query_methods {
     undef $r;
 
     # Fetch the first row
+Dump($q);
     $r = $q->fetch;
     ok $r->isa('DBIx::DBO::Row'), 'Method DBIx::DBO::Query->fetch';
     SKIP: {
@@ -578,10 +579,8 @@ sub cleanup {
     ok !defined $dbo->{dbh} && !defined $dbo->{rdbh}, 'Method DBIx::DBO->disconnect';
 }
 
-my @_no_recursion;
 sub Dump {
-    my $val = shift;
-    my $var = shift;
+    my($val, $var) = @_;
     if (blessed $val and !defined $var) {
         if ($val->isa('DBIx::DBO')) {
             $var = 'dbo';
@@ -596,25 +595,24 @@ sub Dump {
     $var = 'dump' unless defined $var;
     require Data::Dumper;
     my $d = Data::Dumper->new([$val], [$var]);
-    my %seen;
     if (ref $val) {
-        @_no_recursion = ($val);
-        if (reftype $val eq 'ARRAY')   { _Find_Seen(\%seen, $_) for @$val }
-        elsif (reftype $val eq 'HASH') { _Find_Seen(\%seen, $_) for values %$val }
-        elsif (reftype $val eq 'REF')  { _Find_Seen(\%seen, $$val) }
+        my %seen;
+        my @_no_recursion = ($val);
+        if (reftype $val eq 'ARRAY')   { _Find_Seen(\%seen, \@_no_recursion, $_) for @$val }
+        elsif (reftype $val eq 'HASH') { _Find_Seen(\%seen, \@_no_recursion, $_) for values %$val }
+        elsif (reftype $val eq 'REF')  { _Find_Seen(\%seen, \@_no_recursion, $$val) }
         $d->Seen(\%seen);
     }
     print $d->Dump;
 }
 
 sub _Find_Seen {
-    my $seen = shift;
-    my $val = shift;
+    my($seen, $_no_recursion, $val) = @_;
     return unless ref $val;
-    for (@_no_recursion) {
+    for (@$_no_recursion) {
         return if $val == $_;
     }
-    push @_no_recursion, $val;
+    push @$_no_recursion, $val;
 
     if (blessed $val) {
         if ($val->isa('DBIx::DBO')) {
@@ -637,9 +635,9 @@ sub _Find_Seen {
             return;
         }
     }
-    if (reftype $val eq 'ARRAY')   { _Find_Seen($seen, $_) for @$val }
-    elsif (reftype $val eq 'HASH') { _Find_Seen($seen, $_) for values %$val }
-    elsif (reftype $val eq 'REF')  { _Find_Seen($seen, $$val) }
+    if (reftype $val eq 'ARRAY')   { _Find_Seen($seen, $_no_recursion, $_) for @$val }
+    elsif (reftype $val eq 'HASH') { _Find_Seen($seen, $_no_recursion, $_) for values %$val }
+    elsif (reftype $val eq 'REF')  { _Find_Seen($seen, $_no_recursion, $$val) }
 }
 
 # When testing via Sponge, use fake tables
