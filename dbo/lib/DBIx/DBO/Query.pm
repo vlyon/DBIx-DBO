@@ -788,10 +788,8 @@ sub fetch {
     my $row = $me->row;
     if (exists $me->{cache}) {
         if ($me->{cache}{idx} < @{$me->{cache}{data}}) {
-            $$row->{array} = $me->{cache}{data}[$me->{cache}{idx}++];
-            while (my ($key, $idx) = each %{$me->{cache}{hash_idx}}) {
-                _hv_store(%{$me->{hash}}, $key, $$row->{array}->[$idx]);
-            }
+            @{$me->{cache}{array}}[0..$#{$me->{cache}{array}}] = @{$me->{cache}{data}[$me->{cache}{idx}++]};
+            $$row->{array} = $me->{cache}{array};
             $$row->{hash} = $me->{hash};
             return $row;
         }
@@ -818,7 +816,7 @@ Returns the L<Row|DBIx::DBO::Row> object for the current row from the query or a
 =cut
 
 sub row {
-    my $me = shift;
+    my $me = $_[0];
     $me->sql; # Build the SQL and detach the Row if needed
     $me->{Row} ||= $me->_row_class->new($me->{DBO}, $me);
 }
@@ -864,10 +862,12 @@ sub _bind_cols_to_hash {
     unless ($me->{hash}) {
         # Bind only to the first column of the same name
         if ($me->config('CacheQuery')) {
-            $me->{hash} = {};
+            my @cols = @{$me->{sth}{NAME}};
+            $#{$me->{cache}{array}} = $#cols;
+            $me->{hash} = \my %hash;
             my $i = 0;
-            for (@{$me->{sth}{NAME}}) {
-                $me->{cache}{hash_idx}{$_} = $i unless exists $me->{cache}{hash_idx}{$_};
+            for (@cols) {
+                _hv_store(%hash, $_, $me->{cache}{array}[$i]) unless exists $hash{$_};
                 $i++;
             }
         } else {
