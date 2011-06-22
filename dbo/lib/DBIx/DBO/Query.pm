@@ -72,7 +72,7 @@ sub new {
 
 sub _init {
     my $class = shift;
-    my $me = { DBO => shift, sql => undef };
+    my $me = { DBO => shift, sql => undef, Columns => [] };
     croak 'No table specified in new Query' unless @_;
     bless $me, $class;
 
@@ -102,6 +102,7 @@ sub reset {
     $me->group_by;
     $me->order_by;
     $me->limit;
+    # FIXME: Should we be deleting this?
     delete $me->{Config};
 }
 
@@ -112,8 +113,7 @@ Return a list of L<Table|DBIx::DBO::Table> objects for this query.
 =cut
 
 sub tables {
-    my $me = shift;
-    @{$me->{Tables}};
+    @{$_[0]->{Tables}};
 }
 
 sub _table_idx {
@@ -131,6 +131,16 @@ sub _table_alias {
     croak 'The table is not in this query' unless defined $i;
     # Don't use aliases, when there's only 1 table
     @{$me->{Tables}} > 1 ? 't'.($i + 1) : ();
+}
+
+=head3 C<columns>
+
+Return a list of column names.
+
+=cut
+
+sub columns {
+    @{$_[0]->{Columns}};
 }
 
 =head3 C<column>
@@ -861,18 +871,18 @@ sub _bind_cols_to_hash {
     my $me = shift;
     unless ($me->{hash}) {
         # Bind only to the first column of the same name
+        @{$me->{Columns}} = @{$me->{sth}{NAME}};
         if ($me->config('CacheQuery')) {
-            my @cols = @{$me->{sth}{NAME}};
-            $#{$me->{cache}{array}} = $#cols;
+            @{$me->{cache}{array}} = (undef) x @{$me->{Columns}};
             $me->{hash} = \my %hash;
             my $i = 0;
-            for (@cols) {
+            for (@{$me->{Columns}}) {
                 _hv_store(%hash, $_, $me->{cache}{array}[$i]) unless exists $hash{$_};
                 $i++;
             }
         } else {
             my $i;
-            for (@{$me->{sth}{NAME}}) {
+            for (@{$me->{Columns}}) {
                 $i++;
                 $me->{sth}->bind_col($i, \$me->{hash}{$_}) unless exists $me->{hash}{$_};
             }
@@ -981,6 +991,7 @@ sub _build_sql {
             return $me->{sql};
         }
     }
+    undef @{$me->{Columns}};
 
     $me->{sql} = $me->_build_sql_select($me->{build_data});
 }

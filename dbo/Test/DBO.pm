@@ -246,6 +246,8 @@ sub basic_methods {
     $rv = $t->insert(id => 3, name => 'Uncle Arnie') or diag sql_err($t);
     ok $rv, 'Method DBIx::DBO::Table->insert';
 
+    is_deeply [$t->columns], [qw(id name)], 'Method DBIx::DBO::Table->columns';
+
     # Create a column object
     my $c = $t->column('id');
     isa_ok $c, 'DBIx::DBO::Column', '$c';
@@ -322,13 +324,14 @@ sub row_methods {
     my $r = DBIx::DBO::Row->new($dbo, $t->_quoted_name);
     isa_ok $r, 'DBIx::DBO::Row', '$r (using quoted table name)';
 
-    $r = $dbo->row([ @$t{qw(Schema  Name)} ]);
+    $r = $dbo->row([ @$t{qw(Schema Name)} ]);
     isa_ok $r, 'DBIx::DBO::Row', '$r (using table name array)';
 
     $r = $dbo->row($t);
     isa_ok $r, 'DBIx::DBO::Row', '$r (using Table object)';
 
     is $$r->{array}, undef, 'Row is empty';
+    is_deeply [$r->columns], [qw(id name)], 'Method DBIx::DBO::Row->columns';
 
     ok $r->load(id => 2, name => 'Jane Smith'), 'Method DBIx::DBO::Row->load' or diag sql_err($r);
     is_deeply $$r->{array}, [ 2, 'Jane Smith' ], 'Row loaded correctly';
@@ -387,6 +390,7 @@ sub query_methods {
     }
 
     # Access methods
+    is_deeply [$q->columns], [qw(id name)], 'Method DBIx::DBO::Query->columns';
     is $r->{name}, 'John Doe', 'Access row as a hashref';
     is $r->[0], 1, 'Access row as an arrayref';
 
@@ -457,6 +461,8 @@ sub advanced_query_methods {
     }
     is $q->fetch->{name}, 'JOHN DOE', 'Method DBIx::DBO::Query->show';
     is $q->row ** $t ** 'name', 'John Doe', 'Access specific column';
+    is_deeply [$q->row->columns], [qw(name id name)], 'Method DBIx::DBO::Row->columns (aliased)';
+    is_deeply [$q->columns], [qw(name id name)], 'Method DBIx::DBO::Query->columns (aliased)';
 
     # Show whole tables
     $q->show({ FUNC => "'who?'", AS => 'name' }, $t);
