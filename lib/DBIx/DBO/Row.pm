@@ -29,7 +29,7 @@ DBIx::DBO::Row - An OO interface to SQL queries and results.  Encapsulates a fet
   print $row ** 'email';  # Short for: $row->value('email')
   
   # Delete my boss
-  $row->load(id => $row ** boss_id)->delete or die "Can't kill the boss";
+  $row->load(id => $row ** 'boss_id')->delete or die "Can't kill the boss";
 
 =head1 METHODS
 
@@ -56,28 +56,29 @@ sub new {
 }
 
 sub _init {
-    my $class = shift;
+    my($class, $dbo, $parent) = @_;
+    croak 'Invalid Parent Object' unless defined $parent;
 
-    my $me = \{ DBO => shift, Parent => shift, array => undef, hash => {} };
-    croak 'Invalid Parent Object' unless defined $$me->{Parent};
-    bless $me, $class;
-    $$me->{Parent} = $me->_table_class->new($$me->{DBO}, $$me->{Parent}) unless blessed $$me->{Parent};
+    my $me = bless \{ DBO => $dbo, Parent => $parent, array => undef, hash => {} }, $class;
+    $parent = $me->_table_class->new($dbo, $parent) unless blessed $parent;
 
     $$me->{build_data}{LimitOffset} = [1];
-    if ($$me->{Parent}->isa('DBIx::DBO::Query')) {
-        $$me->{Tables} = [ @{$$me->{Parent}{Tables}} ];
+    if ($parent->isa('DBIx::DBO::Query')) {
+        $$me->{Tables} = [ @{$parent->{Tables}} ];
+        $$me->{Columns} = $parent->{Columns};
         $me->_copy_build_data;
         # We must weaken this to avoid a circular reference
         weaken $$me->{Parent};
-    } elsif ($$me->{Parent}->isa('DBIx::DBO::Table')) {
+    } elsif ($parent->isa('DBIx::DBO::Table')) {
         $$me->{build_data} = {
             show => '*',
             Showing => [],
-            from => $$me->{Parent}->_quoted_name,
+            from => $parent->_quoted_name,
             group => '',
             order => '',
         };
         $$me->{Tables} = [ delete $$me->{Parent} ];
+        $$me->{Columns} = $parent->{Columns};
     } else {
         croak 'Invalid Parent Object';
     }
@@ -125,6 +126,16 @@ sub _table_alias {
     @{$$me->{Tables}} > 1 ? 't'.($i + 1) : ();
 }
 
+=head3 C<columns>
+
+Return a list of column names.
+
+=cut
+
+sub columns {
+    @{${$_[0]}->{Columns}};
+}
+
 sub _column_idx {
     my($me, $col) = @_;
     my $idx = -1;
@@ -147,7 +158,8 @@ sub _column_idx {
   $query->column($column_name);
   $query->column($column_or_alias_name, 1);
 
-Returns a reference to a column for use with other methods.
+Returns a column reference from the name or alias.
+By default only column names are searched, set the second argument to true to check column aliases and names.
 
 =cut
 
@@ -215,15 +227,18 @@ sub load {
     my $sql = $me->_build_sql_select($$me->{build_data});
     $old_qw < 0 ? delete $$me->{build_data}{Quick_Where} : ($#{$$me->{build_data}{Quick_Where}} = $old_qw);
 
+    undef @{$$me->{Columns}};
     undef $$me->{array};
-    $$me->{hash} = {};
+    $$me->{hash} = \my %hash;
     $me->_sql($sql, $me->_bind_params_select($$me->{build_data}));
     my $sth = $me->rdbh->prepare($sql);
     return unless $sth and $sth->execute($me->_bind_params_select($$me->{build_data}));
-    my $i = 1;
-    for (@{$sth->{NAME}}) {
-        $sth->bind_col($i, \$$me->{hash}{$_}) unless exists $$me->{hash}{$_};
+
+    my $i;
+    my @array;
+    for (@{$$me->{Columns}} = @{$sth->{NAME}}) {
         $i++;
+        $sth->bind_col($i, \$hash{$_}) unless exists $hash{$_};
     }
     $$me->{array} = $sth->fetch or return;
     $sth->finish;
@@ -233,6 +248,7 @@ sub load {
 sub _detach {
     my $me = $_[0];
     if ($$me->{Parent}) {
+        $$me->{Columns} = [ @{$$me->{Columns}} ];
         $$me->{array} = [ @$me ];
         $$me->{hash} = { %$me };
         undef $$me->{Parent}{Row};

@@ -84,6 +84,16 @@ sub _quoted_name {
     defined $me->{_quoted_name} ? $me->{_quoted_name} : ($me->{_quoted_name} = $me->_qi(@$me{qw(Schema Name)}));
 }
 
+=head3 C<columns>
+
+Return a list of column names.
+
+=cut
+
+sub columns {
+    @{$_[0]->{Columns}};
+}
+
 =head3 C<column>
 
   $table->column($column_name);
