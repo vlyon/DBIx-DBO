@@ -115,7 +115,7 @@ sub import {
     }
 
     # Query tests must produce the same result regardless of caching
-    DBIx::DBO->config(CacheQuery => $ENV{DBO_CACHE_QUERY} || int rand 2);
+    DBIx::DBO->config(CacheQuery => defined $ENV{DBO_CACHE_QUERY} ? $ENV{DBO_CACHE_QUERY} : int rand 2);
 
     if (exists $opt{try_connect}) {
         try_to_connect($opt{try_connect});
