@@ -1,5 +1,11 @@
 Revision history for DBIx-DBO
 
+0.12	Jun 23, 2011
+	- Added the *->columns() methods.
+	- Lots of performance improvements.
+	- Renamed StoreRows to CacheQuery.
+	- Fixes to POD, table name unquoting and install_driver errors.
+
 0.11	Apr 12, 2011
 	- Improved/simplified inheritance and subclassing, and updated POD.
 	- Replaced the RowClass config option with the _row_class method.
