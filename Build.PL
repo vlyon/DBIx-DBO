@@ -40,4 +40,9 @@ if ($] < 5.009_005) {
     $build{requires}{'MRO::Compat'} = 0.09;
 }
 
+unless (exists &Scalar::Util::weaken) {
+    # The pure-perl Scalar::Util doesn't contain weaken(), Task::Weaken will try to fix it or give an error
+    $build{requires}{'Task::Weaken'} = 0;
+}
+
 Module::Build->new(%build)->create_build_script();
