@@ -22,7 +22,7 @@ if ($dbo->do("CREATE DATABASE $quoted_db CHARACTER SET utf8")) {
     $quoted_db = $dbo->_qi($Test::DBO::test_db);
 }
 
-plan tests => 83;
+plan tests => 84;
 
 # Create the DBO (3 tests)
 pass "Connect to MySQL $quoted_db database";
@@ -35,7 +35,7 @@ $Test::DBO::can{collate} = 'BINARY';
 $Test::DBO::can{multi_table_update} = 1;
 $Test::DBO::can{auto_increment_id} = 'INT NOT NULL AUTO_INCREMENT PRIMARY KEY';
 
-# Table methods: do, select* (21 tests)
+# Table methods: do, select* (22 tests)
 my $t = Test::DBO::basic_methods($dbo);
 
 # Advanced table methods: insert, update, delete (2 tests)
