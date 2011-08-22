@@ -216,9 +216,13 @@ sub insert {
     my @cols;
     my @vals;
     my @bind;
-    while (my ($col, $val) = splice @_, 0, 2) {
-        push @cols, $me->_build_col($me->_parse_col($col));
-        push @vals, $me->_build_val(\@bind, $me->_parse_val($val));
+    my %remove_duplicates;
+    while (@_) {
+        my @val = $me->_parse_val(pop);
+        my $col = $me->_build_col($me->_parse_col(pop));
+        next if $remove_duplicates{$col}++;
+        push @cols, $col;
+        push @vals, $me->_build_val(\@bind, @val);
     }
     my $sql = 'INSERT INTO '.$me->_quoted_name.' ('.join(', ', @cols).') VALUES ('.join(', ', @vals).')';
     $me->_sql($sql, @bind);

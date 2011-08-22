@@ -252,10 +252,6 @@ sub basic_methods {
     my $c = $t->column('id');
     isa_ok $c, 'DBIx::DBO::Column', '$c';
 
-    # Advanced insert using a column object
-    $rv = $t->insert($c => {FUNC => '4'}, name => \"'James Bond'") or diag sql_err($t);
-    ok $rv, 'Method DBIx::DBO::Table->insert (complex values)';
-
     # Fetch one value from the Table
     is $t->fetch_value($t ** 'name', id => 3), 'Uncle Arnie', 'Method DBIx::DBO::Table->fetch_value';
 
@@ -268,6 +264,11 @@ sub basic_methods {
 
     # Fetch a column arrayref from the Table
     is_deeply $t->fetch_column($t ** 'name', id => 3), ['Uncle Arnie'], 'Method DBIx::DBO::Table->fetch_column';
+
+    # Advanced insert using a column object
+    $rv = $t->insert($c => {FUNC => '4'}, name => 'NotUsed', name => \"'James Bond'") or diag sql_err($t);
+    ok $rv, 'Method DBIx::DBO::Table->insert (complex values)';
+    is $t->fetch_value('name', id => 4), 'James Bond', 'Method DBIx::DBO::Table->insert (remove duplicate cols)';
 
     # Delete via table object
     $rv = $t->delete(id => 3) or diag sql_err($t);
