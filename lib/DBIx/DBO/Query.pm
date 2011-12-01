@@ -719,8 +719,7 @@ You can specify a slice by including a 'Slice' or 'Columns' attribute in C<%attr
 =cut
 
 sub arrayref {
-    my $me = shift;
-    my $attr = shift;
+    my($me, $attr) = @_;
     $me->_sql($me->sql, $me->_bind_params_select($me->{build_data}));
     $me->rdbh->selectall_arrayref($me->{sql}, $attr, $me->_bind_params_select($me->{build_data}));
 }
@@ -736,9 +735,7 @@ C<$key_field> defines which column, or columns, are used as keys in the returned
 =cut
 
 sub hashref {
-    my $me = shift;
-    my $key = shift;
-    my $attr = shift;
+    my($me, $key, $attr) = @_;
     $me->_sql($me->sql, $me->_bind_params_select($me->{build_data}));
     $me->rdbh->selectall_hashref($me->{sql}, $key, $attr, $me->_bind_params_select($me->{build_data}));
 }
@@ -753,8 +750,7 @@ Run the query using L<DBI-E<gt>selectcol_arrayref|DBI/"selectcol_arrayref"> whic
 =cut
 
 sub col_arrayref {
-    my $me = shift;
-    my $attr = shift;
+    my($me, $attr) = @_;
     $me->_sql($me->sql, $me->_bind_params_select($me->{build_data}));
     my $sth = $me->rdbh->prepare($me->{sql}, $attr) or return;
     unless (defined $attr->{Columns}) {
