@@ -502,9 +502,10 @@ sub _add_where {
         if defined $opt{FORCE} and $opt{FORCE} ne 'AND' and $opt{FORCE} ne 'OR';
 
     # Deal with NULL values
+    $op = '<>' if $op eq '!='; # Use the valid SQL op
     if (@$val == 1 and !defined $val->[0] and !defined $val_func) {
         if ($op eq '=') { $op = 'IS'; $val_func = 'NULL'; delete $val->[0]; }
-        elsif ($op eq '!=') { $op = 'IS NOT'; $val_func = 'NULL'; delete $val->[0]; }
+        elsif ($op eq '<>') { $op = 'IS NOT'; $val_func = 'NULL'; delete $val->[0]; }
     }
 
     # Deal with array values: BETWEEN & IN

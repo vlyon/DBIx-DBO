@@ -322,7 +322,7 @@ sub _build_where_chunk {
 
 sub _op_ag {
     return 'OR' if $_[0] eq '=' or $_[0] eq 'IS' or $_[0] eq '<=>' or $_[0] eq 'IN' or $_[0] eq 'BETWEEN';
-    return 'AND' if $_[0] eq '!=' or $_[0] eq 'IS NOT' or $_[0] eq '<>' or $_[0] eq 'NOT IN' or $_[0] eq 'NOT BETWEEN';
+    return 'AND' if $_[0] eq '<>' or $_[0] eq 'IS NOT' or $_[0] eq 'NOT IN' or $_[0] eq 'NOT BETWEEN';
 }
 
 # Construct one WHERE expression
