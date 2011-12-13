@@ -34,14 +34,19 @@ sub _get_table_info {
             croak 'Invalid table: '.$q_table;
         }
     }
-    unless (exists $me->rdbh->{dbm_tables}{$q_table}{c_cols}
-            and ref $me->rdbh->{dbm_tables}{$q_table}{c_cols} eq 'ARRAY') {
+    # The DBM internal table_name may be different.
+    $q_table = $me->rdbh->{dbm_tables}{$q_table}{table_name};
+
+    unless (exists $me->rdbh->{f_meta}{$q_table}
+            and exists $me->rdbh->{f_meta}{$q_table}{col_names}
+            and ref $me->rdbh->{f_meta}{$q_table}{col_names} eq 'ARRAY') {
         croak 'Invalid DBM table info, could be an incompatible version';
     }
+    my $col_names = $me->rdbh->{f_meta}{$q_table}{col_names};
 
     my %h;
     my $i;
-    for my $col (@{$me->rdbh->{dbm_tables}{$q_table}{c_cols}}) {
+    for my $col (@$col_names) {
         $h{Column_Idx}{$col} = ++$i;
     }
     $h{Columns} = [ sort { $h{Column_Idx}{$a} cmp $h{Column_Idx}{$b} } keys %{$h{Column_Idx}} ];
