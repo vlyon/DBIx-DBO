@@ -61,11 +61,16 @@ sub _alias_preference {
 
 package # hide from PAUSE
     DBIx::DBO::Table::DBD::mysql;
+use Carp 'croak';
 
 sub _save_last_insert_id {
     my $me = shift;
     my $sth = shift;
     return $sth->{mysql_insertid};
+}
+
+sub _do_bulk_insert {
+    shift->_fast_bulk_insert(@_);
 }
 
 package # hide from PAUSE
