@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::DBO Sponge => 'Sponge', tests => 8;
+use Test::DBO Sponge => 'Sponge', tests => 9;
 
 {
     my $warn = '';
@@ -36,16 +36,17 @@ is $@, '', 'DBD class is overridable';
 eval { DBIx::DBO->new($dbh1, $dbh2, {dbd => 'NoDBD'}) };
 like $@, qr/^The read-write and read-only connections must use the same DBI driver /, 'Validate both $dbh drivers';
 
-#my $dbo = DBIx::DBO->new(undef, $dbh2, {dbd => 'NoDBD'}) or die $DBI::errstr;
-#eval { $dbo->connect('DBI:Sponge:') };
 my $dbo = DBIx::DBO->new($dbh2, undef, {dbd => 'NoDBD'}) or die $DBI::errstr;
 eval { $dbo->connect_readonly('DBI:Sponge:') };
 like $@, qr/^The read-write and read-only connections must use the same DBI driver /m, 'Check extra connection driver';
 
-$dbo = DBIx::DBO->new($dbh1, $dbh1);
+$dbo = DBIx::DBO->new(undef, $dbh1);
 my ($q, $t) = $dbo->query($Test::DBO::test_tbl);
 
 eval { $q->where('id', '=', {FUNC => '(?,?)', VAL => [1,2,3]}) };
 like $@, qr/^The number of params \(3\) does not match the number of placeholders \(2\)/,
     'Number of params must equal placeholders';
+
+eval { $t->delete(Column => 'Fake') };
+like $@, qr/^No read-write handle connected/, 'No read-write handle connected';
 
