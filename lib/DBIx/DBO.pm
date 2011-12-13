@@ -514,7 +514,6 @@ sub dbh {
     if (my $handle = $me->config('UseHandle')) {
         return $me->_handle($handle);
     }
-    croak 'Invalid action for a read-only connection' unless $me->{dbh};
     $me->_handle('read-write');
 }
 
@@ -523,7 +522,7 @@ sub rdbh {
     if (my $handle = $me->config('UseHandle')) {
         return $me->_handle($handle);
     }
-    return $me->dbh unless $me->{rdbh};
+    return $me->dbh unless defined $me->{rdbh};
     $me->_handle('read-only');
 }
 
