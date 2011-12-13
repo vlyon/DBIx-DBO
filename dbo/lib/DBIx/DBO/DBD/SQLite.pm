@@ -24,10 +24,7 @@ sub _get_table_schema {
 # Hack to fix quoted primary keys
 if ($DBD::SQLite::VERSION < 1.30) {
     *_set_table_key_info = sub {
-        my $me = shift;
-        my $schema = shift;
-        my $table = shift;
-        my $h = shift;
+        my($me, $schema, $table, $h) = @_;
         $me->SUPER::_set_table_key_info($schema, $table, $h);
         s/^(["'`])(.+)\1$/$2/ for @{$h->{PrimaryKeys}}; # dequote
     }
@@ -37,7 +34,7 @@ package # hide from PAUSE
     DBIx::DBO::Query::DBD::SQLite;
 
 sub fetch {
-    my $me = shift;
+    my $me = $_[0];
     my $row = $me->SUPER::fetch;
     unless (defined $row or $me->{sth}->err) {
         $me->{Row_Count} = $me->{sth}->rows;
@@ -46,7 +43,7 @@ sub fetch {
 }
 
 sub rows {
-    my $me = shift;
+    my $me = $_[0];
     $me->sql; # Ensure the Row_Count is cleared if needed
     defined $me->{Row_Count} ? $me->{Row_Count} : -1;
 }
@@ -55,8 +52,7 @@ package # hide from PAUSE
     DBIx::DBO::Table::DBD::SQLite;
 
 sub _save_last_insert_id {
-    my $me = shift;
-    my $sth = shift;
+    my($me, $sth) = @_;
     $sth->{Database}->last_insert_id(undef, @$me{qw(Schema Name)}, undef);
 }
 
