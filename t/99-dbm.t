@@ -3,7 +3,7 @@ use warnings;
 
 # Create the DBO (2 tests)
 my $dbo;
-use Test::DBO DBM => 'DBM', tests => 59, tempdir => 1, connect_ok => [\$dbo];
+use Test::DBO DBM => 'DBM', tests => 63, tempdir => 1, connect_ok => [\$dbo];
 
 # In DBM there is no Schema
 undef $Test::DBO::test_db;

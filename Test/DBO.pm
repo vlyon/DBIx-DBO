@@ -286,6 +286,25 @@ sub basic_methods {
             or $t->delete(name => 'Vernon Lyon'), $t->insert(id => 5, name => 'Vernon Lyon');
     }
 
+    # Bulk insert
+    my @bulk_data = ({id=>6,name=>'Bulk Insert'},{id=>7,name=>'Bulk Insert'});
+
+    $rv = $t->bulk_insert(rows => [map [@$_{qw(id name)}], @bulk_data]) or diag sql_err($t);
+    is $rv, 2, 'Method DBIx::DBO::Table->bulk_insert (ARRAY)';
+    $t->delete(name => 'Bulk Insert') or diag sql_err($t);
+
+    $rv = $t->bulk_insert(rows => \@bulk_data) or diag sql_err($t);
+    is $rv, 2, 'Method DBIx::DBO::Table->bulk_insert (HASH)';
+    $t->delete(name => 'Bulk Insert') or diag sql_err($t);
+
+    $rv = $t->bulk_insert(columns => [qw(name id)], rows => [map [@$_{qw(name id)}], @bulk_data]) or diag sql_err($t);
+    is $rv, 2, 'Method DBIx::DBO::Table->bulk_insert (ARRAY)';
+    $t->delete(name => 'Bulk Insert') or diag sql_err($t);
+
+    $rv = $t->bulk_insert(columns => [qw(name id)], rows => \@bulk_data) or diag sql_err($t);
+    is $rv, 2, 'Method DBIx::DBO::Table->bulk_insert (HASH)';
+    $t->delete(name => 'Bulk Insert') or diag sql_err($t);
+
     return $t;
 }
 
