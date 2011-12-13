@@ -59,16 +59,17 @@ sub _init {
     my($class, $dbo, $parent) = @_;
     croak 'Invalid Parent Object' unless defined $parent;
 
-    my $me = bless \{ DBO => $dbo, Parent => $parent, array => undef, hash => {} }, $class;
+    my $me = bless \{ DBO => $dbo, array => undef, hash => {} }, $class;
     $parent = $me->_table_class->new($dbo, $parent) unless blessed $parent;
 
     $$me->{build_data}{LimitOffset} = [1];
     if ($parent->isa('DBIx::DBO::Query')) {
+        $$me->{Parent} = $parent;
+        # We must weaken this to avoid a circular reference
+        weaken $$me->{Parent};
         $$me->{Tables} = [ @{$parent->{Tables}} ];
         $$me->{Columns} = $parent->{Columns};
         $me->_copy_build_data;
-        # We must weaken this to avoid a circular reference
-        weaken $$me->{Parent};
     } elsif ($parent->isa('DBIx::DBO::Table')) {
         $$me->{build_data} = {
             show => '*',
@@ -77,7 +78,7 @@ sub _init {
             group => '',
             order => '',
         };
-        $$me->{Tables} = [ delete $$me->{Parent} ];
+        $$me->{Tables} = [ $parent ];
         $$me->{Columns} = $parent->{Columns};
     } else {
         croak 'Invalid Parent Object';
@@ -398,10 +399,9 @@ Assume you want to create a simple C<Row> class for a "Users" table:
   use base 'DBIx::DBO::Row';
   
   sub new {
-      my $class = shift;
-      my $dbo = shift;
+      my($class, $dbo) = @_;
       
-      $class->SUPER::new($dbo, 'Users'); # Create the Row for the "Users" table only
+      $class->SUPER::new($dbo, 'Users'); # Create the Row for the "Users" table
   }
 
 =head1 SEE ALSO
