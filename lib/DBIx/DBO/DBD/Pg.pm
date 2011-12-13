@@ -80,11 +80,16 @@ sub table_info {
 
 package # hide from PAUSE
     DBIx::DBO::Table::DBD::Pg;
+use Carp 'croak';
 
 sub _save_last_insert_id {
     my $me = shift;
     my $sth = shift;
     return $sth->{Database}->last_insert_id(undef, @$me{qw(Schema Name)}, undef);
+}
+
+sub _do_bulk_insert {
+    shift->_fast_bulk_insert(@_);
 }
 
 1;
