@@ -422,7 +422,7 @@ sub query_methods {
     $q->close_bracket;
     $q->close_bracket;
     my $got = $q->col_arrayref({ Columns => [1] });
-    is_deeply $got, [4,5,6], 'Method DBIx::DBO::Query->open_bracket';
+    is_deeply $got, [4,5,6], 'Method DBIx::DBO::Query->open_bracket' or diag sql_err($q);
 
     # Reset the Query
     $q->reset;

@@ -577,11 +577,10 @@ Global options can also be set when C<use>'ing the module:
 =cut
 
 sub config {
-    my $me = shift;
-    my $opt = shift;
-    if (@_) {
+    my($me, $opt) = @_;
+    if (@_ > 2) {
         my $cfg = ref $me ? $me->{Config} ||= {} : \%Config;
-        return $me->_set_config($cfg, $opt, shift);
+        return $me->_set_config($cfg, $opt, $_[2]);
     }
     return (ref $me and defined $me->{Config}{$opt}) ? $me->{Config}{$opt} : $Config{$opt};
 }
