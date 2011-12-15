@@ -321,9 +321,8 @@ sub close_join_on_bracket {
 Restrict the query with the condition specified (WHERE clause).
 
   $query->where($expression1, $operator, $expression2);
-  $query->where($table1 ** 'id', '=', $table2 ** 'id');
 
-C<$operator> is one of: C<'=', '<', 'E<gt>', 'IN', 'NOT IN', 'BETWEEN', 'NOT BETWEEN', ...>
+C<$operator> is one of: C<'=', '<E<gt>', '<', 'E<gt>', 'IN', 'NOT IN', 'LIKE', 'NOT LIKE', 'BETWEEN', 'NOT BETWEEN', ...>
 
 C<$expression>s can be any of the following:
 
@@ -333,57 +332,29 @@ C<$expression>s can be any of the following:
 
 A scalar value: C<123> or C<'hello'> (or for C<$expression1> a column name: C<'id'>)
 
+  $query->where('name', '<>', 'John');
+
 =item *
 
 A scalar reference: C<\"22 * 3">  (These are passed unquoted in the SQL statement!)
+
+  $query->where(\'CONCAT(id, name)', '=', \'"22John"');
 
 =item *
 
 An array reference: C<[1, 3, 5]>  (Used with C<IN> and C<BETWEEN> etc)
 
+  $query->where('id', 'NOT IN', [21, 22, 25, 39]);
+
 =item *
 
 A Column object: C<$table ** 'id'> or C<$table-E<gt>column('id')>
 
-=item *
-
-A hash reference: (Described below)
-
-=back
-
-For a more complex where expression it can be passed as a hash reference.
-Possibly containing scalars, arrays or Column objects.
-
-  $query->where('name', '=', { FUNC => 'COALESCE(?,?)', VAL => [$name, 'Unknown'] });
-  $query->where('string', '=', { FUNC => "CONCAT('Mr. ',?)", COL => 'name' });
-
-The keys to the hash in a complex expression are:
-
-=over 4
+  $query->where($table1 ** 'id', '=', $table2 ** 'id');
 
 =item *
 
-C<VAL> => A scalar, scalar reference or an array reference.
-
-=item *
-
-C<COL> => The name of a column or a Column object.
-
-=item *
-
-C<AS> => An alias name.
-
-=item *
-
-C<FUNC> => A string to be inserted into the SQL, possibly containing "?" placeholders.
-
-=item *
-
-C<COLLATE> => The collation for this value/field.
-
-=item *
-
-C<ORDER> => To order by a column (Used only in C<group_by> and C<order_by>).
+A hash reference: see L</Complex_expressions>
 
 =back
 
@@ -1057,7 +1028,7 @@ This provides access to L<DBI-E<gt>do|DBI/"do"> method.  It defaults to using th
 
 Get or set this C<Query> object's config settings.  When setting an option, the previous value is returned.  When getting an option's value, if the value is undefined, the L<DBIx::DBO|DBIx::DBO>'s value is returned.
 
-See L<DBIx::DBO/Available_config_options>.
+See: L<DBIx::DBO/Available_config_options>.
 
 =cut
 
@@ -1076,6 +1047,50 @@ sub DESTROY {
 
 __END__
 
+=head2 Complex expressions
+
+More complex expressions can be passed as hash references.
+These expressions can be used in the L</show>, L</join_on>, L</where>, L</having>, L</group_by> and L</order_by> methods.
+
+  $query->show({ FUNC => 'SUBSTR(?, 1, 1)', COL => 'name', AS => 'initial' });
+  # MySQL would produce:  SELECT SUBSTR(`name`, 1, 1) AS `initial` FROM ...
+  
+  $query->where({ FUNC => "CONCAT(COALESCE(?, 'Mr.'), ' ', ?)", COL => ['title', 'lastname'] }, '=', 'Dr. Jones');
+  # MySQL would produce:  ... WHERE CONCAT(COALESCE(`title`, 'Mr.'), ' ', `name`) = 'Dr. Jones' ...
+  
+  $query->order_by('id', { FUNC => "COALESCE(?,'?')", COL => 'name', ORDER => 'DESC' });
+  # MySQL would produce:  ... ORDER BY `id`, COALESCE(`name`,'?') DESC
+
+The keys to the hash in a complex expression are:
+
+=over 4
+
+=item *
+
+C<VAL> => A scalar, scalar reference or an array reference.
+
+=item *
+
+C<COL> => The name of a column or a Column object.
+
+=item *
+
+C<AS> => An alias name.
+
+=item *
+
+C<FUNC> => A string to be inserted B<unquoted> into the SQL, possibly containing B<?> placeholders.
+
+=item *
+
+C<COLLATE> => The collation for this value/field.
+
+=item *
+
+C<ORDER> => To order by a column (Used only in C<group_by> and C<order_by>).
+
+=back
+
 =head1 SUBCLASSING
 
 When subclassing C<DBIx::DBO::Query>, please note that C<Query> objects created with the L</new> method are blessed into a DBD driver specific module.
@@ -1089,13 +1104,10 @@ Assume you want to create a C<Query> and C<Row> class for a "Users" table:
   use base 'DBIx::DBO::Query';
   
   sub new {
-      my $class = shift;
-      my $dbo = shift;
+      my($class, $dbo) = @_;
       
       my $self = $class->SUPER::new($dbo, 'Users'); # Create the Query for the "Users" table
-      
-      # We could even add some JOINs or other clauses here
-      
+      # We could even add some JOINs or other clauses here ...
       return $self;
   }
   sub _row_class { 'My::User' } # Rows are blessed into this class
@@ -1118,7 +1130,11 @@ Assume you want to create a C<Query> and C<Row> class for a "Users" table:
 
 =item *
 
-Better explanation of how to construct complex queries.  This module is currently still in development (including the documentation), but I will be adding to/completing it in the near future.
+Allow objects to be frozen/thawed by L<Storable>.
+
+=item *
+
+This module is currently still in development (including the documentation), but I will be refining it in the near future.
 
 =back
 
