@@ -427,21 +427,33 @@ sub query_methods {
     1 while $q->fetch;
     is $q->rows, 6, 'Row count is 6';
 
+    # WHERE clause
+    ok $q->where('name', 'LIKE', \"'%o%'"), 'Method DBIx::DBO::Query->where' or diag sql_err($q);
+
     # Parentheses
-    $q->where('name', 'LIKE', \"'%o%'");
     $q->open_bracket('OR');
     $q->where('name', 'LIKE', \"'%a%'");
     $q->where('id', '!=', \1);
     $q->where('id', '=', undef);
     $q->open_bracket('AND');
-    $q->where('name', '<>', 'abcde');
-    $q->where('name', '!=', undef);
+    $q->where('id', '<>', 'abcde');
+    $q->where('id', '!=', undef);
     $q->where('id', 'NOT IN', [1,22,333]);
     $q->where('id', 'NOT BETWEEN', [123,456]);
-    $q->close_bracket;
-    $q->close_bracket;
     my $got = $q->col_arrayref({ Columns => [1] });
     is_deeply $got, [4,5,6], 'Method DBIx::DBO::Query->open_bracket' or diag sql_err($q);
+
+    my $old_sql = $q->sql;
+    $q->unwhere('name');
+    is $q->sql, $old_sql, 'Method DBIx::DBO::Query->unwhere (before close_bracket)';
+
+    $q->close_bracket;
+    $q->close_bracket;
+    $q->unwhere('name');
+    isnt $q->sql, $old_sql, 'Method DBIx::DBO::Query->close_bracket';
+
+    $got = $q->col_arrayref({ Columns => [1] });
+    is_deeply $got, [2,4,5,6,7], 'Method DBIx::DBO::Query->unwhere';
 
     # Reset the Query
     $q->reset;
