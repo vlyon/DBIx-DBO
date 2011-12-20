@@ -33,6 +33,12 @@ BEGIN {
         DBIx::DBO->config(DebugSQL => $ENV{DBO_DEBUG_SQL});
     }
 
+    # Set up $Carp::Verbose if requested
+    if ($ENV{DBO_CARP_VERBOSE}) {
+        diag "DBO_CARP_VERBOSE=$ENV{DBO_CARP_VERBOSE}";
+        $Carp::Verbose = $ENV{DBO_CARP_VERBOSE};
+    }
+
     # Store the last SQL executed, and show debug info
     {
         package DBIx::DBO::Common;
@@ -436,7 +442,7 @@ sub query_methods {
     $q->where('id', '!=', \1);
     $q->where('id', '=', undef);
     $q->open_bracket('AND');
-    $q->where('id', '<>', 'abcde');
+    $q->where('id', '<>', 12345);
     $q->where('id', '!=', undef);
     $q->where('id', 'NOT IN', [1,22,333]);
     $q->where('id', 'NOT BETWEEN', [123,456]);
@@ -631,6 +637,8 @@ sub Dump {
     }
     $var = 'dump' unless defined $var;
     require Data::Dumper;
+    local $Data::Dumper::Sortkeys = 1;
+    local $Data::Dumper::Quotekeys = 0;
     my $d = Data::Dumper->new([$val], [$var]);
     if (ref $val) {
         my %seen;
