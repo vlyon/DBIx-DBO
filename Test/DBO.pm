@@ -489,16 +489,21 @@ sub advanced_query_methods {
 
     # Show specific columns only
     $q->show({ FUNC => 'UPPER(?)', COL => 'name', AS => 'name' }, 'id', 'name');
+    ok $q->run && $q->fetch->{name} eq 'JOHN DOE', 'Method DBIx::DBO::Query->show' or diag sql_err($q);
     SKIP: {
         unless ($can{collate}) {
             $q->order_by('id');
+            $q->run or diag sql_err($q);
             skip 'COLLATE is not supported', 1;
         }
         $q->order_by({ COL => 'id', COLLATE => $can{collate} });
-        pass 'Method DBIx::DBO::Query->order_by COLLATE';
+        ok $q->run, 'Method DBIx::DBO::Query->order_by COLLATE' or diag sql_err($q);
     }
-    is $q->fetch->{name}, 'JOHN DOE', 'Method DBIx::DBO::Query->show';
-    is $q->row ** $t ** 'name', 'John Doe', 'Access specific column';
+    unless ($q->{Active}) {
+        $q->show('name', 'id', 'name');
+        $q->order_by('id');
+    }
+    is $q->fetch ** $t ** 'name', 'John Doe', 'Access specific column';
     is_deeply [$q->row->columns], [qw(name id name)], 'Method DBIx::DBO::Row->columns (aliased)';
     is_deeply [$q->columns], [qw(name id name)], 'Method DBIx::DBO::Query->columns (aliased)';
 
