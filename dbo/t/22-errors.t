@@ -18,7 +18,7 @@ use Test::DBO Sponge => 'Sponge', tests => 9;
         UseHandle => 0,
         xyz => 123,
     );
-    is $warn =~ s/^Unknown import option '(UseHandle|xyz)' at .* line \d+\n//mg, 2, 'DBIx::DBO->import validation';
+    is $warn =~ s/^Unknown import option '(UseHandle|xyz)' at .* line \d+\.?\n//mg, 2, 'DBIx::DBO->import validation';
     is $warn, '', 'DBIx::DBO->import options';
 }
 
