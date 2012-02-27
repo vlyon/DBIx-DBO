@@ -813,7 +813,7 @@ sub run {
     $me->sql; # Build the SQL and detach the Row if needed
     if (defined $me->{Row}) {
         undef ${$me->{Row}}{array};
-        undef %{$me->{Row}};
+        ${$me->{Row}}{hash} = {};
     }
 
     my $rv = $me->_execute or return undef;
@@ -990,7 +990,7 @@ sub finish {
             $me->{Row}->_detach;
         } else {
             undef ${$me->{Row}}{array};
-            undef %{$me->{Row}};
+            ${$me->{Row}}{hash} = {};
         }
     }
     if (exists $me->{cache}) {

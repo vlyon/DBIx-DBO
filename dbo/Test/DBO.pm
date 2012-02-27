@@ -429,6 +429,12 @@ sub query_methods {
     is $r->value($t->column('name')), 'Jane Smith', 'Access row via method DBIx::DBO::Row::value';
     is $r ** $t ** 'name', 'Jane Smith', 'Access row via shortcut method **';
 
+    # Re-run the query
+    $q->run or diag sql_err($q);
+    is $q->fetch->{name}, 'John Doe', 'Method DBIx::DBO::Query->run';
+    $q->finish;
+    is $q->fetch->{name}, 'John Doe', 'Method DBIx::DBO::Query->finish';
+
     # Count the number of rows
     1 while $q->fetch;
     is $q->rows, 6, 'Row count is 6';
@@ -497,7 +503,6 @@ sub advanced_query_methods {
         $q->order_by({ COL => 'id', COLLATE => $can{collate} });
         ok $q->run, 'Method DBIx::DBO::Query->order_by COLLATE' or diag sql_err($q);
     }
-
     $q->show({ FUNC => 'UPPER(?)', COL => 'name', AS => 'name' }, 'id', 'name');
     ok $q->run && $q->fetch->{name} eq 'JOHN DOE', 'Method DBIx::DBO::Query->show' or diag sql_err($q);
 
