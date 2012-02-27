@@ -13,7 +13,7 @@ my $need_c3_initialize;
 my @ConnectArgs;
 
 BEGIN {
-    $VERSION = '0.13';
+    $VERSION = '0.14';
     # The C3 method resolution order is required.
     if ($] < 5.009_005) {
         require MRO::Compat;
