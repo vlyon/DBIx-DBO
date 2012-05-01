@@ -49,7 +49,7 @@ sub _get_table_info {
     for my $col (@$col_names) {
         $h{Column_Idx}{$col} = ++$i;
     }
-    $h{Columns} = [ sort { $h{Column_Idx}{$a} cmp $h{Column_Idx}{$b} } keys %{$h{Column_Idx}} ];
+    $h{Columns} = [ sort { $h{Column_Idx}{$a} <=> $h{Column_Idx}{$b} } keys %{$h{Column_Idx}} ];
     $h{PrimaryKeys} = [];
     $me->{TableInfo}{defined $schema ? $schema : ''}{$table} = \%h;
 }

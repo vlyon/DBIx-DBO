@@ -355,19 +355,19 @@ This provides access to the L<DBI-E<gt>selectall_arrayref|DBI/"selectall_arrayre
 =cut
 
 sub selectrow_array {
-    my ($me, $sql, $attr) = splice @_, 0, 3;
+    my($me, $sql, $attr) = splice @_, 0, 3;
     $me->_sql($sql, @_);
     $me->rdbh->selectrow_array($sql, $attr, @_);
 }
 
 sub selectrow_arrayref {
-    my ($me, $sql, $attr) = splice @_, 0, 3;
+    my($me, $sql, $attr) = splice @_, 0, 3;
     $me->_sql($sql, @_);
     $me->rdbh->selectrow_arrayref($sql, $attr, @_);
 }
 
 sub selectall_arrayref {
-    my ($me, $sql, $attr) = splice @_, 0, 3;
+    my($me, $sql, $attr) = splice @_, 0, 3;
     $me->_sql($sql, @_);
     $me->rdbh->selectall_arrayref($sql, $attr, @_);
 }
@@ -401,16 +401,14 @@ sub _get_table_schema {
 }
 
 sub _get_table_info {
-    my $me = shift;
-    my $schema = shift;
-    my $table = shift;
+    my($me, $schema, $table) = @_;
 
     my $cols = $me->rdbh->column_info(undef, $schema, $table, '%')->fetchall_arrayref({});
     croak 'Invalid table: '.$me->_qi($table) unless @$cols;
 
     my %h;
     $h{Column_Idx}{$_->{COLUMN_NAME}} = $_->{ORDINAL_POSITION} for @$cols;
-    $h{Columns} = [ sort { $h{Column_Idx}{$a} cmp $h{Column_Idx}{$b} } keys %{$h{Column_Idx}} ];
+    $h{Columns} = [ sort { $h{Column_Idx}{$a} <=> $h{Column_Idx}{$b} } keys %{$h{Column_Idx}} ];
 
     $h{PrimaryKeys} = [];
     $me->_set_table_key_info($schema, $table, \%h);
@@ -419,25 +417,21 @@ sub _get_table_info {
 }
 
 sub _set_table_key_info {
-    my $me = shift;
-    my $schema = shift;
-    my $table = shift;
-    my $h = shift;
+    my($me, $schema, $table, $h) = @_;
+
     if (my $keys = $me->rdbh->primary_key_info(undef, $schema, $table)) {
         $h->{PrimaryKeys}[$_->{KEY_SEQ} - 1] = $_->{COLUMN_NAME} for @{$keys->fetchall_arrayref({})};
     }
 }
 
 sub _unquote_table {
-    my $me = shift;
     # TODO: Better splitting of: schema.table or `schema`.`table` or "schema"."table"@"catalog" or ...
-    $_[0] =~ /^(?:("|)(.+)\1\.|)("|)(.+)\3$/ or croak "Invalid table: \"$_[0]\"";
+    $_[1] =~ /^(?:("|)(.+)\1\.|)("|)(.+)\3$/ or croak "Invalid table: \"$_[1]\"";
     return ($4, $2);
 }
 
 sub table_info {
-    my $me = shift;
-    my $table = shift;
+    my($me, $table) = @_;
     my $schema;
     croak 'No table name supplied' unless defined $table and length $table;
 

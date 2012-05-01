@@ -6,18 +6,15 @@ package # hide from PAUSE
 use Carp qw(croak);
 
 sub _get_table_schema {
-    my $me = shift;
-    my $schema = shift;
-    my $table = shift;
+    my($me, $schema, $table) = @_;
+
     ($schema) = $me->rdbh->selectrow_array('SELECT DATABASE()') unless defined $schema and length $schema;
     $me->SUPER::_get_table_schema($schema, $table);
 }
 
 sub _set_table_key_info {
-    my $me = shift;
-    my $schema = shift;
-    my $table = shift;
-    my $h = shift;
+    my($me, $schema, $table, $h) = @_;
+
     if (my $keys = $me->rdbh->primary_key_info(undef, $schema, $table)) {
         $h->{PrimaryKeys}[$_->{KEY_SEQ} - 1] = $_->{COLUMN_NAME} for @{$keys->fetchall_arrayref({})};
     } else {
@@ -29,8 +26,7 @@ sub _set_table_key_info {
 }
 
 sub _unquote_table {
-    my $me = shift;
-    $_[0] =~ /^(?:(`|"|)(.+)\1\.|)(`|"|)(.+)\3$/ or croak "Invalid table: \"$_[0]\"";
+    $_[1] =~ /^(?:(`|"|)(.+)\1\.|)(`|"|)(.+)\3$/ or croak "Invalid table: \"$_[1]\"";
     return ($4, $2);
 }
 
@@ -64,8 +60,8 @@ package # hide from PAUSE
 use Carp 'croak';
 
 sub _save_last_insert_id {
-    my $me = shift;
-    my $sth = shift;
+    my($me, $sth) = @_;
+
     return $sth->{mysql_insertid};
 }
 
