@@ -6,9 +6,9 @@ package # hide from PAUSE
 use Carp 'croak';
 
 sub _get_table_schema {
-    my $me = shift;
-    my $schema = my $q_schema = shift;
-    my $table = my $q_table = shift;
+    my($me, $schema, $table) = @_;
+    my $q_schema = $schema;
+    my $q_table = $table;
 
     $q_schema =~ s/([\\_%])/\\$1/g if defined $q_schema;
     $q_table =~ s/([\\_%])/\\$1/g;
@@ -17,15 +17,15 @@ sub _get_table_schema {
     my $info = $me->rdbh->table_info(undef, $q_schema, $q_table,
         'TABLE,VIEW,GLOBAL TEMPORARY,LOCAL TEMPORARY,SYSTEM TABLE')->fetchall_arrayref({});
     # Then if we found nothing, try any type
-    $info = $me->rdbh->table_info(undef, $q_schema, $q_table)->fetchall_arrayref if $info and @$info == 0;
+    $info = $me->rdbh->table_info(undef, $q_schema, $q_table)->fetchall_arrayref({}) if $info and @$info == 0;
     croak 'Invalid table: '.$me->_qi($table) unless $info and @$info == 1 and $info->[0]{pg_table} eq $table;
     return $info->[0]{pg_schema};
 }
 
 sub _get_table_info {
-    my $me = shift;
-    my $schema = my $q_schema = shift;
-    my $table = my $q_table = shift;
+    my($me, $schema, $table) = @_;
+    my $q_schema = $schema;
+    my $q_table = $table;
 
     $q_schema =~ s/([\\_%])/\\$1/g if defined $q_schema;
     $q_table =~ s/([\\_%])/\\$1/g;
@@ -35,7 +35,7 @@ sub _get_table_info {
 
     my %h;
     $h{Column_Idx}{$_->{pg_column}} = $_->{ORDINAL_POSITION} for @$cols;
-    $h{Columns} = [ sort { $h{Column_Idx}{$a} cmp $h{Column_Idx}{$b} } keys %{$h{Column_Idx}} ];
+    $h{Columns} = [ sort { $h{Column_Idx}{$a} <=> $h{Column_Idx}{$b} } keys %{$h{Column_Idx}} ];
 
     $h{PrimaryKeys} = [];
     $me->_set_table_key_info($schema, $table, \%h);
@@ -44,10 +44,8 @@ sub _get_table_info {
 }
 
 sub _set_table_key_info {
-    my $me = shift;
-    my $schema = shift;
-    my $table = shift;
-    my $h = shift;
+    my($me, $schema, $table, $h) = @_;
+
     if (my $keys = $me->rdbh->primary_key_info(undef, $schema, $table)) {
         # In Pg the KEY_SEQ is actually the column index! Rows returned are in key seq order
         # And the column names are quoted so we use the pg_column names instead
@@ -56,9 +54,8 @@ sub _set_table_key_info {
 }
 
 sub table_info {
-    my $me = shift;
+    my($me, $table) = @_;
     my $schema = '';
-    my $table = shift;
     croak 'No table name supplied' unless defined $table and length $table;
 
     if (UNIVERSAL::isa($table, 'DBIx::DBO::Table')) {
@@ -83,8 +80,8 @@ package # hide from PAUSE
 use Carp 'croak';
 
 sub _save_last_insert_id {
-    my $me = shift;
-    my $sth = shift;
+    my($me, $sth) = @_;
+
     return $sth->{Database}->last_insert_id(undef, @$me{qw(Schema Name)}, undef);
 }
 
