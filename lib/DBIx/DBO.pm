@@ -400,14 +400,20 @@ sub _get_table_schema {
     return $info->[0][1];
 }
 
-sub _get_table_info {
+sub _get_column_info {
     my($me, $schema, $table) = @_;
 
     my $cols = $me->rdbh->column_info(undef, $schema, $table, '%')->fetchall_arrayref({});
     croak 'Invalid table: '.$me->_qi($table) unless @$cols;
 
+    map { $_->{COLUMN_NAME} => $_->{ORDINAL_POSITION} } @$cols;
+}
+
+sub _get_table_info {
+    my($me, $schema, $table) = @_;
+
     my %h;
-    $h{Column_Idx}{$_->{COLUMN_NAME}} = $_->{ORDINAL_POSITION} for @$cols;
+    $h{Column_Idx} = { $me->_get_column_info($schema, $table) };
     $h{Columns} = [ sort { $h{Column_Idx}{$a} <=> $h{Column_Idx}{$b} } keys %{$h{Column_Idx}} ];
 
     $h{PrimaryKeys} = [];

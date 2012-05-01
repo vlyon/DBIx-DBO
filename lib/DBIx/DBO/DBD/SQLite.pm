@@ -27,7 +27,7 @@ if ($DBD::SQLite::VERSION < 1.30) {
         my($me, $schema, $table, $h) = @_;
         $me->SUPER::_set_table_key_info($schema, $table, $h);
         s/^(["'`])(.+)\1$/$2/ for @{$h->{PrimaryKeys}}; # dequote
-    }
+    };
 }
 
 package # hide from PAUSE
