@@ -22,7 +22,7 @@ sub _get_table_schema {
     return $info->[0]{pg_schema};
 }
 
-sub _get_table_info {
+sub _get_column_info {
     my($me, $schema, $table) = @_;
     my $q_schema = $schema;
     my $q_table = $table;
@@ -33,14 +33,7 @@ sub _get_table_info {
     my $cols = $me->rdbh->column_info(undef, $q_schema, $q_table, '%')->fetchall_arrayref({});
     croak 'Invalid table: '.$me->_qi($table) unless @$cols;
 
-    my %h;
-    $h{Column_Idx}{$_->{pg_column}} = $_->{ORDINAL_POSITION} for @$cols;
-    $h{Columns} = [ sort { $h{Column_Idx}{$a} <=> $h{Column_Idx}{$b} } keys %{$h{Column_Idx}} ];
-
-    $h{PrimaryKeys} = [];
-    $me->_set_table_key_info($schema, $table, \%h);
-
-    $me->{TableInfo}{defined $schema ? $schema : ''}{$table} = \%h;
+    map { $_->{pg_column} => $_->{ORDINAL_POSITION} } @$cols;
 }
 
 sub _set_table_key_info {

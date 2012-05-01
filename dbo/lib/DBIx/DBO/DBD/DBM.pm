@@ -17,16 +17,12 @@ sub _init {
 }
 
 sub _get_table_schema {
-    my $me = shift;
-    my $schema = shift; # Not used
-    my $table = shift;
-    return;
+    # Schema is not used
 }
 
-sub _get_table_info {
-    my $me = shift;
-    my $schema = shift; # Not used
-    my $table = my $q_table = shift;
+sub _get_column_info {
+    my($me, $schema, $table) = @_;
+    my $q_table = $table;
 
     unless (exists $me->rdbh->{dbm_tables}{$q_table}) {
         $q_table = $me->_qi($table); # Try with the quoted table name
@@ -42,16 +38,13 @@ sub _get_table_info {
             and ref $me->rdbh->{f_meta}{$q_table}{col_names} eq 'ARRAY') {
         croak 'Invalid DBM table info, could be an incompatible version';
     }
-    my $col_names = $me->rdbh->{f_meta}{$q_table}{col_names};
+    my $cols = $me->rdbh->{f_meta}{$q_table}{col_names};
 
-    my %h;
     my $i;
-    for my $col (@$col_names) {
-        $h{Column_Idx}{$col} = ++$i;
-    }
-    $h{Columns} = [ sort { $h{Column_Idx}{$a} <=> $h{Column_Idx}{$b} } keys %{$h{Column_Idx}} ];
-    $h{PrimaryKeys} = [];
-    $me->{TableInfo}{defined $schema ? $schema : ''}{$table} = \%h;
+    map { $_ => ++$i } @$cols;
+}
+
+sub _set_table_key_info {
 }
 
 1;
