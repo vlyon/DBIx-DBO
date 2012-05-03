@@ -46,28 +46,6 @@ sub _set_table_key_info {
     }
 }
 
-sub table_info {
-    my($me, $table) = @_;
-    my $schema = '';
-    croak 'No table name supplied' unless defined $table and length $table;
-
-    if (UNIVERSAL::isa($table, 'DBIx::DBO::Table')) {
-        ($schema, $table) = @$table{qw(Schema Name)};
-        return ($schema, $table, $me->{TableInfo}{$schema}{$table});
-    }
-    if (ref $table eq 'ARRAY') {
-        ($schema, $table) = @$table;
-    } else {
-        ($table, $schema) = $me->_unquote_table($table);
-    }
-    $schema = $me->_get_table_schema($schema, $table) unless defined $schema and length $schema;
-
-    unless (exists $me->{TableInfo}{$schema}{$table}) {
-        $me->_get_table_info($schema, $table);
-    }
-    return ($schema, $table, $me->{TableInfo}{$schema}{$table});
-}
-
 package # hide from PAUSE
     DBIx::DBO::Table::DBD::Pg;
 use Carp 'croak';

@@ -433,22 +433,18 @@ sub _set_table_key_info {
 sub _unquote_table {
     # TODO: Better splitting of: schema.table or `schema`.`table` or "schema"."table"@"catalog" or ...
     $_[1] =~ /^(?:("|)(.+)\1\.|)("|)(.+)\3$/ or croak "Invalid table: \"$_[1]\"";
-    return ($4, $2);
+    return ($2, $4);
 }
 
 sub table_info {
     my($me, $table) = @_;
-    my $schema;
     croak 'No table name supplied' unless defined $table and length $table;
 
+    my $schema;
     if (UNIVERSAL::isa($table, 'DBIx::DBO::Table')) {
         ($schema, $table) = @$table{qw(Schema Name)};
     } else {
-        if (ref $table eq 'ARRAY') {
-            ($schema, $table) = @$table;
-        } else {
-            ($table, $schema) = $me->_unquote_table($table);
-        }
+        ($schema, $table) = ref $table eq 'ARRAY' ? @$table : $me->_unquote_table($table);
         defined $schema or $schema = $me->_get_table_schema($schema, $table);
 
         $me->_get_table_info($schema, $table) unless exists $me->{TableInfo}{defined $schema ? $schema : ''}{$table};

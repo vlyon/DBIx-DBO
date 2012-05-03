@@ -27,7 +27,7 @@ sub _set_table_key_info {
 
 sub _unquote_table {
     $_[1] =~ /^(?:(`|"|)(.+)\1\.|)(`|"|)(.+)\3$/ or croak "Invalid table: \"$_[1]\"";
-    return ($4, $2);
+    return ($2, $4);
 }
 
 sub config {
