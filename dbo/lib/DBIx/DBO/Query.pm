@@ -1055,8 +1055,8 @@ These expressions can be used in the L</show>, L</join_on>, L</where>, L</having
   $query->show({ FUNC => 'SUBSTR(?, 1, 1)', COL => 'name', AS => 'initial' });
   # MySQL would produce:  SELECT SUBSTR(`name`, 1, 1) AS `initial` FROM ...
   
-  $query->where({ FUNC => "CONCAT(COALESCE(?, 'Mr.'), ' ', ?)", COL => ['title', 'lastname'] }, '=', 'Dr. Jones');
-  # MySQL would produce:  ... WHERE CONCAT(COALESCE(`title`, 'Mr.'), ' ', `name`) = 'Dr. Jones' ...
+  $query->where({ FUNC => "CONCAT(COALESCE(?, 'Mr.'), ' ', ?)", VAL => [$title, $t ** 'name'] }, '=', 'Dr. Jones');
+  # MySQL would produce:  ... WHERE CONCAT(COALESCE(?, 'Mr.'), ' ', `name`) = 'Dr. Jones' ...
   
   $query->order_by('id', { FUNC => "COALESCE(?,'?')", COL => 'name', ORDER => 'DESC' });
   # MySQL would produce:  ... ORDER BY `id`, COALESCE(`name`,'?') DESC
@@ -1106,10 +1106,14 @@ Assume you want to create a C<Query> and C<Row> class for a "Users" table:
   sub new {
       my($class, $dbo) = @_;
       
-      my $self = $class->SUPER::new($dbo, 'Users'); # Create the Query for the "Users" table
+      # Create the Query for the "Users" table
+      my $self = $class->SUPER::new($dbo, 'Users');
+      
       # We could even add some JOINs or other clauses here ...
+      
       return $self;
   }
+  
   sub _row_class { 'My::User' } # Rows are blessed into this class
 
   package My::User;
@@ -1117,7 +1121,7 @@ Assume you want to create a C<Query> and C<Row> class for a "Users" table:
   
   sub new {
       my $class = shift;
-      my ($dbo, $parent) = @_;
+      my($dbo, $parent) = @_;
       
       $parent ||= My::Users->new($dbo); # The Row will use the same table as it's parent
       
