@@ -9,21 +9,21 @@ my %build = (
     dist_version_from   => 'lib/DBIx/DBO.pm',
     dynamic_config      => 1,
     configure_requires => {
-        'Module::Build' => 0.30,
+        'Module::Build' => '0.30',
     },
     build_requires => {
-        'Module::Build' => 0.30,
+        'Module::Build' => '0.30',
         'Test::More' => 0.62,
         'File::Temp' => 0,
     },
     requires => {
         'perl' => 5.008_001,
-        'DBI' => 1.50,
+        'DBI' => '1.50',
     },
     recommends => {
         'DBD::mysql' => 4.004,
         'DBD::Pg' => 2,
-        'DBD::SQLite' => 1.30,
+        'DBD::SQLite' => '1.30',
         'DBD::Oracle' => 1.13,
     },
     meta_merge => {

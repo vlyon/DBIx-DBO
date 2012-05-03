@@ -14,7 +14,6 @@ our %Config = (
     AutoReconnect => 0,
     DebugSQL => 0,
     QuoteIdentifier => 1,
-    RowClass => undef,
     CacheQuery => 0,
 );
 our @CARP_NOT = qw(DBIx::DBO DBIx::DBO::Table DBIx::DBO::Query DBIx::DBO::Row);
