@@ -134,7 +134,8 @@ sub row {
 Fetch the first matching row from the table returning it as a L<Row|DBIx::DBO::Row> object.
 
 The C<%where> is a hash of field/value pairs.
-The value can be a SCALAR reference, which will be used without quoting, or an ARRAY reference for multiple C<IN> values.
+The value can be a simple SCALAR or C<undef> for C<NULL>
+It can also be a SCALAR reference, which will be used without quoting, or an ARRAY reference for multiple C<IN> values.
 
   $someone = $table->fetch_row(age => 21, join_date => \'CURDATE()', end_date => undef);
   $a_child = $table->fetch_row(name => \'NOT NULL', age => [5 .. 15]);
