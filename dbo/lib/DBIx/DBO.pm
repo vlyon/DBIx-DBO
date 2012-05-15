@@ -156,8 +156,7 @@ sub new {
 }
 
 sub _init {
-    my $class = shift;
-    my $new = shift;
+    my($class, $new) = @_;
     bless $new, $class;
 }
 
@@ -469,7 +468,6 @@ sub disconnect {
         undef $me->{rdbh};
     }
     delete $me->{TableInfo};
-    delete $me->{LastSQL};
     return;
 }
 
@@ -687,4 +685,3 @@ L<DBI>, L<DBIx::SearchBuilder>.
 
 =cut
 
-1;
