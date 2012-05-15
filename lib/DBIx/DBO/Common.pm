@@ -164,7 +164,7 @@ sub _alias_preference {
 }
 
 sub _valid_col {
-    my ($me, $col) = @_;
+    my($me, $col) = @_;
     # Check if the object is an alias
     return $col if $col->[0] == $me;
     # TODO: Sub-queries
@@ -176,7 +176,7 @@ sub _valid_col {
 }
 
 sub _parse_col {
-    my ($me, $col, $_check_aliases) = @_;
+    my($me, $col, $_check_aliases) = @_;
     if (ref $col) {
         return $me->_valid_col($col) if UNIVERSAL::isa($col, 'DBIx::DBO::Column');
         croak 'Invalid column: '.$col;
@@ -186,7 +186,7 @@ sub _parse_col {
 }
 
 sub _build_col {
-    my ($me, $col) = @_;
+    my($me, $col) = @_;
     $me->_qi($me->_table_alias($col->[0]), $col->[1]);
 }
 
@@ -241,7 +241,7 @@ sub _substitute_placeholders {
 }
 
 sub _build_val {
-    my ($me, $bind, $fld, $func, $opt) = @_;
+    my($me, $bind, $fld, $func, $opt) = @_;
     my $extra = '';
     $extra .= ' COLLATE '.$me->rdbh->quote($opt->{COLLATE}) if exists $opt->{COLLATE};
     $extra .= ' AS '.$me->_qi($opt->{AS}) if exists $opt->{AS};
