@@ -705,8 +705,7 @@ my $fake_table_info = {
     Column_Idx => { id => 1, name => 2, age => 3 },
 };
 sub _get_table_info {
-    my $me = shift;
-    my ($schema, $table) = @_;
+    my($me, $schema, $table) = @_;
     # Fake table info
     return $me->{TableInfo}{''}{$table} ||= $fake_table_info;
 }

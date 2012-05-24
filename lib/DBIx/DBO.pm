@@ -354,21 +354,18 @@ This provides access to the L<DBI-E<gt>selectall_arrayref|DBI/"selectall_arrayre
 =cut
 
 sub selectrow_array {
-    my($me, $sql, $attr) = splice @_, 0, 3;
-    $me->_sql($sql, @_);
-    $me->rdbh->selectrow_array($sql, $attr, @_);
+    my $me = shift;
+    $me->_selectrow_array(@_);
 }
 
 sub selectrow_arrayref {
-    my($me, $sql, $attr) = splice @_, 0, 3;
-    $me->_sql($sql, @_);
-    $me->rdbh->selectrow_arrayref($sql, $attr, @_);
+    my $me = shift;
+    $me->_selectrow_arrayref(@_);
 }
 
 sub selectall_arrayref {
-    my($me, $sql, $attr) = splice @_, 0, 3;
-    $me->_sql($sql, @_);
-    $me->rdbh->selectall_arrayref($sql, $attr, @_);
+    my $me = shift;
+    $me->_selectall_arrayref(@_);
 }
 
 =head3 C<table_info>

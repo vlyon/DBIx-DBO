@@ -49,9 +49,39 @@ sub _sql {
 }
 
 sub do {
-    my ($me, $sql, $attr, @bind) = @_;
+    my($me, $sql, $attr, @bind) = @_;
     $me->_sql($sql, @bind);
     $me->dbh->do($sql, $attr, @bind);
+}
+
+sub _selectrow_array {
+    my($me, $sql, $attr, @bind) = @_;
+    $me->_sql($sql, @bind);
+    $me->rdbh->selectrow_array($sql, $attr, @bind);
+}
+
+sub _selectrow_arrayref {
+    my($me, $sql, $attr, @bind) = @_;
+    $me->_sql($sql, @bind);
+    $me->rdbh->selectrow_arrayref($sql, $attr, @bind);
+}
+
+sub _selectrow_hashref {
+    my($me, $sql, $attr, @bind) = @_;
+    $me->_sql($sql, @bind);
+    $me->rdbh->selectrow_hashref($sql, $attr, @bind);
+}
+
+sub _selectall_arrayref {
+    my($me, $sql, $attr, @bind) = @_;
+    $me->_sql($sql, @bind);
+    $me->rdbh->selectall_arrayref($sql, $attr, @bind);
+}
+
+sub _selectall_hashref {
+    my($me, $sql, $key, $attr, @bind) = @_;
+    $me->_sql($sql, @bind);
+    $me->rdbh->selectall_hashref($sql, $key, $attr, @bind);
 }
 
 sub _build_sql_select {
@@ -326,14 +356,14 @@ sub _op_ag {
 
 # Construct one WHERE expression
 sub _build_where_piece {
-    my ($me, $bind, $op, $fld, $fld_func, $fld_opt, $val, $val_func, $val_opt) = @_;
+    my($me, $bind, $op, $fld, $fld_func, $fld_opt, $val, $val_func, $val_opt) = @_;
     $me->_build_val($bind, $fld, $fld_func, $fld_opt)." $op ".$me->_build_val($bind, $val, $val_func, $val_opt);
 }
 
 # Construct one WHERE expression (simple)
 sub _build_quick_where {
     croak 'Wrong number of arguments' if @_ & 1;
-    my ($me, $bind) = splice @_, 0, 2;
+    my($me, $bind) = splice @_, 0, 2;
     my @where;
     while (my ($col, $val) = splice @_, 0, 2) {
         # FIXME: What about aliases in quick_where?
