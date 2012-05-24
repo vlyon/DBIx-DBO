@@ -161,8 +161,7 @@ sub fetch_value {
     my $sql = 'SELECT '.$me->_qi($col->[1]).' FROM '.$me->_quoted_name;
     my @bind;
     $sql .= ' WHERE '.$_ if $_ = $me->_build_quick_where(\@bind, @_);
-    $me->_sql($sql, @bind);
-    my $ref = $me->rdbh->selectrow_arrayref($sql, undef, @bind);
+    my $ref = $me->_selectrow_arrayref($sql, undef, @bind);
     return $ref && $ref->[0];
 }
 
@@ -179,8 +178,7 @@ sub fetch_hash {
     my $sql = 'SELECT * FROM '.$me->_quoted_name;
     my @bind;
     $sql .= ' WHERE '.$_ if $_ = $me->_build_quick_where(\@bind, @_);
-    $me->_sql($sql, @bind);
-    $me->rdbh->selectrow_hashref($sql, undef, @bind);
+    $me->_selectrow_hashref($sql, undef, @bind);
 }
 
 =head3 C<fetch_column>

@@ -692,8 +692,7 @@ You can specify a slice by including a 'Slice' or 'Columns' attribute in C<%attr
 
 sub arrayref {
     my($me, $attr) = @_;
-    $me->_sql($me->sql, $me->_bind_params_select($me->{build_data}));
-    $me->rdbh->selectall_arrayref($me->{sql}, $attr, $me->_bind_params_select($me->{build_data}));
+    $me->_selectall_arrayref($me->sql, $attr, $me->_bind_params_select($me->{build_data}));
 }
 
 =head3 C<hashref>
@@ -708,8 +707,7 @@ C<$key_field> defines which column, or columns, are used as keys in the returned
 
 sub hashref {
     my($me, $key, $attr) = @_;
-    $me->_sql($me->sql, $me->_bind_params_select($me->{build_data}));
-    $me->rdbh->selectall_hashref($me->{sql}, $key, $attr, $me->_bind_params_select($me->{build_data}));
+    $me->_selectall_hashref($me->sql, $key, $attr, $me->_bind_params_select($me->{build_data}));
 }
 
 =head3 C<col_arrayref>
@@ -723,8 +721,9 @@ Run the query using L<DBI-E<gt>selectcol_arrayref|DBI/"selectcol_arrayref"> whic
 
 sub col_arrayref {
     my($me, $attr) = @_;
-    $me->_sql($me->sql, $me->_bind_params_select($me->{build_data}));
-    my $sth = $me->rdbh->prepare($me->{sql}, $attr) or return;
+    my($sql, @bind) = ($me->sql, $me->_bind_params_select($me->{build_data}));
+    $me->_sql($sql, @bind);
+    my $sth = $me->rdbh->prepare($sql, $attr) or return;
     unless (defined $attr->{Columns}) {
         # Some drivers don't provide $sth->{NUM_OF_FIELDS} until after execute is called
         if ($sth->{NUM_OF_FIELDS}) {
@@ -740,7 +739,7 @@ sub col_arrayref {
             return \@col;
         }
     }
-    return $me->rdbh->selectcol_arrayref($sth, $attr, $me->_bind_params_select($me->{build_data}));
+    return $me->rdbh->selectcol_arrayref($sth, $attr, @bind);
 }
 
 =head3 C<fetch>
@@ -890,16 +889,13 @@ Returns undefined if there is an error.
 
 sub count_rows {
     my $me = shift;
-    my $old_fr = $me->{Config}{CalcFoundRows};
-    $me->{Config}{CalcFoundRows} = 0;
+    local $me->{Config}{CalcFoundRows} = 0;
     my $old_sb = delete $me->{build_data}{Show_Bind};
     $me->{build_data}{show} = '1';
 
     my $sql = 'SELECT COUNT(*) FROM ('.$me->_build_sql_select($me->{build_data}).') t';
-    $me->_sql($sql, $me->_bind_params_select($me->{build_data}));
-    my ($count) = $me->rdbh->selectrow_array($sql, undef, $me->_bind_params_select($me->{build_data}));
+    my($count) = $me->_selectrow_array($sql, undef, $me->_bind_params_select($me->{build_data}));
 
-    $me->{Config}{CalcFoundRows} = $old_fr if defined $old_fr;
     $me->{build_data}{Show_Bind} = $old_sb if $old_sb;
     undef $me->{build_data}{show};
     return $count;
