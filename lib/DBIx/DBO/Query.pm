@@ -2,10 +2,8 @@ package DBIx::DBO::Query;
 
 use strict;
 use warnings;
-use DBIx::DBO::Common;
 use Devel::Peek 'SvREFCNT';
 use Carp 'croak';
-our @ISA = qw(DBIx::DBO::Common);
 
 BEGIN {
     if ($] < 5.008_009) {
@@ -17,6 +15,9 @@ BEGIN {
     }
 }
 
+sub _table_class { $_[0]{DBO}->_table_class }
+sub _row_class { $_[0]{DBO}->_row_class }
+
 =head1 NAME
 
 DBIx::DBO::Query - An OO interface to SQL queries and results.  Encapsulates an entire query in an object.
@@ -27,7 +28,7 @@ DBIx::DBO::Query - An OO interface to SQL queries and results.  Encapsulates an 
   my $query = $dbo->query('my_table', 'my_other_table');
   
   # Get the Table objects from the query
-  my ($table1, $table2) = $query->tables;
+  my($table1, $table2) = $query->tables;
   
   # Add a JOIN ON clause
   $query->join_on($table1 ** 'login', '=', $table2 ** 'username');
@@ -66,7 +67,6 @@ sub new {
     my $proto = shift;
     UNIVERSAL::isa($_[0], 'DBIx::DBO') or croak 'Invalid DBO Object';
     my $class = ref($proto) || $proto;
-    $class = $class->_set_dbd_inheritance($_[0]{dbd});
     $class->_init(@_);
 }
 
@@ -117,7 +117,7 @@ sub tables {
 }
 
 sub _table_idx {
-    my ($me, $tbl) = @_;
+    my($me, $tbl) = @_;
     for my $i (0 .. $#{$me->{Tables}}) {
         return $i if $tbl == $me->{Tables}[$i];
     }
@@ -125,7 +125,7 @@ sub _table_idx {
 }
 
 sub _table_alias {
-    my ($me, $tbl) = @_;
+    my($me, $tbl) = @_;
     return undef if $me == $tbl; # This means it's checking for an aliased column
     my $i = $me->_table_idx($tbl);
     croak 'The table is not in this query' unless defined $i;
@@ -152,19 +152,19 @@ Returns a reference to a column for use with other methods.
 =cut
 
 sub column {
-    my ($me, $col, $_check_aliases) = @_;
-    $_check_aliases = $me->_alias_preference('column') unless defined $_check_aliases;
+    my($me, $col, $_check_aliases) = @_;
+    $_check_aliases = $me->{DBO}{dbd_class}->_alias_preference($me, 'column') unless defined $_check_aliases;
     my $column;
     return $column if $_check_aliases == 1 and $column = $me->_check_alias($col);
     for my $tbl ($me->tables) {
         return $tbl->column($col) if exists $tbl->{Column_Idx}{$col};
     }
     return $column if $_check_aliases == 2 and $column = $me->_check_alias($col);
-    croak 'No such column'.($_check_aliases ? '/alias' : '').': '.$me->_qi($col);
+    croak 'No such column'.($_check_aliases ? '/alias' : '').': '.$me->{DBO}{dbd_class}->_qi($me, $col);
 }
 
 sub _check_alias {
-    my ($me, $col) = @_;
+    my($me, $col) = @_;
     for my $fld (@{$me->{build_data}{Showing}}) {
         return $me->{Column}{$col} ||= bless [$me, $col], 'DBIx::DBO::Column'
             if ref($fld) eq 'ARRAY' and exists $fld->[2]{AS} and $col eq $fld->[2]{AS};
@@ -234,11 +234,8 @@ Returns the C<Table> object.
 
 =cut
 
-##
-# Comma, INNER, NATURAL, LEFT, RIGHT, FULL
-##
 sub join_table {
-    my ($me, $tbl, $type) = @_;
+    my($me, $tbl, $type) = @_;
     if (UNIVERSAL::isa($tbl, 'DBIx::DBO::Table')) {
         croak 'This table is already in this query' if $me->_table_idx($tbl);
     } else {
@@ -277,9 +274,9 @@ sub join_on {
     my $t2 = shift;
     my $i = $me->_table_idx($t2) or croak 'Invalid table object to join onto';
 
-    my ($col1, $col1_func, $col1_opt) = $me->_parse_col_val(shift);
+    my($col1, $col1_func, $col1_opt) = $me->_parse_col_val(shift);
     my $op = shift;
-    my ($col2, $col2_func, $col2_opt) = $me->_parse_col_val(shift);
+    my($col2, $col2_func, $col2_opt) = $me->_parse_col_val(shift);
 
     # Validate the fields
     $me->_validate_where_fields(@$col1, @$col2);
@@ -372,9 +369,9 @@ sub where {
     my $me = shift;
 
     # If the $fld is just a scalar use it as a column name not a value
-    my ($fld, $fld_func, $fld_opt) = $me->_parse_col_val(shift);
+    my($fld, $fld_func, $fld_opt) = $me->_parse_col_val(shift);
     my $op = shift;
-    my ($val, $val_func, $val_opt) = $me->_parse_val(shift, Check => 'Auto');
+    my($val, $val_func, $val_opt) = $me->{DBO}{dbd_class}->_parse_val($me, shift, Check => 'Auto');
 
     # Validate the fields
     $me->_validate_where_fields(@$fld, @$val);
@@ -409,7 +406,7 @@ sub _validate_where_fields {
     my $me = shift;
     for my $f (@_) {
         if (UNIVERSAL::isa($f, 'DBIx::DBO::Column')) {
-            $me->_valid_col($f);
+            $me->{DBO}{dbd_class}->_valid_col($me, $f);
         } elsif (my $type = ref $f) {
             croak 'Invalid value type: '.$type if $type ne 'SCALAR';
         }
@@ -422,7 +419,7 @@ sub _del_where {
 
     if (@_) {
         require Data::Dumper;
-        my ($fld, $fld_func, $fld_opt) = $me->_parse_col_val(shift);
+        my($fld, $fld_func, $fld_opt) = $me->_parse_col_val(shift);
         # TODO: Validate the fields?
 
         return unless exists $me->{build_data}{$clause.'_Data'};
@@ -437,7 +434,7 @@ sub _del_where {
 
         if (@_) {
             my $op = shift;
-            my ($val, $val_func, $val_opt) = $me->_parse_val(shift, Check => 'Auto');
+            my($val, $val_func, $val_opt) = $me->{DBO}{dbd_class}->_parse_val($me, shift, Check => 'Auto');
 
             @match = grep {
                 Data::Dumper::Dumper($op, $val, $val_func, $val_opt) eq Data::Dumper::Dumper(@{$ref->[$_]}[0,4,5,6])
@@ -467,7 +464,7 @@ sub _del_where {
 ##
 sub _add_where {
     my $me = shift;
-    my ($ref, $op, $fld, $fld_func, $fld_opt, $val, $val_func, $val_opt, %opt) = @_;
+    my($ref, $op, $fld, $fld_func, $fld_opt, $val, $val_func, $val_opt, %opt) = @_;
 
     croak 'Invalid option, FORCE must be AND or OR'
         if defined $opt{FORCE} and $opt{FORCE} ne 'AND' and $opt{FORCE} ne 'OR';
@@ -484,7 +481,7 @@ sub _add_where {
         if ($op eq 'BETWEEN' or $op eq 'NOT BETWEEN') {
             croak 'Invalid value argument, BETWEEN requires 2 values'
                 if ref $val ne 'ARRAY' or @$val != 2;
-            $val_func = $me->PLACEHOLDER.' AND '.$me->PLACEHOLDER;
+            $val_func = $me->{DBO}{dbd_class}->PLACEHOLDER.' AND '.$me->{DBO}{dbd_class}->PLACEHOLDER;
         } elsif ($op eq 'IN' or $op eq 'NOT IN') {
             if (ref $val eq 'ARRAY') {
                 croak 'Invalid value argument, IN requires at least 1 value' if @$val == 0;
@@ -497,13 +494,13 @@ sub _add_where {
                     next if defined $$lim[1] xor defined $fld;
                     next if defined $$lim[1] and defined $fld and $$lim[1] != $fld;
                     last if ($$lim[5] and $$lim[5] ne _op_ag($op));
-                    last if $$lim[4] ne '('.join(',', ($me->PLACEHOLDER) x @{$$lim[2]}).')';
+                    last if $$lim[4] ne '('.join(',', ($me->{DBO}{dbd_class}->PLACEHOLDER) x @{$$lim[2]}).')';
                     push @{$$lim[2]}, @$val;
-                    $$lim[4] = '('.join(',', ($me->PLACEHOLDER) x @{$$lim[2]}).')';
+                    $$lim[4] = '('.join(',', ($me->{DBO}{dbd_class}->PLACEHOLDER) x @{$$lim[2]}).')';
                     return;
                 }
             }
-            $val_func = '('.join(',', ($me->PLACEHOLDER) x @$val).')';
+            $val_func = '('.join(',', ($me->{DBO}{dbd_class}->PLACEHOLDER) x @$val).')';
         } elsif (@$val != 1) {
             # Check that there is only 1 placeholder
             croak 'Wrong number of fields/values, called with '.@$val.' while needing 1';
@@ -519,10 +516,10 @@ sub _parse_col_val {
     my %c = (Check => 'Column', @_);
     unless (defined $c{Aliases}) {
         (my $method = (caller(1))[3]) =~ s/.*:://;
-        $c{Aliases} = $me->_alias_preference($method);
+        $c{Aliases} = $me->{DBO}{dbd_class}->_alias_preference($me, $method);
     }
-    return $me->_parse_val($col, %c) if ref $col;
-    return [ $me->_parse_col($col, $c{Aliases}) ];
+    return $me->{DBO}{dbd_class}->_parse_val($me, $col, %c) if ref $col;
+    return [ $me->{DBO}{dbd_class}->_parse_col($me, $col, $c{Aliases}) ];
 }
 
 =head3 C<open_bracket>, C<close_bracket>
@@ -545,7 +542,7 @@ sub open_bracket {
 }
 
 sub _open_bracket {
-    my ($me, $brackets, $bracket_refs, $ref, $ag) = @_;
+    my($me, $brackets, $bracket_refs, $ref, $ag) = @_;
     croak 'Invalid argument MUST be AND or OR' if !$ag or $ag !~ /^(AND|OR)$/;
     my $last = @$brackets ? $brackets->[-1] : 'AND';
     if ($ag ne $last) {
@@ -564,7 +561,7 @@ sub close_bracket {
 }
 
 sub _close_bracket {
-    my ($me, $brackets, $bracket_refs) = @_;
+    my($me, $brackets, $bracket_refs) = @_;
     my $ag = pop @{$brackets} or croak "Can't close bracket with no open bracket!";
     my $last = @$brackets ? $brackets->[-1] : 'AND';
     pop @$bracket_refs if $last ne $ag;
@@ -605,9 +602,9 @@ sub having {
     my $me = shift;
 
     # If the $fld is just a scalar use it as a column name not a value
-    my ($fld, $fld_func, $fld_opt) = $me->_parse_col_val(shift);
+    my($fld, $fld_func, $fld_opt) = $me->_parse_col_val(shift);
     my $op = shift;
-    my ($val, $val_func, $val_opt) = $me->_parse_val(shift, Check => 'Auto');
+    my($val, $val_func, $val_opt) = $me->{DBO}{dbd_class}->_parse_val($me, shift, Check => 'Auto');
 
     # Validate the fields
     $me->_validate_where_fields(@$fld, @$val);
@@ -672,7 +669,7 @@ When called without arguments or if C<$rows> is undefined, the limit is removed.
 =cut
 
 sub limit {
-    my ($me, $rows, $offset) = @_;
+    my($me, $rows, $offset) = @_;
     undef $me->{sql};
     undef $me->{build_data}{limit};
     return undef $me->{build_data}{LimitOffset} unless defined $rows;
@@ -692,7 +689,8 @@ You can specify a slice by including a 'Slice' or 'Columns' attribute in C<%attr
 
 sub arrayref {
     my($me, $attr) = @_;
-    $me->_selectall_arrayref($me->sql, $attr, $me->_bind_params_select($me->{build_data}));
+    $me->{DBO}{dbd_class}->_selectall_arrayref($me, $me->sql, $attr,
+        $me->{DBO}{dbd_class}->_bind_params_select($me, $me->{build_data}));
 }
 
 =head3 C<hashref>
@@ -707,7 +705,8 @@ C<$key_field> defines which column, or columns, are used as keys in the returned
 
 sub hashref {
     my($me, $key, $attr) = @_;
-    $me->_selectall_hashref($me->sql, $key, $attr, $me->_bind_params_select($me->{build_data}));
+    $me->{DBO}{dbd_class}->_selectall_hashref($me, $me->sql, $key, $attr,
+        $me->{DBO}{dbd_class}->_bind_params_select($me, $me->{build_data}));
 }
 
 =head3 C<col_arrayref>
@@ -721,15 +720,15 @@ Run the query using L<DBI-E<gt>selectcol_arrayref|DBI/"selectcol_arrayref"> whic
 
 sub col_arrayref {
     my($me, $attr) = @_;
-    my($sql, @bind) = ($me->sql, $me->_bind_params_select($me->{build_data}));
-    $me->_sql($sql, @bind);
+    my($sql, @bind) = ($me->sql, $me->{DBO}{dbd_class}->_bind_params_select($me, $me->{build_data}));
+    $me->{DBO}{dbd_class}->_sql($me, $sql, @bind);
     my $sth = $me->rdbh->prepare($sql, $attr) or return;
     unless (defined $attr->{Columns}) {
         # Some drivers don't provide $sth->{NUM_OF_FIELDS} until after execute is called
         if ($sth->{NUM_OF_FIELDS}) {
             $attr->{Columns} = [1 .. $sth->{NUM_OF_FIELDS}];
         } else {
-            $sth->execute($me->_bind_params_select($me->{build_data})) or return;
+            $sth->execute(@bind) or return;
             my @col;
             if (my $max = $attr->{MaxRows}) {
                 push @col, @$_ while 0 < $max-- and $_ = $sth->fetch;
@@ -829,9 +828,9 @@ sub run {
 
 sub _execute {
     my $me = shift;
-    $me->_sql($me->sql, $me->_bind_params_select($me->{build_data}));
+    $me->{DBO}{dbd_class}->_sql($me, $me->sql, $me->{DBO}{dbd_class}->_bind_params_select($me, $me->{build_data}));
     $me->_sth or return;
-    $me->{sth}->execute($me->_bind_params_select($me->{build_data}));
+    $me->{sth}->execute($me->{DBO}{dbd_class}->_bind_params_select($me, $me->{build_data}));
 }
 
 sub _bind_cols_to_hash {
@@ -869,12 +868,7 @@ Returns undefined if the number is unknown.
 sub rows {
     my $me = shift;
     $me->sql; # Ensure the Row_Count is cleared if needed
-    unless (defined $me->{Row_Count}) {
-        $me->_sth and ($me->{sth}{Executed} or $me->run)
-            or croak $me->rdbh->errstr;
-        $me->{Row_Count} = $me->_sth->rows;
-        $me->{Row_Count} = $me->count_rows if $me->{Row_Count} == -1;
-    }
+    $me->{DBO}{dbd_class}->_rows($me) unless defined $me->{Row_Count};
     $me->{Row_Count};
 }
 
@@ -893,8 +887,9 @@ sub count_rows {
     my $old_sb = delete $me->{build_data}{Show_Bind};
     $me->{build_data}{show} = '1';
 
-    my $sql = 'SELECT COUNT(*) FROM ('.$me->_build_sql_select($me->{build_data}).') t';
-    my($count) = $me->_selectrow_array($sql, undef, $me->_bind_params_select($me->{build_data}));
+    my $sql = 'SELECT COUNT(*) FROM ('.$me->{DBO}{dbd_class}->_build_sql_select($me, $me->{build_data}).') t';
+    my($count) = $me->{DBO}{dbd_class}->_selectrow_array($me, $sql, undef,
+        $me->{DBO}{dbd_class}->_bind_params_select($me, $me->{build_data}));
 
     $me->{build_data}{Show_Bind} = $old_sb if $old_sb;
     undef $me->{build_data}{show};
@@ -914,11 +909,7 @@ Returns undefined if there is an error or is unable to determine the number of f
 
 sub found_rows {
     my $me = shift;
-    if (not defined $me->{Found_Rows}) {
-        $me->{build_data}{limit} = '';
-        $me->{Found_Rows} = $me->count_rows;
-        undef $me->{build_data}{limit};
-    }
+    $me->{DBO}{dbd_class}->_calc_found_rows($me) unless defined $me->{Found_Rows};
     $me->{Found_Rows};
 }
 
@@ -950,14 +941,14 @@ sub _build_sql {
             undef ${$me->{Row}}{array};
             undef %{$me->{Row}};
 
-            $me->{sql} = $me->_build_sql_select($me->{build_data});
+            $me->{sql} = $me->{DBO}{dbd_class}->_build_sql_select($me, $me->{build_data});
             $me->{Row}->_copy_build_data;
             return $me->{sql};
         }
     }
     undef @{$me->{Columns}};
 
-    $me->{sql} = $me->_build_sql_select($me->{build_data});
+    $me->{sql} = $me->{DBO}{dbd_class}->_build_sql_select($me, $me->{build_data});
 }
 
 # Get the DBI statement handle for the query.
@@ -1001,6 +992,10 @@ sub finish {
 
 These methods are accessible from all DBIx::DBO* objects.
 
+=head3 C<dbo>
+
+The C<DBO> object.
+
 =head3 C<dbh>
 
 The I<read-write> C<DBI> handle.
@@ -1009,13 +1004,11 @@ The I<read-write> C<DBI> handle.
 
 The I<read-only> C<DBI> handle, or if there is no I<read-only> connection, the I<read-write> C<DBI> handle.
 
-=head3 C<do>
+=cut
 
-  $query->do($statement)         or die $query->dbh->errstr;
-  $query->do($statement, \%attr) or die $query->dbh->errstr;
-  $query->do($statement, \%attr, @bind_values) or die ...
-
-This provides access to L<DBI-E<gt>do|DBI/"do"> method.  It defaults to using the I<read-write> C<DBI> handle.
+sub dbo { $_[0]{DBO} }
+sub dbh { $_[0]{DBO}->dbh }
+sub rdbh { $_[0]{DBO}->rdbh }
 
 =head3 C<config>
 
@@ -1031,8 +1024,8 @@ See: L<DBIx::DBO/Available_config_options>.
 sub config {
     my $me = shift;
     my $opt = shift;
-    return $me->_set_config($me->{Config} ||= {}, $opt, shift) if @_;
-    return defined $me->{Config}{$opt} ? $me->{Config}{$opt} : $me->{DBO}->config($opt);
+    return $me->{DBO}{dbd_class}->_set_config($me->{Config} ||= {}, $opt, shift) if @_;
+    $me->{DBO}{dbd_class}->_get_config($opt, $me->{Config} ||= {}, $me->{DBO}{Config}, \%DBIx::DBO::Config);
 }
 
 sub DESTROY {
@@ -1089,15 +1082,11 @@ C<ORDER> => To order by a column (Used only in C<group_by> and C<order_by>).
 
 =head1 SUBCLASSING
 
-When subclassing C<DBIx::DBO::Query>, please note that C<Query> objects created with the L</new> method are blessed into a DBD driver specific module.
-For example, if using MySQL, a new C<Query> object will be blessed into C<DBIx::DBO::Query::DBD::mysql> which inherits from C<DBIx::DBO::Query>.
-However if objects are created from a subclass called C<MySubClass> the new object will be blessed into C<MySubClass::DBD::mysql> which will inherit from both C<MySubClass> and C<DBIx::DBO::Query::DBD::mysql>.
-
 Classes can easily be created for tables in your database.
 Assume you want to create a C<Query> and C<Row> class for a "Users" table:
 
   package My::Users;
-  use base 'DBIx::DBO::Query';
+  our @ISA = qw(DBIx::DBO::Query);
   
   sub new {
       my($class, $dbo) = @_;
@@ -1113,11 +1102,10 @@ Assume you want to create a C<Query> and C<Row> class for a "Users" table:
   sub _row_class { 'My::User' } # Rows are blessed into this class
 
   package My::User;
-  use base 'DBIx::DBO::Row';
+  our @ISA = qw(DBIx::DBO::Row);
   
   sub new {
-      my $class = shift;
-      my($dbo, $parent) = @_;
+      my($class, $dbo, $parent) = @_;
       
       $parent ||= My::Users->new($dbo); # The Row will use the same table as it's parent
       

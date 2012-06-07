@@ -1,7 +1,7 @@
 Build.PL
 Changes
 lib/DBIx/DBO.pm
-lib/DBIx/DBO/Common.pm
+lib/DBIx/DBO/DBD.pm
 lib/DBIx/DBO/DBD/DBM.pm
 lib/DBIx/DBO/DBD/Oracle.pm
 lib/DBIx/DBO/DBD/Pg.pm

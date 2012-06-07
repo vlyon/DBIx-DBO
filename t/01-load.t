@@ -41,8 +41,8 @@ is $dbo->config('UseHandle'), 'read-write', 'Setting $dbo->config overrides DBIx
 is $dbo->config('QuoteIdentifier'), 456, '$dbo->config inherits from DBIx::DBO->config';
 
 $dbo->config(QuoteIdentifier => 0);
-is $dbo->_qi(undef, 'table', 'field'), 'table.field', 'Method $dbo->_qi';
-is $dbo->_qi(undef, ''), '', 'Method $dbo->_qi (empty)';
+is $dbo->{dbd_class}->_qi($dbo, undef, 'table', 'field'), 'table.field', 'Method $dbo->_qi';
+is $dbo->{dbd_class}->_qi($dbo, undef, ''), '', 'Method $dbo->_qi (empty)';
 
 eval { DBIx::DBO->config(UseHandle => 'invalid') };
 ok $@ =~ /^Invalid value for the 'UseHandle' setting/, 'UseHandle config must be valid';

@@ -41,9 +41,11 @@ BEGIN {
 
     # Store the last SQL executed, and show debug info
     {
-        package DBIx::DBO::Common;
+        package # hide from PAUSE
+            DBIx::DBO::DBD;
         no warnings 'redefine';
-        *DBIx::DBO::Common::_sql = sub {
+        *DBIx::DBO::DBD::_sql = sub {
+            my $class = shift;
             my $me = shift;
             my $loc = Carp::short_error_loc();
             my %i = Carp::caller_info($loc);
@@ -88,7 +90,7 @@ sub import {
     }
 
     # Skip tests with missing module requirements
-    unless (eval { DBIx::DBO->_require_dbd_class($dbd) }) {
+    unless (eval { DBIx::DBO::DBD->_require_dbd_class($dbd) }) {
         if ($@ =~ /^Can't locate ([\w\/]+)\.pm in \@INC /m) {
             # Module is not installed
             ($_ = $1) =~ s'/'::'g;
@@ -134,7 +136,7 @@ sub import {
 
         plan tests => $opt{tests};
         pass "Connect to $dbd_name";
-        isa_ok $dbo, "DBIx::DBO::DBD::${dbd}", '$dbo';
+        isa_ok $dbo, 'DBIx::DBO', '$dbo';
     } else {
         plan tests => $opt{tests};
     }
@@ -142,7 +144,7 @@ sub import {
 
 sub sql_err {
     my $me = shift;
-    my ($cmd, $sql, @bind) = @{(Scalar::Util::reftype($me) eq 'REF' ? $$me : $me)->{LastSQL}};
+    my($cmd, $sql, @bind) = @{(Scalar::Util::reftype($me) eq 'REF' ? $$me : $me)->{LastSQL}};
     $sql =~ s/^/  /mg;
     my @err = ($DBI::errstr || $me->rdbh->errstr || '???');
     unshift @err, 'Bind Values: ('.join(', ', map $me->rdbh->quote($_), @bind).')' if @bind;
@@ -152,7 +154,7 @@ sub sql_err {
 }
 
 sub connect_dbo {
-    my ($dsn, $user, $pass) = @_;
+    my($dsn, $user, $pass) = @_;
     defined $dsn or $dsn = '';
     DBIx::DBO->connect("DBI:$dbd:$dsn", $user, $pass, {RaiseError => 0});
 }
@@ -180,8 +182,8 @@ sub basic_methods {
     # Create a DBO from DBI handles
     isa_ok(DBIx::DBO->new($dbo->{dbh}, $dbo->{rdbh}), 'DBIx::DBO', 'Method DBIx::DBO->new, $dbo');
 
-    my $quoted_table = $dbo->_qi($test_sch, $test_tbl);
-    my @quoted_cols = map $dbo->_qi($_), qw(type id name);
+    my $quoted_table = $dbo->{dbd_class}->_qi($dbo, $test_sch, $test_tbl);
+    my @quoted_cols = map $dbo->{dbd_class}->_qi($dbo, $_), qw(type id name);
     my $t;
     my $create_table = "CREATE TABLE $quoted_table ($quoted_cols[1] ".
         ($can{auto_increment_id} || 'INT NOT NULL').", $quoted_cols[2] VARCHAR(20))";
@@ -204,7 +206,7 @@ sub basic_methods {
         # Remove the created table during cleanup
         todo_cleanup("DROP TABLE $quoted_table");
 
-        $dbo->_get_table_info($t->{Schema}, $t->{Name});
+        $dbo->{dbd_class}->_get_table_info($dbo, $t->{Schema}, $t->{Name});
         $t = $dbo->table([$test_sch, $test_tbl]);
     }
     else {
@@ -366,6 +368,9 @@ sub row_methods {
     is $$r->{array}, undef, 'Row is empty again';
     is_deeply \@{$r->load(id => 2)}, [ 2, 'Someone Else' ], 'Row updated correctly' or diag sql_err($r);
 
+    $r->update(name => 'Nobody', $t ** 'name' => 'Anybody') or diag sql_err($r);
+    is_deeply \@{$r->load(id => 2)}, [ 2, 'Anybody' ], 'Row update removes duplicates' or diag sql_err($r);
+
     ok $r->delete, 'Method DBIx::DBO::Row->delete' or diag sql_err($r);
     $t->insert(id => 2, name => 'Jane Smith');
 
@@ -480,8 +485,8 @@ sub query_methods {
     $q->show('name', {COL => 'id', AS => 'key'});
     $q->group_by;
     $r = $q->fetch;
-    ok $r->update(id => $r->{key}), 'Can update a Row using aliases' or diag sql_err($r);
-    ok $r->load(id => 5), 'Can load a Row using aliases' or diag sql_err($r);
+    ok $r->update(id => $r->{key}), 'Can update a Row despite using aliases' or diag sql_err($r);
+    ok $r->load(id => 5), 'Can load a Row despite using aliases' or diag sql_err($r);
 
     $q->finish;
     return $q;
@@ -546,7 +551,7 @@ sub join_methods {
     my $dbo = shift;
     my $table = shift;
 
-    my ($q, $t1, $t2) = $dbo->query($table, $table);
+    my($q, $t1, $t2) = $dbo->query($table, $table);
 
     # DISTINCT clause
     $q->order_by('id');
@@ -673,7 +678,7 @@ sub _Find_Seen {
             return;
         } elsif ($val->isa('DBIx::DBO::Table')) {
             my $t = 1;
-            while (my ($k, $v) = each %$seen) {
+            while (my($k, $v) = each %$seen) {
                 next if $k !~ /^t\d+$/;
                 return if $val == $v;
                 $t++;
@@ -705,7 +710,7 @@ my $fake_table_info = {
     Column_Idx => { id => 1, name => 2, age => 3 },
 };
 sub _get_table_info {
-    my($me, $schema, $table) = @_;
+    my($class, $me, $schema, $table) = @_;
     # Fake table info
     return $me->{TableInfo}{''}{$table} ||= $fake_table_info;
 }

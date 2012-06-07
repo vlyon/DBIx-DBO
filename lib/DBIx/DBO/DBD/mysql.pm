@@ -6,80 +6,70 @@ package # hide from PAUSE
 use Carp qw(croak);
 
 sub _get_table_schema {
-    my($me, $schema, $table) = @_;
+    my($class, $me, $schema, $table) = @_;
 
     ($schema) = $me->rdbh->selectrow_array('SELECT DATABASE()') unless defined $schema and length $schema;
-    $me->SUPER::_get_table_schema($schema, $table);
+    $class->SUPER::_get_table_schema($me, $schema, $table);
 }
 
 sub _set_table_key_info {
-    my($me, $schema, $table, $h) = @_;
+    my($class, $me, $schema, $table, $h) = @_;
 
     if (my $keys = $me->rdbh->primary_key_info(undef, $schema, $table)) {
         $h->{PrimaryKeys}[$_->{KEY_SEQ} - 1] = $_->{COLUMN_NAME} for @{$keys->fetchall_arrayref({})};
     } else {
         # Support for older DBD::mysql - Simulate primary_key_info()
         local $me->rdbh->{FetchHashKeyName} = 'NAME_lc';
-        my $info = $me->rdbh->selectall_arrayref('SHOW KEYS FROM '.$me->_qi($schema, $table), {Columns => {}});
+        my $info = $me->rdbh->selectall_arrayref('SHOW KEYS FROM '.$class->_qi($me, $schema, $table), {Columns => {}});
         $_->{key_name} eq 'PRIMARY' and $h->{PrimaryKeys}[$_->{seq_in_index} - 1] = $_->{column_name} for @$info;
     }
 }
 
 sub _unquote_table {
-    $_[1] =~ /^(?:(`|"|)(.+)\1\.|)(`|"|)(.+)\3$/ or croak "Invalid table: \"$_[1]\"";
+    $_[2] =~ /^(?:(`|"|)(.+)\1\.|)(`|"|)(.+)\3$/ or croak "Invalid table: \"$_[2]\"";
     return ($2, $4);
 }
 
-sub config {
+sub _save_last_insert_id {
+    my($class, $me, $sth) = @_;
+
+    return $sth->{mysql_insertid};
+}
+
+sub _get_config {
     my $class = shift;
-    my $val = $class->SUPER::config(@_);
+    my $val = $class->SUPER::_get_config(@_);
     # MySQL supports LIMIT on UPDATE/DELETE by default
     ($_[0] ne 'LimitRowUpdate' and $_[0] ne 'LimitRowDelete' or defined $val) ? $val : 1;
 }
 
-package # hide from PAUSE
-    DBIx::DBO::Common::DBD::mysql;
+# Query
+sub _calc_found_rows {
+    my($class, $me) = @_;
+    if ($me->sql =~ / SQL_CALC_FOUND_ROWS /) {
+        $me->run unless $me->_sth->{Executed};
+        return $me->{Found_Rows} = ($class->_selectrow_array($me, 'SELECT FOUND_ROWS()'))[0];
+    }
+    $class->SUPER::_calc_found_rows($me);
+}
 
 sub _build_sql_select {
-    my $me = shift;
-    my $sql = $me->SUPER::_build_sql_select(@_);
+    my($class, $me, @arg) = @_;
+    my $sql = $class->SUPER::_build_sql_select($me, @arg);
     $sql =~ s/SELECT /SELECT SQL_CALC_FOUND_ROWS / if $me->config('CalcFoundRows');
     return $sql;
 }
 
 # MySQL doesn't allow the use of aliases in the WHERE clause
 sub _alias_preference {
-    my $me = shift;
-    my $method = shift || ((caller(2))[3] =~ /\b(\w+)$/);
+    my($class, $me, $method) = @_;
+    $method ||= ((caller(2))[3] =~ /\b(\w+)$/);
     return 0 if $method eq 'join_on' or $method eq 'where';
     return 1;
 }
 
-package # hide from PAUSE
-    DBIx::DBO::Table::DBD::mysql;
-use Carp 'croak';
-
-sub _save_last_insert_id {
-    my($me, $sth) = @_;
-
-    return $sth->{mysql_insertid};
-}
-
-sub _do_bulk_insert {
+sub _bulk_insert {
     shift->_fast_bulk_insert(@_);
-}
-
-package # hide from PAUSE
-    DBIx::DBO::Query::DBD::mysql;
-
-sub found_rows {
-    my $me = shift;
-    my $sql = $me->sql;
-    if (not defined $me->{Found_Rows} and $sql =~ / SQL_CALC_FOUND_ROWS /) {
-        $me->run unless $me->_sth->{Executed};
-        ($me->{Found_Rows}) = $me->_selectrow_array('SELECT FOUND_ROWS()');
-    }
-    $me->{Found_Rows};
 }
 
 1;
