@@ -10,7 +10,7 @@ my $quoted_db;
 sub connect_and_create {
     if (my $dbo = Test::DBO::connect_dbo(@_)) {
         # Create a test database
-        $quoted_db = $dbo->_qi($Test::DBO::test_db);
+        $quoted_db = $dbo->{dbd_class}->_qi($dbo, $Test::DBO::test_db);
         if ($dbo->do("CREATE DATABASE $quoted_db")) {
             note "Created $quoted_db test database";
             return $dbo;
@@ -44,20 +44,20 @@ unless ($quoted_db) {
     $quoted_db = $dbo->_qi($Test::DBO::test_db);
 }
 
-plan tests => 94;
+plan tests => 95;
 pass "Connect to PostgreSQL $quoted_db database";
-isa_ok $dbo, 'DBIx::DBO::DBD::Pg', '$dbo';
+isa_ok $dbo, 'DBIx::DBO', '$dbo';
 
 # Create the schema
 my $drop_sch;
-my $quoted_sch = $dbo->_qi($Test::DBO::test_sch);
+my $quoted_sch = $dbo->{dbd_class}->_qi($dbo, $Test::DBO::test_sch);
 if (ok $dbo->do("CREATE SCHEMA $quoted_sch"), "Create $quoted_sch test schema") {
     Test::DBO::todo_cleanup("DROP SCHEMA $quoted_sch CASCADE");
 } else {
     note sql_err($dbo);
 }
 
-my $quoted_seq = $dbo->_qi($Test::DBO::test_sch, 'dbo_test_seq');
+my $quoted_seq = $dbo->{dbd_class}->_qi($dbo, $Test::DBO::test_sch, 'dbo_test_seq');
 $dbo->do("CREATE SEQUENCE $quoted_seq START WITH 5")
     and Test::DBO::todo_cleanup("DROP SEQUENCE $quoted_seq")
     and $Test::DBO::can{auto_increment_id} = " INT PRIMARY KEY DEFAULT nextval('$quoted_seq')"
@@ -69,7 +69,7 @@ my $t = Test::DBO::basic_methods($dbo);
 # Advanced table methods: insert, update, delete (2 tests)
 Test::DBO::advanced_table_methods($dbo, $t);
 
-# Row methods: (14 tests)
+# Row methods: (15 tests)
 Test::DBO::row_methods($dbo, $t);
 
 # Query methods: (23 tests)

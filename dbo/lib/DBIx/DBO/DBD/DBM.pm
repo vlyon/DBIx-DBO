@@ -21,11 +21,11 @@ sub _get_table_schema {
 }
 
 sub _get_column_info {
-    my($me, $schema, $table) = @_;
+    my($class, $me, $schema, $table) = @_;
     my $q_table = $table;
 
     unless (exists $me->rdbh->{dbm_tables}{$q_table}) {
-        $q_table = $me->_qi($table); # Try with the quoted table name
+        $q_table = $class->_qi($me, $table); # Try with the quoted table name
         unless (exists $me->rdbh->{dbm_tables}{$q_table}) {
             croak 'Invalid table: '.$q_table;
         }

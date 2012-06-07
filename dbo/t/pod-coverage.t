@@ -13,8 +13,8 @@ my $min_pc = 0.18;
 eval "use Pod::Coverage $min_pc";
 plan skip_all => "Pod::Coverage $min_pc required for testing POD coverage" if $@;
 
-# Don't check POD for DBIx::DBO::Common and DBIx::DBO::DBD::*
-my @modules = grep $_ !~ /^DBIx::DBO::(DBD|Common)\b/, all_modules();
+# Don't check POD for DBIx::DBO::DBD and DBIx::DBO::DBD::*
+my @modules = grep $_ !~ /^DBIx::DBO::DBD\b/, all_modules();
 plan tests => scalar @modules;
 scalar grep !pod_coverage_ok($_, "Pod coverage on $_"), @modules;
 

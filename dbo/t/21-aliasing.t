@@ -15,7 +15,7 @@ use Test::DBO Sponge => 'Sponge', tests => 7;
         @rows = @_;
     }
     sub prepare {
-        my ($dbh, $sql, $attr) = @_;
+        my($dbh, $sql, $attr) = @_;
         $attr ||= {};
         $attr->{NAME} ||= \@cols;
         $attr->{rows} ||= \@rows;
@@ -33,8 +33,8 @@ $q->show({COL => 'name', AS => 'id'}, {COL => 'age', AS => 'alias'});
 isa_ok my $c = $q->column('age'), 'DBIx::DBO::Column', '$c';
 isa_ok my $a = $q->column('alias'), 'DBIx::DBO::Column', '$a';
 
-ok $q->_parse_col('alias', 2), 'Parse a column via an alias name';
-ok $q->_parse_col($a, 2), 'Parse a column via an alias object';
+ok $q->{DBO}{dbd_class}->_parse_col($q, 'alias', 2), 'Parse a column via an alias name';
+ok $q->{DBO}{dbd_class}->_parse_col($q, $a, 2), 'Parse a column via an alias object';
 
 ok $q->where('alias', '=', 123), 'WHERE clause using an alias name';
 ok $q->where($a, '=', 123), 'WHERE clause using an alias object';

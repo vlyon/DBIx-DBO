@@ -41,7 +41,7 @@ eval { $dbo->connect_readonly('DBI:Sponge:') };
 like $@, qr/^The read-write and read-only connections must use the same DBI driver /m, 'Check extra connection driver';
 
 $dbo = DBIx::DBO->new(undef, $dbh1);
-my ($q, $t) = $dbo->query($Test::DBO::test_tbl);
+my($q, $t) = $dbo->query($Test::DBO::test_tbl);
 
 eval { $q->where('id', '=', {FUNC => '(?,?)', VAL => [1,2,3]}) };
 like $@, qr/^The number of params \(3\) does not match the number of placeholders \(2\)/,

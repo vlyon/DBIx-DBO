@@ -2,13 +2,13 @@ package DBIx::DBO::Row;
 
 use strict;
 use warnings;
-use DBIx::DBO::Common;
 use Scalar::Util qw(blessed weaken);
 use Carp 'croak';
-our @ISA = qw(DBIx::DBO::Common);
 
 use overload '@{}' => sub {${$_[0]}->{array} || []}, '%{}' => sub {${$_[0]}->{hash}};
 use overload '**' => \&value, fallback => 1;
+
+sub _table_class { ${$_[0]}->{DBO}->_table_class }
 
 =head1 NAME
 
@@ -44,14 +44,10 @@ Can take the same arguments as L<DBIx::DBO::Table/new> or a L<Query|DBIx::DBO::Q
 
 =cut
 
-sub dbh { ${$_[0]}->{DBO}->dbh }
-sub rdbh { ${$_[0]}->{DBO}->rdbh }
-
 sub new {
     my $proto = shift;
     UNIVERSAL::isa($_[0], 'DBIx::DBO') or croak 'Invalid DBO Object';
     my $class = ref($proto) || $proto;
-    $class = $class->_set_dbd_inheritance($_[0]{dbd});
     $class->_init(@_);
 }
 
@@ -157,7 +153,7 @@ sub _column_idx {
 =head3 C<column>
 
   $query->column($column_name);
-  $query->column($column_or_alias_name, 1);
+  $query->column($alias_or_column_name, 1);
 
 Returns a column reference from the name or alias.
 By default only column names are searched, set the second argument to true to check column aliases and names.
@@ -175,7 +171,7 @@ sub column {
     for my $tbl ($me->tables) {
         return $tbl->column($col) if exists $tbl->{Column_Idx}{$col};
     }
-    croak 'No such column'.($_check_aliases ? '/alias' : '').': '.$me->_qi($col);
+    croak 'No such column'.($_check_aliases ? '/alias' : '').': '.$$me->{DBO}{dbd_class}->_qi($me, $col);
 }
 
 =head3 C<value>
@@ -199,7 +195,7 @@ sub value {
     if (UNIVERSAL::isa($col, 'DBIx::DBO::Column')) {
         my $i = $me->_column_idx($col);
         return $$me->{array}[$i] if defined $i;
-        croak 'The field '.$me->_qi($col->[0]{Name}, $col->[1]).' was not included in this query';
+        croak 'The field '.$$me->{DBO}{dbd_class}->_qi($me, $col->[0]{Name}, $col->[1]).' was not included in this query';
     }
     return $$me->{hash}{$col} if exists $$me->{hash}{$col};
     croak 'No such column: '.$col;
@@ -225,15 +221,15 @@ sub load {
     my $old_qw = $#{$$me->{build_data}{Quick_Where}};
     push @{$$me->{build_data}{Quick_Where}}, @_;
     undef $$me->{build_data}{where};
-    my $sql = $me->_build_sql_select($$me->{build_data});
+    my $sql = $$me->{DBO}{dbd_class}->_build_sql_select($me, $$me->{build_data});
     $old_qw < 0 ? delete $$me->{build_data}{Quick_Where} : ($#{$$me->{build_data}{Quick_Where}} = $old_qw);
 
     undef @{$$me->{Columns}};
     undef $$me->{array};
     $$me->{hash} = \my %hash;
-    $me->_sql($sql, $me->_bind_params_select($$me->{build_data}));
+    $$me->{DBO}{dbd_class}->_sql($me, $sql, $$me->{DBO}{dbd_class}->_bind_params_select($me, $$me->{build_data}));
     my $sth = $me->rdbh->prepare($sql);
-    return unless $sth and $sth->execute($me->_bind_params_select($$me->{build_data}));
+    return unless $sth and $sth->execute($$me->{DBO}{dbd_class}->_bind_params_select($me, $$me->{build_data}));
 
     my $i;
     my @array;
@@ -278,21 +274,14 @@ otherwise ALL rows matching the current row will be updated.
 sub update {
     my $me = shift;
     croak 'No current record to update!' unless $$me->{array};
-    my $build_data = $me->_build_data_matching_this_row;
+    my @update = $$me->{DBO}{dbd_class}->_parse_set($me, @_);
+    my $build_data = $$me->{DBO}{dbd_class}->_build_data_matching_this_row($me);
     $build_data->{LimitOffset} = [1] if $me->config('LimitRowUpdate') and $me->tables == 1;
-    my $sql = $me->_build_sql_update($build_data, @_);
+    my $sql = $$me->{DBO}{dbd_class}->_build_sql_update($me, $build_data, @update);
 
-    my $rv = $me->do($sql, undef, $me->_bind_params_update($build_data));
-    $me->_reset_on_update($build_data, @_) if $rv and $rv > 0;
+    my $rv = $$me->{DBO}{dbd_class}->_do($me, $sql, undef, $$me->{DBO}{dbd_class}->_bind_params_update($me, $build_data));
+    $$me->{DBO}{dbd_class}->_reset_row_on_update($me, $build_data, @update) if $rv and $rv > 0;
     return $rv;
-}
-
-sub _reset_on_update {
-    my $me = shift;
-    # TODO: Reload/update instead of leaving the row empty?
-    # To update the Row object is difficult because columns may have been aliased
-    undef $$me->{array};
-    $$me->{hash} = {};
 }
 
 =head3 C<delete>
@@ -311,37 +300,22 @@ otherwise ALL rows matching the current row will be deleted.
 sub delete {
     my $me = shift;
     croak 'No current record to delete!' unless $$me->{array};
-    my $build_data = $me->_build_data_matching_this_row;
+    my $build_data = $$me->{DBO}{dbd_class}->_build_data_matching_this_row($me);
     $build_data->{LimitOffset} = [1] if $me->config('LimitRowDelete') and $me->tables == 1;
-    my $sql = $me->_build_sql_delete($build_data, @_);
+    my $sql = $$me->{DBO}{dbd_class}->_build_sql_delete($me, $build_data, @_);
 
     undef $$me->{array};
     $$me->{hash} = {};
-    $me->do($sql, undef, $me->_bind_params_delete($build_data));
-}
-
-sub _build_data_matching_this_row {
-    my $me = shift;
-    # Identify the row by the PrimaryKeys if any, otherwise by all Columns
-    my @quick_where;
-    for my $tbl (@{$$me->{Tables}}) {
-        for my $col (map $tbl ** $_, @{$tbl->{ @{$tbl->{PrimaryKeys}} ? 'PrimaryKeys' : 'Columns' }}) {
-            my $i = $me->_column_idx($col);
-            defined $i or croak 'The '.$me->_qi($tbl->{Name}, $col->[1]).' field needed to identify this row, was not included in this query';
-            push @quick_where, $col => $$me->{array}[$i];
-        }
-    }
-    my %h = (
-        from => $$me->{build_data}{from},
-        Quick_Where => \@quick_where
-    );
-    $h{From_Bind} = $$me->{build_data}{From_Bind} if exists $$me->{build_data}{From_Bind};
-    return \%h;
+    $$me->{DBO}{dbd_class}->_do($me, $sql, undef, $$me->{DBO}{dbd_class}->_bind_params_delete($me, $build_data));
 }
 
 =head2 Common Methods
 
 These methods are accessible from all DBIx::DBO* objects.
+
+=head3 C<dbo>
+
+The C<DBO> object.
 
 =head3 C<dbh>
 
@@ -351,13 +325,11 @@ The I<read-write> C<DBI> handle.
 
 The I<read-only> C<DBI> handle, or if there is no I<read-only> connection, the I<read-write> C<DBI> handle.
 
-=head3 C<do>
+=cut
 
-  $row->do($statement)         or die $row->dbh->errstr;
-  $row->do($statement, \%attr) or die $row->dbh->errstr;
-  $row->do($statement, \%attr, @bind_values) or die ...
-
-This provides access to the L<DBI-E<gt>do|DBI/"do"> method.  It defaults to using the I<read-write> C<DBI> handle.
+sub dbo { ${$_[0]}->{DBO} }
+sub dbh { ${$_[0]}->{DBO}->dbh }
+sub rdbh { ${$_[0]}->{DBO}->rdbh }
 
 =head3 C<config>
 
@@ -373,9 +345,8 @@ See L<DBIx::DBO/Available_config_options>.
 sub config {
     my $me = shift;
     my $opt = shift;
-    return $me->_set_config($$me->{Config} ||= {}, $opt, shift) if @_;
-    return defined $$me->{Config}{$opt} ? $$me->{Config}{$opt} :
-        (defined $$me->{Parent} ? $$me->{Parent} : $$me->{DBO})->config($opt);
+    return $$me->{DBO}{dbd_class}->_set_config($$me->{Config} ||= {}, $opt, shift) if @_;
+    $$me->{DBO}{dbd_class}->_get_config($opt, $$me->{Config} ||= {}, defined $$me->{Parent} ? ($$me->{Parent}) : (), $$me->{DBO}{Config}, \%DBIx::DBO::Config);
 }
 
 sub DESTROY {
@@ -388,15 +359,11 @@ __END__
 
 =head1 SUBCLASSING
 
-When subclassing C<DBIx::DBO::Row>, please note that C<Row> objects created with the L</new> method are blessed into a DBD driver specific module.
-For example, if using MySQL, a new C<Row> object will be blessed into C<DBIx::DBO::Row::DBD::mysql> which inherits from C<DBIx::DBO::Row>.
-However if objects are created from a subclass called C<MySubClass> the new object will be blessed into C<MySubClass::DBD::mysql> which will inherit from both C<MySubClass> and C<DBIx::DBO::Row::DBD::mysql>.
-
 Classes can easily be created for tables in your database.
 Assume you want to create a simple C<Row> class for a "Users" table:
 
   package My::User;
-  use base 'DBIx::DBO::Row';
+  our @ISA = qw(DBIx::DBO::Row);
   
   sub new {
       my($class, $dbo) = @_;
