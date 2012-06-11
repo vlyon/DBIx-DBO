@@ -22,7 +22,7 @@ if ($dbo->do("CREATE DATABASE $quoted_db CHARACTER SET utf8")) {
     $quoted_db = $dbo->{dbd_class}->_qi($dbo, $Test::DBO::test_db);
 }
 
-plan tests => 99;
+plan tests => 97;
 
 # Create the DBO (3 tests)
 pass "Connect to MySQL $quoted_db database";
@@ -56,13 +56,6 @@ is $q->{LastSQL}[1], 'SELECT FOUND_ROWS()', 'Use FOUND_ROWS() in MySQL';
 
 # Advanced query methods: (11 tests)
 Test::DBO::advanced_query_methods($dbo, $t, $q);
-
-# MySQL CalcFoundRows: (2 tests)
-$q->limit(2);
-$q->config(CalcFoundRows => 1);
-like $q->sql, qr/ SQL_CALC_FOUND_ROWS /, 'Use SQL_CALC_FOUND_ROWS in MySQL';
-$q->found_rows;
-is $q->{LastSQL}[1], 'SELECT FOUND_ROWS()', 'Use FOUND_ROWS() in MySQL';
 
 # Join methods: (10 tests)
 Test::DBO::join_methods($dbo, $t->{Name});
