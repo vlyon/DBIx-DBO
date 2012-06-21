@@ -346,7 +346,7 @@ sub config {
     my $me = shift;
     my $opt = shift;
     return $$me->{DBO}{dbd_class}->_set_config($$me->{Config} ||= {}, $opt, shift) if @_;
-    $$me->{DBO}{dbd_class}->_get_config($opt, $$me->{Config} ||= {}, defined $$me->{Parent} ? ($$me->{Parent}) : (), $$me->{DBO}{Config}, \%DBIx::DBO::Config);
+    $$me->{DBO}{dbd_class}->_get_config($opt, $$me->{Config} ||= {}, defined $$me->{Parent} ? ($$me->{Parent}{Config}) : (), $$me->{DBO}{Config}, \%DBIx::DBO::Config);
 }
 
 sub DESTROY {

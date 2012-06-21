@@ -403,6 +403,9 @@ sub query_methods {
     isa_ok $r, 'DBIx::DBO::Row', '$q->row';
     my $r_str = "$r";
 
+    $q->config(Testing => 123);
+    is $r->config('Testing'), 123, 'Row gets config from parent Query';
+
     # Alter the SQL to ensure the row is detached and rebuilt
     $q->order_by('id');
     $r = $q->row;
