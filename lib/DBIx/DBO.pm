@@ -493,6 +493,23 @@ sub config {
         : $me->_dbd_class->_get_config($opt, \%Config);
 }
 
+sub STORABLE_freeze {
+    my $me = $_[0];
+    return unless ref $me->{dbh} or ref $me->{rdbh};
+
+    my($dbh, $rdbh) = @$me{qw(dbh rdbh)};
+    $me->{dbh} = "$me->{dbh}" if defined $me->{dbh};
+    $me->{rdbh} = "$me->{rdbh}" if defined $me->{rdbh};
+    my $frozen = Storable::nfreeze($me);
+    @$me{qw(dbh rdbh)} = ($dbh, $rdbh);
+    return $frozen;
+}
+
+sub STORABLE_thaw {
+    my($me, $cloning, $frozen) = @_;
+    %$me = %{ Storable::thaw($frozen) };
+}
+
 sub DESTROY {
     undef %{$_[0]};
 }
