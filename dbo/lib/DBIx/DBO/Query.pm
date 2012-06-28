@@ -1028,6 +1028,25 @@ sub config {
     $me->{DBO}{dbd_class}->_get_config($opt, $me->{Config} ||= {}, $me->{DBO}{Config}, \%DBIx::DBO::Config);
 }
 
+sub STORABLE_freeze {
+    my($me, $cloning) = @_;
+    return unless defined $me->{sth};
+
+    local $me->{sth};
+    local $me->{Active};
+    local $me->{cache}{idx} = 0 if exists $me->{cache};
+    return Storable::nfreeze($me);
+}
+
+sub STORABLE_thaw {
+    my($me, $cloning, @frozen) = @_;
+    %$me = %{ Storable::thaw(@frozen) };
+    if (exists $me->{Row} and exists ${$me->{Row}}->{Parent}) {
+        ${$me->{Row}}->{Parent} = $me;
+        Scalar::Util::weaken ${$me->{Row}}->{Parent};
+    }
+}
+
 sub DESTROY {
     undef %{$_[0]};
 }
@@ -1111,20 +1130,6 @@ Assume you want to create a C<Query> and C<Row> class for a "Users" table:
       
       $class->SUPER::new($dbo, $parent);
   }
-
-=head1 TODO LIST
-
-=over 4
-
-=item *
-
-Allow objects to be frozen/thawed by L<Storable>.
-
-=item *
-
-This module is currently still in development (including the documentation), but I will be refining it in the near future.
-
-=back
 
 =head1 SEE ALSO
 

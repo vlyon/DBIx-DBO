@@ -244,7 +244,7 @@ sub load {
 
 sub _detach {
     my $me = $_[0];
-    if ($$me->{Parent}) {
+    if (exists $$me->{Parent}) {
         $$me->{Columns} = [ @{$$me->{Columns}} ];
         $$me->{array} = [ @$me ];
         $$me->{hash} = { %$me };
@@ -254,7 +254,7 @@ sub _detach {
             $$me->{Config} = { %{$$me->{Parent}{Config}}, $$me->{Config} ? %{$$me->{Config}} : () };
         }
     }
-    undef $$me->{Parent};
+    delete $$me->{Parent};
 }
 
 =head3 C<update>
