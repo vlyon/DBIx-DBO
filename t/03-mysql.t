@@ -10,7 +10,7 @@ $dbo ||= Test::DBO::connect_dbo('test', 'root') || Test::DBO::connect_dbo('test'
         or plan skip_all => "Can't connect: $DBI::errstr";
 
 my $quoted_db = $dbo->{dbd_class}->_qi($dbo, $Test::DBO::test_db);
-if ($dbo->do("CREATE DATABASE $quoted_db CHARACTER SET utf8")) {
+if ($dbo->do("CREATE DATABASE $quoted_db")) {
     Test::DBO::todo_cleanup("DROP DATABASE $quoted_db");
     $dbo->do("USE $quoted_db");
 } else {
@@ -37,6 +37,8 @@ $Test::DBO::can{auto_increment_id} = 'INT NOT NULL AUTO_INCREMENT PRIMARY KEY';
 
 # Table methods: do, select* (22 tests)
 my $t = Test::DBO::basic_methods($dbo);
+
+$dbo->do('ALTER TABLE '.$t->_quoted_name.' CHARACTER SET utf8') or diag sql_err($dbo);
 
 # Advanced table methods: insert, update, delete (2 tests)
 Test::DBO::advanced_table_methods($dbo, $t);
