@@ -276,8 +276,7 @@ sub query {
 
 =head3 C<row>
 
-  $dbo->row($table_object);
-  $dbo->row($query_object);
+  $dbo->row($table || $table_object || $query_object);
 
 Create and return a new L<Row|DBIx::DBO::Row> object.
 
@@ -287,23 +286,15 @@ sub row {
     $_[0]->_row_class->new(@_);
 }
 
-=head3 C<selectrow_array>
+=head3 C<selectrow_array>, C<selectrow_arrayref>, C<selectrow_hashref>, C<selectall_arrayref>
 
   $dbo->selectrow_array($statement, \%attr, @bind_values);
-
-This provides access to the L<DBI-E<gt>selectrow_array|DBI/"selectrow_array"> method.  It defaults to using the I<read-only> C<DBI> handle.
-
-=head3 C<selectrow_arrayref>
-
   $dbo->selectrow_arrayref($statement, \%attr, @bind_values);
-
-This provides access to the L<DBI-E<gt>selectrow_arrayref|DBI/"selectrow_arrayref"> method.  It defaults to using the I<read-only> C<DBI> handle.
-
-=head3 C<selectall_arrayref>
-
+  $dbo->selectrow_hashref($statement, \%attr, @bind_values);
   $dbo->selectall_arrayref($statement, \%attr, @bind_values);
 
-This provides access to the L<DBI-E<gt>selectall_arrayref|DBI/"selectall_arrayref"> method.  It defaults to using the I<read-only> C<DBI> handle.
+These convenience methods provide access to L<DBI-E<gt>selectrow_array|DBI/"selectrow_array">, L<DBI-E<gt>selectrow_arrayref|DBI/"selectrow_arrayref">, L<DBI-E<gt>selectrow_hashref|DBI/"selectrow_hashref">, L<DBI-E<gt>selectall_arrayref|DBI/"selectall_arrayref"> methods.
+They default to using the I<read-only> C<DBI> handle.
 
 =cut
 
@@ -315,6 +306,11 @@ sub selectrow_array {
 sub selectrow_arrayref {
     my $me = shift;
     $me->{dbd_class}->_selectrow_arrayref($me, @_);
+}
+
+sub selectrow_hashref {
+    my $me = shift;
+    $me->{dbd_class}->_selectrow_hashref($me, @_);
 }
 
 sub selectall_arrayref {
