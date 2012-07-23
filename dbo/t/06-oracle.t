@@ -15,19 +15,19 @@ undef $Test::DBO::test_db;
 undef $Test::DBO::test_sch;
 $Test::DBO::case_sensitivity_sql = 'SELECT COUNT(*) FROM DUAL WHERE ? LIKE ?';
 
-# Table methods: do, select* (22 tests)
+# Table methods: do, select* (26 tests)
 my $t = Test::DBO::basic_methods($dbo);
 
 # Advanced table methods: insert, update, delete (2 tests)
 Test::DBO::advanced_table_methods($dbo, $t);
 
-# Row methods: (15 tests)
+# Row methods: (14 tests)
 Test::DBO::row_methods($dbo, $t);
 
-# Query methods: (24 tests)
+# Query methods: (27 tests)
 my $q = Test::DBO::query_methods($dbo, $t);
 
-# Advanced query methods: (11 tests)
+# Advanced query methods: (13 tests)
 Test::DBO::advanced_query_methods($dbo, $t, $q);
 
 # Join methods: (10 tests)

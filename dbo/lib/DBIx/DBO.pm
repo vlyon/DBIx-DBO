@@ -161,8 +161,9 @@ sub new {
 }
 
 sub _init {
-    my($class, $new) = @_;
-    bless $new, $class;
+    my($class, $me) = @_;
+    bless $me, $class;
+    $me->{dbd_class}->_init_dbo($me);
 }
 
 sub connect {

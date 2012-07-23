@@ -10,6 +10,11 @@ our @CARP_NOT = qw(DBIx::DBO DBIx::DBO::Table DBIx::DBO::Query DBIx::DBO::Row);
 our $placeholder = PLACEHOLDER;
 $placeholder = qr/\Q$placeholder/;
 
+sub _init_dbo {
+    my($class, $me) = @_;
+    return $me;
+}
+
 sub _get_table_schema {
     my($class, $me, $schema, $table) = @_;
 

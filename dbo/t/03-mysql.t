@@ -35,7 +35,7 @@ $Test::DBO::can{collate} = 'BINARY';
 $Test::DBO::can{multi_table_update} = 1;
 $Test::DBO::can{auto_increment_id} = 'INT NOT NULL AUTO_INCREMENT PRIMARY KEY';
 
-# Table methods: do, select* (22 tests)
+# Table methods: do, select* (26 tests)
 my $t = Test::DBO::basic_methods($dbo);
 
 $dbo->do('ALTER TABLE '.$t->_quoted_name.' CHARACTER SET utf8') or diag sql_err($dbo);
@@ -43,10 +43,10 @@ $dbo->do('ALTER TABLE '.$t->_quoted_name.' CHARACTER SET utf8') or diag sql_err(
 # Advanced table methods: insert, update, delete (2 tests)
 Test::DBO::advanced_table_methods($dbo, $t);
 
-# Row methods: (15 tests)
+# Row methods: (14 tests)
 Test::DBO::row_methods($dbo, $t);
 
-# Query methods: (24 tests)
+# Query methods: (27 tests)
 my $q = Test::DBO::query_methods($dbo, $t);
 
 # MySQL CalcFoundRows: (2 tests)
@@ -56,7 +56,7 @@ like $q->sql, qr/ SQL_CALC_FOUND_ROWS /, 'Use SQL_CALC_FOUND_ROWS in MySQL';
 $q->found_rows;
 is $q->{LastSQL}[1], 'SELECT FOUND_ROWS()', 'Use FOUND_ROWS() in MySQL';
 
-# Advanced query methods: (11 tests)
+# Advanced query methods: (13 tests)
 Test::DBO::advanced_query_methods($dbo, $t, $q);
 
 # Join methods: (10 tests)
