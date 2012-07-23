@@ -8,9 +8,9 @@ package # hide from PAUSE
     DBIx::DBO::DBD::DBM;
 use Carp 'croak';
 
-sub _init {
+sub _init_dbo {
     my $class = shift;
-    my $me = $class->SUPER::_init(@_);
+    my $me = $class->SUPER::_init_dbo(@_);
     # DBM does not support QuoteIdentifier correctly!
     $me->config(QuoteIdentifier => 0);
     return $me;
