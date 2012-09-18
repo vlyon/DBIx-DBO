@@ -78,6 +78,19 @@ sub _table_alias {
     croak 'The table is not in this query';
 }
 
+=head3 C<name>
+
+  $table_name = $table->name;
+  ($schema_name, $table_name) = $table->name;
+
+In scalar context it returns the name of the table in list context the schema and table names are returned.
+
+=cut
+
+sub name {
+    wantarray ? @{$_[0]}{qw(Schema Name)} : $_[0]->{Name};
+}
+
 sub _quoted_name {
     my $me = shift;
     defined $me->{_quoted_name} ? $me->{_quoted_name} : ($me->{_quoted_name} = $me->{DBO}{dbd_class}->_qi($me, @$me{qw(Schema Name)}));

@@ -510,6 +510,7 @@ sub advanced_query_methods {
         }
         $q->order_by({ COL => 'id', COLLATE => $can{collate} });
         ok $q->run, 'Method DBIx::DBO::Query->order_by COLLATE' or diag sql_err($q);
+        $q->order_by('id');
     }
     $q->show({ FUNC => 'UPPER(?)', COL => 'name', AS => 'name' }, 'id', 'name');
     ok $q->run && $q->fetch->{name} eq 'JOHN DOE', 'Method DBIx::DBO::Query->show' or diag sql_err($q);
