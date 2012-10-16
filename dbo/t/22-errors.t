@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use Test::DBO ExampleP => 'ExampleP';
-use Test::DBO Sponge => 'Sponge', tests => 9;
+use Test::DBO Sponge => 'Sponge', tests => 10;
 
 {
     my $warn = '';
@@ -15,9 +15,9 @@ use Test::DBO Sponge => 'Sponge', tests => 9;
         QuoteIdentifier => 1,
         CacheQuery => 0,
         UseHandle => 0,
-        xyz => 123,
+        'NoValue'
     );
-    is $warn =~ s/^Unknown import option '(UseHandle|xyz)' at .* line \d+\.?\n//mg, 2, 'DBIx::DBO->import validation';
+    is $warn =~ s/^(Import option 'NoValue' passed without a value|Unknown import option 'UseHandle') at .* line \d+\.?\n//mg, 2, 'DBIx::DBO->import validation';
     is $warn, '', 'DBIx::DBO->import options';
 }
 
@@ -40,7 +40,11 @@ my $dbo = DBIx::DBO->new($dbh2, undef, {dbd => 'NoDBD'}) or die $DBI::errstr;
 eval { $dbo->connect_readonly('DBI:Sponge:') };
 like $@, qr/^The read-write and read-only connections must use the same DBI driver /m, 'Check extra connection driver';
 
-$dbo = DBIx::DBO->new(undef, $dbh1);
+eval { $dbo->connect('DBI:Sponge:') };
+like $@, qr/^DBO is already connected/, 'DBO is already connected';
+
+$dbo = DBIx::DBO->connect_readonly('DBI:Sponge:');
+$dbo->connect_readonly('DBI:Sponge:');
 my($q, $t) = $dbo->query($Test::DBO::test_tbl);
 
 eval { $q->where('id', '=', {FUNC => '(?,?)', VAL => [1,2,3]}) };
