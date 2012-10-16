@@ -172,7 +172,11 @@ sub connect {
     if (ref $me) {
         croak 'DBO is already connected' if $me->{dbh};
         $me->_check_driver($_[0]) if @_;
-        $conn = $me->{ConnectArgs} ||= scalar @ConnectArgs if $me->config('AutoReconnect');
+        if ($me->config('AutoReconnect')) {
+            $me->{ConnectArgs} = scalar @ConnectArgs unless defined $me->{ConnectArgs};
+            $conn = $me->{ConnectArgs};
+        }
+#        $conn = $me->{ConnectArgs} //= scalar @ConnectArgs if $me->config('AutoReconnect');
         $me->{dbh} = $me->_connect($conn, @_) or return;
         return $me;
     }
@@ -188,7 +192,11 @@ sub connect_readonly {
     if (ref $me) {
         $me->{rdbh}->disconnect if $me->{rdbh};
         $me->_check_driver($_[0]) if @_;
-        $conn = $me->{ConnectReadOnlyArgs} ||= scalar @ConnectArgs if $me->config('AutoReconnect');
+        if ($me->config('AutoReconnect')) {
+            $me->{ConnectReadOnlyArgs} = scalar @ConnectArgs unless defined $me->{ConnectReadOnlyArgs};
+            $conn = $me->{ConnectReadOnlyArgs};
+        }
+#        $conn = $me->{ConnectReadOnlyArgs} //= scalar @ConnectArgs if $me->config('AutoReconnect');
         $me->{rdbh} = $me->_connect($conn, @_) or return;
         return $me;
     }
@@ -234,9 +242,13 @@ sub _connect {
         # AutoCommit is always on
         %attr = (PrintError => 0, RaiseError => 1, %attr, AutoCommit => 1);
         @conn = ($dsn, $user, $auth, \%attr);
+
+        # If a conn index is given then store the connection args
+        $ConnectArgs[$conn_idx] = \@conn if defined $conn_idx;
+    } else {
+        # If a conn index is given then retrieve the connection args
+        @conn = @{$ConnectArgs[$conn_idx]} if defined $conn_idx;
     }
-    # If a conn index is given then store the connection args
-    $ConnectArgs[$conn_idx] = \@conn if defined $conn_idx;
 
     local @DBIx::DBO::CARP_NOT = qw(DBI);
     DBI->connect(@conn);
