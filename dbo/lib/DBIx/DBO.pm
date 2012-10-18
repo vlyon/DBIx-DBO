@@ -190,7 +190,7 @@ sub connect_readonly {
     my $me = shift;
     my $conn;
     if (ref $me) {
-        $me->{rdbh}->disconnect if $me->{rdbh};
+        undef $me->{rdbh};
         $me->_check_driver($_[0]) if @_;
         if ($me->config('AutoReconnect')) {
             $me->{ConnectReadOnlyArgs} = scalar @ConnectArgs unless defined $me->{ConnectReadOnlyArgs};
