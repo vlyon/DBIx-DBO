@@ -59,7 +59,7 @@ sub new {
 
 sub _init {
     my($class, $dbo, $table) = @_;
-    (my $schema, $table, my $info) = $dbo->table_info($table) or croak 'No such table: '.$table;
+    (my $schema, $table, my $info) = $dbo->table_info($table);
     bless { %$info, Schema => $schema, Name => $table, DBO => $dbo, LastInsertID => undef }, $class;
 }
 
