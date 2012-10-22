@@ -285,9 +285,12 @@ sub join_on {
     undef $me->{sql};
     undef $me->{build_data}{from};
 
+    # Find the current Join_On reference
+    my $ref = $me->{build_data}{Join_On}[$i] ||= [];
+    $ref = $ref->[$_] for (@{$me->{Join_Bracket_Refs}[$i]});
+
     $me->{build_data}{Join}[$i] = ' JOIN ' if $me->{build_data}{Join}[$i] eq ', ';
-    $me->_add_where($me->{build_data}{Join_On}[$i] ||= [], $op,
-        $col1, $col1_func, $col1_opt, $col2, $col2_func, $col2_opt, @_);
+    $me->_add_where($ref, $op, $col1, $col1_func, $col1_opt, $col2, $col2_func, $col2_opt, @_);
 }
 
 =head3 C<open_join_on_bracket>, C<close_join_on_bracket>
@@ -303,13 +306,15 @@ The first argument is the table being joined onto.
 
 sub open_join_on_bracket {
     my $me = shift;
-    my $i = $me->_table_idx(shift) or croak 'No such table object in the join';
+    my $tbl = shift or croak 'Invalid table object for join on clause';
+    my $i = $me->_table_idx($tbl) or croak 'No such table object in the join';
     $me->_open_bracket($me->{Join_Brackets}[$i], $me->{Join_Bracket_Refs}[$i], $me->{build_data}{Join_On}[$i] ||= [], @_);
 }
 
 sub close_join_on_bracket {
     my $me = shift;
-    my $i = $me->_table_idx(shift) or croak 'No such table object in the join';
+    my $tbl = shift or croak 'Invalid table object for join on clause';
+    my $i = $me->_table_idx($tbl) or croak 'No such table object in the join';
     $me->_close_bracket($me->{Join_Brackets}[$i], $me->{Join_Bracket_Refs}[$i]);
 }
 
@@ -862,6 +867,7 @@ sub _bind_cols_to_hash {
 
 Count the number of rows returned.
 Returns undefined if the number is unknown.
+This uses the DBI C<rows> method which is unreliable in some situations (See L<DBI-E<gt>rows|DBI/"rows">).
 
 =cut
 
