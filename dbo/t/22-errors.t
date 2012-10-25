@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use Test::DBO ExampleP => 'ExampleP';
-use Test::DBO Sponge => 'Sponge', tests => 10;
+use Test::DBO Sponge => 'Sponge', tests => 15;
 
 {
     my $warn = '';
@@ -48,10 +48,27 @@ $dbo = DBIx::DBO->connect_readonly('DBI:Sponge:');
 $dbo->connect_readonly('DBI:Sponge:');
 my($q, $t) = $dbo->query($Test::DBO::test_tbl);
 
+eval { $t->new('no_dbo_object') };
+like $@, qr/^Invalid DBO Object/, 'Requires DBO object';
+
+eval { $dbo->table('no_such_table') };
+like $@, qr/^Invalid table: "no_such_table"/, 'Ensure table exists';
+
 eval { $q->where('id', '=', {FUNC => '(?,?)', VAL => [1,2,3]}) };
 like $@, qr/^The number of params \(3\) does not match the number of placeholders \(2\)/,
     'Number of params must equal placeholders';
 
 eval { $t->delete(name => [qw(doesnt exist)]) };
 like $@, qr/^No read-write handle connected/, 'No read-write handle connected';
+
+$dbo->disconnect;
+eval { $dbo->connect_readonly };
+like $@, qr/^Can't connect to data source ''/, 'AutoReconnect is off by default';
+
+$dbo->connect_readonly('DBI:Sponge:');
+eval { $dbo->connect_readonly('') };
+like $@, qr/^Can't connect to data source ''/, 'Empty DSN';
+
+eval { $dbo->connect_readonly('DBI:ExampleP:') };
+like $@, qr/The read-write and read-only connections must use the same DBI driver/, 'Check driver on extra connect';
 
