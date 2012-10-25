@@ -405,6 +405,8 @@ sub _build_quick_where {
                 if (ref $val eq 'SCALAR' and $$val =~ /^\s*(?:NOT\s+)NULL\s*$/is) {
                     ' IS ';
                 } elsif (ref $val eq 'ARRAY') {
+                    croak 'Invalid value argument, IN requires at least 1 value' unless @$val;
+                    $val = { FUNC => join(',', ('?') x @$val), VAL => $val };
                     ' IN ';
                 } elsif (defined $val) {
                     ' = ';
