@@ -52,6 +52,14 @@ sub _save_last_insert_id {
     return $sth->{Database}->last_insert_id(undef, @$me{qw(Schema Name)}, undef);
 }
 
+# Pg doesn't allow the use of aliases in the WHERE, GROUP BY or HAVING clause
+sub _alias_preference {
+    my($class, $me, $method) = @_;
+    $method ||= ((caller(2))[3] =~ /\b(\w+)$/);
+    return 0 if $method eq 'join_on' or $method eq 'where' or $method eq 'group_by' or $method eq 'having';
+    return 1;
+}
+
 sub _bulk_insert {
     shift->_fast_bulk_insert(@_);
 }
