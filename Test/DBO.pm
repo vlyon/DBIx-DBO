@@ -537,8 +537,14 @@ sub advanced_query_methods {
     is_deeply $a, {4 => {id => 4},6 => {id => 6}}, 'Method DBIx::DBO::Query->hashref';
 
     # HAVING clause
-    $q->show('id', 'name', { FUNC => 'CONCAT(?, ?)', COL => [qw(id name)], AS => 'combo'});
-    ok $q->having('combo', '=', '4James Bond'), 'Method DBIx::DBO::Query->having';
+    my $concat = $dbd eq 'SQLite' ? '? || ?' : 'CONCAT(?, ?)';
+    my %concat_col = (FUNC => $concat, COL => [qw(id name)]);
+    my $having_col = $dbo->{dbd_class}->_alias_preference($q, 'having') ? 'combo' : \%concat_col;
+    $q->show('id', 'name', { %concat_col, AS => 'combo'});
+    $q->group_by('id', 'name');
+    $q->having($having_col, '=', '4James Bond');
+    $q->having($having_col, '=', '4James Bond');
+    is_deeply [@{$q->fetch}], [4, 'James Bond', '4James Bond'], 'Method DBIx::DBO::Query->having';
 
     $q->finish;
 }
