@@ -22,7 +22,7 @@ if ($dbo->do("CREATE DATABASE $quoted_db")) {
     $quoted_db = $dbo->{dbd_class}->_qi($dbo, $Test::DBO::test_db);
 }
 
-plan tests => 98;
+plan tests => 100;
 
 # Create the DBO (3 tests)
 pass "Connect to MySQL $quoted_db database";
@@ -68,7 +68,7 @@ is $q->{LastSQL}[1], 'SELECT FOUND_ROWS()', 'Use FOUND_ROWS() in MySQL';
 # Advanced query methods: (13 tests)
 Test::DBO::advanced_query_methods($dbo, $t, $q);
 
-# Join methods: (10 tests)
+# Join methods: (12 tests)
 Test::DBO::join_methods($dbo, $t->{Name});
 
 END {
