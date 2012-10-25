@@ -18,8 +18,8 @@ sub _build_sql_select {
 
 sub _alias_preference {
     my($class, $me, $method) = @_;
-    # Oracle doesn't allow the use of aliases in GROUP BY
-    return 0 if $method eq 'join_on' or $method eq 'group_by';
+    # Oracle doesn't allow the use of aliases in GROUP BY or HAVING
+    return 0 if $method eq 'join_on' or $method eq 'group_by' or $method eq 'having';
     return 1;
 }
 
