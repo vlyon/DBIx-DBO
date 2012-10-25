@@ -9,6 +9,7 @@ use Test::DBO Sponge => 'Sponge', tests => 10;
     local $SIG{__WARN__} = sub {
         $warn .= join '', @_;
     };
+    local $Carp::Verbose = 0;
     DBIx::DBO->import(
         AutoReconnect => 0,
         DebugSQL => 0,
