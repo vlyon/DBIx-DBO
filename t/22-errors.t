@@ -52,6 +52,6 @@ eval { $q->where('id', '=', {FUNC => '(?,?)', VAL => [1,2,3]}) };
 like $@, qr/^The number of params \(3\) does not match the number of placeholders \(2\)/,
     'Number of params must equal placeholders';
 
-eval { $t->delete(Column => 'Fake') };
+eval { $t->delete(name => [qw(doesnt exist)]) };
 like $@, qr/^No read-write handle connected/, 'No read-write handle connected';
 
