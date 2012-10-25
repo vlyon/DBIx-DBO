@@ -49,8 +49,6 @@ if (my $collation = $dbo->selectrow_hashref('SHOW TABLE STATUS LIKE ?', undef, s
     }
 }
 
-#$dbo->do('ALTER TABLE '.$t->_quoted_name.' CHARACTER SET utf8') or diag sql_err($dbo);
-
 # Advanced table methods: insert, update, delete (2 tests)
 Test::DBO::advanced_table_methods($dbo, $t);
 
