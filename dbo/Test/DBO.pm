@@ -594,8 +594,17 @@ sub join_methods {
 
     # LEFT JOIN
     ($q, $t1) = $dbo->query($table);
+    # ... "t1" LEFT JOIN ... "t2"
     $t2 = $q->join_table($table, 'left');
+    # ... "t1" LEFT JOIN ... "t2" ON "t1"."id" = "t2"."id"/2.0
     $q->join_on($t2, $t1 ** 'id', '=', { FUNC => '?/2.0', COL => $t2 ** 'id' });
+    ok $q->open_join_on_bracket($t2, 'OR'), 'Method DBIx::DBO::Query->open_join_on_bracket';
+    # ... "t1" LEFT JOIN ... "t2" ON "t1"."id" = "t2"."id"/2.0 AND 1 = 2
+    $q->join_on($t2, \1, '=', \2);
+    # ... "t1" LEFT JOIN ... "t2" ON "t1"."id" = "t2"."id"/2.0 AND (1 = 2 OR 3 = 3)
+    $q->join_on($t2, \3, '=', \3);
+    ok $q->close_join_on_bracket($t2), 'Method DBIx::DBO::Query->close_join_on_bracket';
+
     $q->order_by({ COL => $t1 ** 'name', ORDER => 'DESC' });
     if ($dbd eq 'Oracle') {
         # Oracle doesn't support LIMIT OFFSET
