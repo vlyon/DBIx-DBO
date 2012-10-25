@@ -193,7 +193,7 @@ sub basic_methods {
         pass 'Create the test table';
 
         # Create a table object
-        $t = $dbo->table([$test_sch, $test_tbl]);
+        $t = $dbo->table([undef, $test_tbl]);
         isa_ok $t, 'DBIx::DBO::Table', '$t';
 
         # Check the Primary Keys
@@ -207,7 +207,7 @@ sub basic_methods {
         todo_cleanup("DROP TABLE $quoted_table");
 
         $dbo->{dbd_class}->_get_table_info($dbo, $t->{Schema}, $t->{Name});
-        $t = $dbo->table([$test_sch, $test_tbl]);
+        $t = $t->new($dbo, [$test_sch, $test_tbl]);
     }
     else {
         diag sql_err($dbo);
@@ -711,6 +711,7 @@ my $fake_table_info = {
 };
 sub _get_table_info {
     my($class, $me, $schema, $table) = @_;
+    return $class->SUPER::_get_table_info($me, $schema, $table) if $table ne $Test::DBO::test_tbl;
     # Fake table info
     return $me->{TableInfo}{''}{$table} ||= $fake_table_info;
 }
