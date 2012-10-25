@@ -102,7 +102,7 @@ sub _selectall_hashref {
 
 sub _qi {
     my($class, $me, @id) = @_;
-    return $me->dbh->quote_identifier(@id) if $me->config('QuoteIdentifier');
+    return $me->rdbh->quote_identifier(@id) if $me->config('QuoteIdentifier');
     # Strip off any null/undef elements (ie schema)
     shift(@id) while @id and not (defined $id[0] and length $id[0]);
     join '.', @id;
