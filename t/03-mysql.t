@@ -22,7 +22,7 @@ if ($dbo->do("CREATE DATABASE $quoted_db")) {
     $quoted_db = $dbo->{dbd_class}->_qi($dbo, $Test::DBO::test_db);
 }
 
-plan tests => 100;
+plan tests => 101;
 
 # Create the DBO (3 tests)
 pass "Connect to MySQL $quoted_db database";
@@ -34,8 +34,9 @@ $Test::DBO::test_sch = $Test::DBO::test_db;
 $Test::DBO::can{collate} = 'BINARY';
 $Test::DBO::can{multi_table_update} = 1;
 $Test::DBO::can{auto_increment_id} = 'INT NOT NULL AUTO_INCREMENT PRIMARY KEY';
+$Test::DBO::can{truncate} = 1;
 
-# Table methods: do, select* (26 tests)
+# Table methods: do, select* (27 tests)
 my $t = Test::DBO::basic_methods($dbo);
 
 # Pick a random available collation
