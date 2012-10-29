@@ -3,7 +3,7 @@ use warnings;
 
 # Create the DBO (2 tests)
 my $dbo;
-use Test::DBO SQLite => 'SQLite', tests => 97, tempdir => 1, connect_ok => [\$dbo];
+use Test::DBO SQLite => 'SQLite', tests => 98, tempdir => 1, connect_ok => [\$dbo];
 
 # In SQLite there is no Schema
 undef $Test::DBO::test_db;
@@ -11,7 +11,7 @@ undef $Test::DBO::test_sch;
 $Test::DBO::can{collate} = 'BINARY';
 $Test::DBO::can{auto_increment_id} = 'INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT';
 
-# Table methods: do, select* (26 tests)
+# Table methods: do, select* (27 tests)
 my $t = Test::DBO::basic_methods($dbo);
 
 # Advanced table methods: insert, update, delete (2 tests)

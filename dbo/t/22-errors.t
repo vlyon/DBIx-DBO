@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use Test::DBO ExampleP => 'ExampleP';
-use Test::DBO Sponge => 'Sponge', tests => 15;
+use Test::DBO Sponge => 'Sponge', tests => 17;
 
 {
     my $warn = '';
@@ -47,6 +47,7 @@ like $@, qr/^DBO is already connected/, 'DBO is already connected';
 $dbo = DBIx::DBO->connect_readonly('DBI:Sponge:');
 $dbo->connect_readonly('DBI:Sponge:');
 my($q, $t) = $dbo->query($Test::DBO::test_tbl);
+my $t2 = $dbo->table($Test::DBO::test_tbl);
 
 eval { $t->new('no_dbo_object') };
 like $@, qr/^Invalid DBO Object/, 'Requires DBO object';
@@ -57,6 +58,12 @@ like $@, qr/^Invalid table: "no_such_table"/, 'Ensure table exists';
 eval { $q->where('id', '=', {FUNC => '(?,?)', VAL => [1,2,3]}) };
 like $@, qr/^The number of params \(3\) does not match the number of placeholders \(2\)/,
     'Number of params must equal placeholders';
+
+eval { $t->column('WrongColumn') };
+like $@, qr/^Invalid column "WrongColumn" in table/, 'Invalid column';
+
+eval { $t->delete($t2 ** 'name' => undef) };
+like $@, qr/^Invalid column, the column is from a table not included in this query/, 'Invalid column (another table)';
 
 eval { $t->delete(name => [qw(doesnt exist)]) };
 like $@, qr/^No read-write handle connected/, 'No read-write handle connected';
