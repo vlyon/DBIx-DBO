@@ -118,14 +118,10 @@ The C<**> method is a shortcut for the C<column> method.
 
 sub column {
     my($me, $col) = @_;
+    croak 'Missing argument for column' unless defined $col;
     croak 'Invalid column '.$me->{DBO}{dbd_class}->_qi($me, $col).' in table '.$me->_quoted_name
         unless exists $me->{Column_Idx}{$col};
     $me->{Column}{$col} ||= bless [$me, $col], 'DBIx::DBO::Column';
-}
-
-sub _valid_col {
-    my($me, $col) = @_;
-    return $col if $col->[0] == $me;
 }
 
 =head3 C<row>
