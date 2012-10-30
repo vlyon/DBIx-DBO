@@ -51,4 +51,11 @@ unless (exists &Scalar::Util::weaken) {
     $build{requires}{'Task::Weaken'} = 0;
 }
 
-Module::Build->new(%build)->create_build_script();
+Module::Build->subclass(code => q(
+    sub ACTION_testcover {
+        $ENV{DEVEL_COVER_OPTIONS} = '-ignore,^Test/,-coverage,all,pod-also_private-STORABLE_'
+            unless exists $ENV{DEVEL_COVER_OPTIONS};
+        shift->SUPER::ACTION_testcover;
+    }
+))->new(%build)->create_build_script();
+

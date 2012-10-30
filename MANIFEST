@@ -27,3 +27,4 @@ t/pod-coverage.t
 t/pod.t
 Test/DBO.pm
 META.yml
+META.json
