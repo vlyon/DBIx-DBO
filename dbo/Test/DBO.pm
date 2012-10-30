@@ -41,9 +41,9 @@ BEGIN {
 
     # Store the last SQL executed, and show debug info
     {
+        no warnings 'redefine';
         package # hide from PAUSE
             DBIx::DBO::DBD;
-        no warnings 'redefine';
         *DBIx::DBO::DBD::_sql = sub {
             my $class = shift;
             my $me = shift;
@@ -61,6 +61,11 @@ BEGIN {
             my $sql = shift;
             Test::More::diag "DEBUG_SQL: $sql\nDEBUG_SQL: (".join(', ', map $me->rdbh->quote($_), @_).")\n".$trace;
         };
+        package
+            DBIx::DBO::Query;
+        *DBIx::DBO::Query::SvREFCNT = sub {
+            return Devel::Peek::SvREFCNT($_[0]) - 1;
+        } if exists $INC{'Devel/Cover.pm'};
     }
 }
 
@@ -425,10 +430,7 @@ sub query_methods {
     # Fetch the first row
     $r = $q->fetch;
     ok $r->isa('DBIx::DBO::Row'), 'Method DBIx::DBO::Query->fetch';
-    SKIP: {
-        skip "Re-use row doesn't work with Devel::Cover", 1 if exists $INC{'Devel/Cover.pm'};
-        is $r_str, "$r", 'Re-use the same row object';
-    }
+    is $r_str, "$r", 'Re-use the same row object';
 
     # Access methods
     is_deeply [$q->columns], [qw(id name)], 'Method DBIx::DBO::Query->columns';
