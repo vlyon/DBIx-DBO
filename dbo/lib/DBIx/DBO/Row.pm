@@ -191,7 +191,7 @@ Values in the C<Row> can also be obtained by using the object as an array/hash r
 
 sub value {
     my($me, $col) = @_;
-    croak 'The record is empty' unless $$me->{array};
+    croak 'The row is empty' unless $$me->{array};
     if (UNIVERSAL::isa($col, 'DBIx::DBO::Column')) {
         my $i = $me->_column_idx($col);
         return $$me->{array}[$i] if defined $i;
@@ -273,7 +273,7 @@ otherwise ALL rows matching the current row will be updated.
 
 sub update {
     my $me = shift;
-    croak 'No current record to update!' unless $$me->{array};
+    croak "Can't update an empty row" unless $$me->{array};
     my @update = $$me->{DBO}{dbd_class}->_parse_set($me, @_);
     my $build_data = $$me->{DBO}{dbd_class}->_build_data_matching_this_row($me);
     $build_data->{LimitOffset} = [1] if $me->config('LimitRowUpdate') and $me->tables == 1;
@@ -299,7 +299,7 @@ otherwise ALL rows matching the current row will be deleted.
 
 sub delete {
     my $me = shift;
-    croak 'No current record to delete!' unless $$me->{array};
+    croak "Can't delete an empty row" unless $$me->{array};
     my $build_data = $$me->{DBO}{dbd_class}->_build_data_matching_this_row($me);
     $build_data->{LimitOffset} = [1] if $me->config('LimitRowDelete') and $me->tables == 1;
     my $sql = $$me->{DBO}{dbd_class}->_build_sql_delete($me, $build_data, @_);
