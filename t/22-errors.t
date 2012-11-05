@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use Test::DBO ExampleP => 'ExampleP';
-use Test::DBO Sponge => 'Sponge', tests => 17;
+use Test::DBO Sponge => 'Sponge', tests => 21;
 
 {
     my $warn = '';
@@ -23,7 +23,7 @@ use Test::DBO Sponge => 'Sponge', tests => 17;
 }
 
 eval { DBIx::DBO->new(1, 2, 3, 4) };
-like $@, qr/^Too many arguments for /, 'DBIx::DBO->new takes only 3 args';
+like $@, qr/^Too many arguments for DBIx::DBO::new /, 'DBIx::DBO->new takes only 3 args';
 
 eval { DBIx::DBO->new(1, 2, \3) };
 like $@, qr/^3rd argument to DBIx::DBO::new is not a HASH reference /, 'DBIx::DBO->new 3rd arg must be a HASH';
@@ -42,40 +42,53 @@ eval { $dbo->connect_readonly('DBI:Sponge:') };
 like $@, qr/^The read-write and read-only connections must use the same DBI driver /m, 'Check extra connection driver';
 
 eval { $dbo->connect('DBI:Sponge:') };
-like $@, qr/^DBO is already connected/, 'DBO is already connected';
+like $@, qr/^DBO is already connected /, 'DBO is already connected';
 
 $dbo = DBIx::DBO->connect_readonly('DBI:Sponge:');
-$dbo->connect_readonly('DBI:Sponge:');
+eval { $dbo->connect_readonly('DBI:Sponge:') };
+is $@, '', 'DBO can replace the readonly connection';
+
+$dbo = DBIx::DBO->new(undef, $dbh1);
 my($q, $t) = $dbo->query($Test::DBO::test_tbl);
 my $t2 = $dbo->table($Test::DBO::test_tbl);
 
 eval { $t->new('no_dbo_object') };
-like $@, qr/^Invalid DBO Object/, 'Requires DBO object';
+like $@, qr/^Invalid DBO Object /, 'Requires DBO object';
 
 eval { $dbo->table('no_such_table') };
-like $@, qr/^Invalid table: "no_such_table"/, 'Ensure table exists';
+like $@, qr/^Invalid table: "no_such_table" /, 'Ensure table exists';
 
 eval { $q->where('id', '=', {FUNC => '(?,?)', VAL => [1,2,3]}) };
-like $@, qr/^The number of params \(3\) does not match the number of placeholders \(2\)/,
+like $@, qr/^The number of params \(3\) does not match the number of placeholders \(2\) /,
     'Number of params must equal placeholders';
 
 eval { $t->column('WrongColumn') };
-like $@, qr/^Invalid column "WrongColumn" in table/, 'Invalid column';
+like $@, qr/^Invalid column "WrongColumn" in table /, 'Invalid column';
 
 eval { $t->delete($t2 ** 'name' => undef) };
-like $@, qr/^Invalid column, the column is from a table not included in this query/, 'Invalid column (another table)';
+like $@, qr/^Invalid column, the column is from a table not included in this query /, 'Invalid column (another table)';
 
 eval { $t->delete(name => [qw(doesnt exist)]) };
-like $@, qr/^No read-write handle connected/, 'No read-write handle connected';
+like $@, qr/^No read-write handle connected /, 'No read-write handle connected';
+
+my $r = $t->row;
+eval { $r->value('id') };
+like $@, qr/^The row is empty /, 'Empty row';
+
+eval { $r->update };
+like $@, qr/^Can't update an empty row /, 'No row to update';
+
+eval { $r->delete };
+like $@, qr/^Can't delete an empty row /, 'No row to delete';
 
 $dbo->disconnect;
 eval { $dbo->connect_readonly };
-like $@, qr/^Can't connect to data source ''/, 'AutoReconnect is off by default';
+like $@, qr/^Can't connect to data source '' /, 'AutoReconnect is off by default';
 
 $dbo->connect_readonly('DBI:Sponge:');
 eval { $dbo->connect_readonly('') };
-like $@, qr/^Can't connect to data source ''/, 'Empty DSN';
+like $@, qr/^Can't connect to data source '' /, 'Empty DSN';
 
 eval { $dbo->connect_readonly('DBI:ExampleP:') };
-like $@, qr/The read-write and read-only connections must use the same DBI driver/, 'Check driver on extra connect';
+like $@, qr/The read-write and read-only connections must use the same DBI driver /, 'Check replaced connection driver';
 
