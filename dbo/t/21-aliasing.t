@@ -3,25 +3,8 @@ use warnings;
 
 use Test::DBO Sponge => 'Sponge', tests => 7;
 
-@MySponge::ISA = ('DBI');
-@MySponge::db::ISA = ('DBI::db');
-@MySponge::st::ISA = ('DBI::st');
-{ package # Hide from PAUSE
-    MySponge::db;
-    my @cols;
-    my @rows;
-    sub setup {
-        @cols = @{shift()};
-        @rows = @_;
-    }
-    sub prepare {
-        my($dbh, $sql, $attr) = @_;
-        $attr ||= {};
-        $attr->{NAME} ||= \@cols;
-        $attr->{rows} ||= \@rows;
-        $dbh->SUPER::prepare($sql, $attr);
-    }
-}
+MySponge::db::setup([qw(id alias)], ['vlyon', 22]);
+
 # Create the DBO
 my $dbh = MySponge->connect('DBI:Sponge:') or die $DBI::errstr;
 my $dbo = DBIx::DBO->new($dbh);
@@ -40,7 +23,6 @@ ok $q->where('alias', '=', 123), 'WHERE clause using an alias name';
 ok $q->where($a, '=', 123), 'WHERE clause using an alias object';
 
 my $r = $q->row;
-MySponge::db::setup([qw(id alias)], ['vlyon', 22]);
 ok $r->load(id => 'vlyon'), 'Load a row via an alias';
 
 # TODO: Aliases in quick_where
