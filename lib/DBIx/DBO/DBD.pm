@@ -6,7 +6,12 @@ use warnings;
 use Carp 'croak';
 use constant PLACEHOLDER => "\x{b1}\x{a4}\x{221e}";
 
-our @CARP_NOT = qw(DBIx::DBO DBIx::DBO::Table DBIx::DBO::Query DBIx::DBO::Row);
+our @CARP_NOT = qw(DBIx::DBO DBIx::DBO::DBD DBIx::DBO::Table DBIx::DBO::Query DBIx::DBO::Row);
+*DBIx::DBO::CARP_NOT = \@CARP_NOT;
+*DBIx::DBO::Table::CARP_NOT = \@CARP_NOT;
+*DBIx::DBO::Query::CARP_NOT = \@CARP_NOT;
+*DBIx::DBO::Row::CARP_NOT = \@CARP_NOT;
+
 our $placeholder = PLACEHOLDER;
 $placeholder = qr/\Q$placeholder/;
 
