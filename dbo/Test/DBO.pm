@@ -472,6 +472,9 @@ sub query_methods {
     my $got = $q->col_arrayref({ Columns => [1] });
     is_deeply $got, [4,5,6], 'Method DBIx::DBO::Query->open_bracket' or diag sql_err($q);
 
+    $q->where('id', 'NOT IN', 4444);
+    ok scalar(() = $q->sql =~ / NOT IN /g) == 1, 'Group multiple IN & NOT IN clauses together';
+
     my $old_sql = $q->sql;
     $q->unwhere('name');
     is $q->sql, $old_sql, 'Method DBIx::DBO::Query->unwhere (before close_bracket)';
