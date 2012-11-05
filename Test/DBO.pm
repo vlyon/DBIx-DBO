@@ -42,7 +42,7 @@ BEGIN {
     # Store the last SQL executed, and show debug info
     {
         no warnings 'redefine';
-        package # hide from PAUSE
+        package # Hide from PAUSE
             DBIx::DBO::DBD;
         *DBIx::DBO::DBD::_sql = sub {
             my $class = shift;
@@ -723,7 +723,7 @@ sub _Find_Seen {
 }
 
 # When testing via Sponge, use fake tables
-package # hide from PAUSE
+package # Hide from PAUSE
     DBIx::DBO::DBD::Sponge;
 sub _get_table_schema {
     return;
@@ -738,6 +738,26 @@ sub _get_table_info {
     return $class->SUPER::_get_table_info($me, $schema, $table) if $table ne $Test::DBO::test_tbl;
     # Fake table info
     return $me->{TableInfo}{''}{$table} ||= $fake_table_info;
+}
+
+# When testing via MySponge, fake table contents
+package # Hide from PAUSE
+    MySponge::db;
+@MySponge::ISA = ('DBI');
+@MySponge::db::ISA = ('DBI::db');
+@MySponge::st::ISA = ('DBI::st');
+my @cols;
+my @rows;
+sub setup {
+    @cols = @{shift()};
+    @rows = @_;
+}
+sub prepare {
+    my($dbh, $sql, $attr) = @_;
+    $attr ||= {};
+    $attr->{NAME} ||= \@cols;
+    $attr->{rows} ||= \@rows;
+    $dbh->SUPER::prepare($sql, $attr);
 }
 
 1;

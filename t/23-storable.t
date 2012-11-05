@@ -5,21 +5,7 @@ use Storable;
 use Test::DBO Sponge => 'Sponge', tests => 27;
 note 'Testing with: CacheQuery => '.DBIx::DBO->config('CacheQuery');
 
-@MySponge::ISA = ('DBI');
-@MySponge::db::ISA = ('DBI::db');
-@MySponge::st::ISA = ('DBI::st');
-{ package # Hide from PAUSE
-    MySponge::db;
-    my @cols = qw(id name age);
-    my @rows = ([1, 'one', 1], [7, 'test', 123], [3, 'three', 333], [999, 'end', 0]);;
-    sub prepare {
-        my($dbh, $sql, $attr) = @_;
-        $attr ||= {};
-        $attr->{NAME} ||= \@cols;
-        $attr->{rows} ||= \@rows;
-        $dbh->SUPER::prepare($sql, $attr);
-    }
-}
+MySponge::db::setup([qw(id name age)], [1, 'one', 1], [7, 'test', 123], [3, 'three', 333], [999, 'end', 0]);
 
 # Create the DBO
 my $dbh = MySponge->connect('DBI:Sponge:') or die $DBI::errstr;
