@@ -74,8 +74,6 @@ sub tables {
 }
 
 sub _table_alias {
-    return if $_[0] == $_[1];
-    croak 'The table is not in this query';
 }
 
 =head3 C<name>
