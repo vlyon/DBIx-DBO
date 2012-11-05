@@ -494,14 +494,15 @@ sub _add_where {
                 $val = [ $val ];
             }
             # Add to previous 'IN' and 'NOT IN' Where expressions
-            unless ($opt{FORCE} and $opt{FORCE} ne _op_ag($op)) {
-                for my $lim (grep $$_[0] eq $op, @{$ref}) {
-                    next if defined $$lim[1] xor defined $fld;
-                    next if defined $$lim[1] and defined $fld and $$lim[1] != $fld;
-                    last if ($$lim[5] and $$lim[5] ne _op_ag($op));
-                    last if $$lim[4] ne '('.join(',', ($me->{DBO}{dbd_class}->PLACEHOLDER) x @{$$lim[2]}).')';
-                    push @{$$lim[2]}, @$val;
-                    $$lim[4] = '('.join(',', ($me->{DBO}{dbd_class}->PLACEHOLDER) x @{$$lim[2]}).')';
+            my $op_ag = $me->{DBO}{dbd_class}->_op_ag($op);
+            unless ($opt{FORCE} and $opt{FORCE} ne $op_ag) {
+                for my $lim (grep $$_[0] eq $op, @$ref) {
+                    # $fld and $$lim[1] are always ARRAY refs
+                    next if "@{$$lim[1]}" ne "@$fld";
+                    last if $$lim[7] and $$lim[7] ne $op_ag;
+                    last if $$lim[5] ne '('.join(',', ($me->{DBO}{dbd_class}->PLACEHOLDER) x @{$$lim[4]}).')';
+                    push @{$$lim[4]}, @$val;
+                    $$lim[5] = '('.join(',', ($me->{DBO}{dbd_class}->PLACEHOLDER) x @{$$lim[4]}).')';
                     return;
                 }
             }
