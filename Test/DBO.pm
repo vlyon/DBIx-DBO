@@ -561,8 +561,14 @@ sub advanced_query_methods {
     $q->show('id', 'name', { %concat_col, AS => 'combo'});
     $q->group_by('id', 'name');
     $q->having($having_col, '=', '4James Bond');
-    $q->having($having_col, '=', '4James Bond');
+    $q->having($having_col, '=', 'ABC-XYZ');
+    $q->having($having_col, '=', 'XYZ-ABC');
     is_deeply [@{$q->fetch}], [4, 'James Bond', '4James Bond'], 'Method DBIx::DBO::Query->having';
+
+    $q->unhaving($having_col, '=', '4James Bond');
+    is $q->fetch, undef, 'Method DBIx::DBO::Query->unhaving';
+    $q->unhaving($having_col);
+    is_deeply [@{$q->fetch}], [4, 'James Bond', '4James Bond'], 'Method DBIx::DBO::Query->unhaving (whole column)';
 
     $q->finish;
 }
