@@ -3,7 +3,7 @@ use warnings;
 use Test::More tests => 11;
 
 BEGIN {
-    if ($Test::More::VERSION < 0.84) {
+    if (eval "$Test::More::VERSION < 0.84") {
         diag "Test::More 0.84 is recommended, this is only $Test::More::VERSION!";
         unless (exists $::{note}) {
             eval q#
