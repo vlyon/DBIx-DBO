@@ -2,7 +2,9 @@ use strict;
 use warnings;
 
 use Test::DBO ExampleP => 'ExampleP';
-use Test::DBO Sponge => 'Sponge', tests => 21;
+use Test::DBO Sponge => 'Sponge', tests => 35;
+
+MySponge::db::setup([qw(id name)], [123, 'vlyon']);
 
 {
     my $warn = '';
@@ -28,7 +30,13 @@ like $@, qr/^Too many arguments for DBIx::DBO::new /, 'DBIx::DBO->new takes only
 eval { DBIx::DBO->new(1, 2, \3) };
 like $@, qr/^3rd argument to DBIx::DBO::new is not a HASH reference /, 'DBIx::DBO->new 3rd arg must be a HASH';
 
-my $dbh1 = DBI->connect('DBI:Sponge:') or die $DBI::errstr;
+eval { DBIx::DBO->new(123, undef) };
+like $@, qr/^Invalid read-write database handle /, 'DBIx::DBO->new validate read-write $dbh';
+
+eval { DBIx::DBO->new(undef, 123) };
+like $@, qr/^Invalid read-only database handle /, 'DBIx::DBO->new validate read-only $dbh';
+
+my $dbh1 = MySponge->connect('DBI:Sponge:') or die $DBI::errstr;
 my $dbh2 = DBI->connect('DBI:ExampleP:') or die $DBI::errstr;
 
 eval { DBIx::DBO->new($dbh1, $dbh1, {dbd => 'NoDBD'}) };
@@ -62,6 +70,27 @@ eval { $q->where('id', '=', {FUNC => '(?,?)', VAL => [1,2,3]}) };
 like $@, qr/^The number of params \(3\) does not match the number of placeholders \(2\) /,
     'Number of params must equal placeholders';
 
+eval { $q->where('id', '<', [1,2,3]) };
+like $@, qr/^Wrong number of fields\/values, called with 3 while needing 1 /, 'Wrong number of fields/values';
+
+eval { $q->where('id', 'BETWEEN', [1,2,3]) };
+like $@, qr/^Invalid value argument, BETWEEN requires 2 values /, 'BETWEEN requires 2 values';
+
+eval { $q->join_on($t2) };
+like $@, qr/^Invalid table object to join onto /, 'Validate table in JOIN ON';
+
+eval { $q->open_join_on_bracket };
+like $@, qr/^Invalid table object for join on clause /, 'Require table in open_join_on_bracket';
+
+eval { $q->open_join_on_bracket($t2) };
+like $@, qr/^No such table object in the join /, 'Validate table in open_join_on_bracket';
+
+eval { $q->close_join_on_bracket };
+like $@, qr/^Invalid table object for join on clause /, 'Require table in close_join_on_bracket';
+
+eval { $q->close_join_on_bracket($t2) };
+like $@, qr/^No such table object in the join /, 'Validate table in close_join_on_bracket';
+
 eval { $t->column('WrongColumn') };
 like $@, qr/^Invalid column "WrongColumn" in table /, 'Invalid column';
 
@@ -71,7 +100,10 @@ like $@, qr/^Invalid column, the column is from a table not included in this que
 eval { $t->delete(name => [qw(doesnt exist)]) };
 like $@, qr/^No read-write handle connected /, 'No read-write handle connected';
 
-my $r = $t->row;
+(my $r, $t) = DBIx::DBO::Row->new($dbo, $t->{Name});
+$r->config(LimitRowDelete => 0);
+$r->config(LimitRowDelete => 1);
+
 eval { $r->value('id') };
 like $@, qr/^The row is empty /, 'Empty row';
 
@@ -80,6 +112,22 @@ like $@, qr/^Can't update an empty row /, 'No row to update';
 
 eval { $r->delete };
 like $@, qr/^Can't delete an empty row /, 'No row to delete';
+
+eval { $r->column('WrongColumn') };
+like $@, qr/^No such column: "WrongColumn" /, 'No such column object';
+
+eval { DBIx::DBO::Row->new };
+like $@, qr/^Invalid DBO Object for new Row /, 'Row requires a DBO';
+
+eval { $r->new($dbo) };
+like $@, qr/^Missing parent for new Row /, 'Row requires a parent';
+
+eval { $dbo->row($r) };
+like $@, qr/^Invalid parent for new Row /, 'Row requires a valid parent';
+
+$r = $t->fetch_row;
+eval { $r->value('WrongColumn') };
+like $@, qr/^No such column: "WrongColumn" /, 'Empty row';
 
 $dbo->disconnect;
 eval { $dbo->connect_readonly };

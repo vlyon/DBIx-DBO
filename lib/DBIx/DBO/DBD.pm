@@ -219,9 +219,8 @@ sub _build_from {
     $h->{from} = $class->_build_table($me, ($me->tables)[0]);
     for (my $i = 1; $i < $me->tables; $i++) {
         $h->{from} .= $h->{Join}[$i].$class->_build_table($me, ($me->tables)[$i]);
-        if ($h->{Join_On}[$i]) {
-            $h->{from} .= ' ON '.join(' AND ', $class->_build_where_chunk($me, $h->{From_Bind}, 'OR', $h->{Join_On}[$i]));
-        }
+        $h->{from} .= ' ON '.join(' AND ', $class->_build_where_chunk($me, $h->{From_Bind}, 'OR', $h->{Join_On}[$i]))
+            if $h->{Join_On}[$i];
     }
     $h->{from};
 }
