@@ -3,7 +3,7 @@ use warnings;
 
 # Create the DBO (2 tests)
 my $dbo;
-use Test::DBO SQLite => 'SQLite', tests => 102, tempdir => 1, connect_ok => [\$dbo];
+use Test::DBO SQLite => 'SQLite', tests => 104, tempdir => 1, connect_ok => [\$dbo];
 
 # In SQLite there is no Schema
 undef $Test::DBO::test_db;
@@ -23,7 +23,7 @@ Test::DBO::row_methods($dbo, $t);
 # Query methods: (29 tests)
 my $q = Test::DBO::query_methods($dbo, $t);
 
-# Advanced query methods: (13 tests)
+# Advanced query methods: (15 tests)
 Test::DBO::advanced_query_methods($dbo, $t, $q);
 
 # Join methods: (12 tests)

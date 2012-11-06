@@ -101,6 +101,7 @@ sub reset {
     $me->show;
     $me->group_by;
     $me->order_by;
+    $me->unhaving;
     $me->limit;
     # FIXME: Should we be deleting this?
     delete $me->{Config};
@@ -433,6 +434,7 @@ sub _del_where {
         $ref = $ref->[$_] for (@{$me->{$clause.'_Bracket_Refs'}});
 
         local $Data::Dumper::Indent = 0;
+        local $Data::Dumper::Maxdepth = 2;
         my @match = grep {
             Data::Dumper::Dumper($fld, $fld_func, $fld_opt) eq Data::Dumper::Dumper(@{$ref->[$_]}[1,2,3])
         } 0 .. $#$ref;
