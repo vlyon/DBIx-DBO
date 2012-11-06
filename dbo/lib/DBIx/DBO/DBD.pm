@@ -117,7 +117,7 @@ sub _sql {
     my($class, $me, $sql, @bind) = @_;
     my $dbg = $me->config('DebugSQL') or return;
 
-    require Carp::Heavy if $Carp::VERSION < 1.12;
+    require Carp::Heavy if eval "$Carp::VERSION < 1.12";
     my $loc = Carp::short_error_loc();
     my %i = Carp::caller_info($loc);
     my $trace;

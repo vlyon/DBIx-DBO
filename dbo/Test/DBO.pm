@@ -11,7 +11,7 @@ use Scalar::Util qw(blessed reftype);
 use Test::More;
 use DBIx::DBO;
 BEGIN {
-    require Carp::Heavy if $Carp::VERSION < 1.12;
+    require Carp::Heavy if eval "$Carp::VERSION < 1.12";
 
     # If we are using a version of Test::More older than 0.82 ...
     unless (exists $Test::More::{note}) {

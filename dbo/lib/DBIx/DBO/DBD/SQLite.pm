@@ -22,7 +22,7 @@ sub _get_table_schema {
 }
 
 # Hack to fix quoted primary keys
-if ($DBD::SQLite::VERSION < 1.30) {
+if (eval "$DBD::SQLite::VERSION < 1.30") {
     *_set_table_key_info = sub {
         my($class, $me, $schema, $table, $h) = @_;
         $class->SUPER::_set_table_key_info($me, $schema, $table, $h);
