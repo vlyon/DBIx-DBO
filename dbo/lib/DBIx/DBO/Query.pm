@@ -191,7 +191,7 @@ sub show {
     undef @{$me->{build_data}{Showing}};
     for my $fld (@_) {
         if (UNIVERSAL::isa($fld, 'DBIx::DBO::Table')) {
-            croak 'Invalid table field' unless defined $me->_table_idx($fld);
+            croak 'Invalid table to show' unless defined $me->_table_idx($fld);
             push @{$me->{build_data}{Showing}}, $fld;
             next;
         }

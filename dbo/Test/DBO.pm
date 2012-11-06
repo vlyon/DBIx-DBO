@@ -233,6 +233,8 @@ sub basic_methods {
     }
     die "Couldn't create the DBIx::DBO::Table object!" unless $t;
 
+    is $t->dbo, $dbo, 'Method DBIx::DBO::Table->dbo';
+
     pass 'Method DBIx::DBO->do';
 
     ok my $table_info = $dbo->table_info([$test_sch, $test_tbl]), 'Method DBIx::DBO->table_info';
@@ -370,6 +372,8 @@ sub row_methods {
     $r = $dbo->row($t);
     isa_ok $r, 'DBIx::DBO::Row', '$r (using Table object)';
 
+    is $r->dbo, $dbo, 'Method DBIx::DBO::Row->dbo';
+
     is $$r->{array}, undef, 'Row is empty';
     is_deeply [$r->columns], [qw(id name)], 'Method DBIx::DBO::Row->columns';
 
@@ -398,6 +402,8 @@ sub query_methods {
     # Create a query object
     my $q = $dbo->query($t);
     isa_ok $q, 'DBIx::DBO::Query', '$q';
+
+    is $q->dbo, $dbo, 'Method DBIx::DBO::Query->dbo';
 
     # Default sql = select everything
     my $sql = $q->sql;
