@@ -5,8 +5,7 @@ use warnings;
 use Scalar::Util qw(blessed weaken);
 use Carp 'croak';
 
-use overload '@{}' => sub {${$_[0]}->{array} || []}, '%{}' => sub {${$_[0]}->{hash}};
-use overload '**' => \&value, fallback => 1;
+use overload '@{}' => sub {${$_[0]}->{array} || []}, '%{}' => sub {${$_[0]}->{hash}}, '**' => \&value, fallback => 1;
 
 sub _table_class { ${$_[0]}->{DBO}->_table_class }
 
@@ -46,14 +45,14 @@ Can take the same arguments as L<DBIx::DBO::Table/new> or a L<Query|DBIx::DBO::Q
 
 sub new {
     my $proto = shift;
-    UNIVERSAL::isa($_[0], 'DBIx::DBO') or croak 'Invalid DBO Object';
+    UNIVERSAL::isa($_[0], 'DBIx::DBO') or croak 'Invalid DBO Object for new Row';
     my $class = ref($proto) || $proto;
     $class->_init(@_);
 }
 
 sub _init {
     my($class, $dbo, $parent) = @_;
-    croak 'Invalid Parent Object' unless defined $parent;
+    croak 'Missing parent for new Row' unless defined $parent;
 
     my $me = bless \{ DBO => $dbo, array => undef, hash => {} }, $class;
     $parent = $me->_table_class->new($dbo, $parent) unless blessed $parent;
@@ -77,7 +76,7 @@ sub _init {
         $$me->{Tables} = [ $parent ];
         $$me->{Columns} = $parent->{Columns};
     } else {
-        croak 'Invalid Parent Object';
+        croak 'Invalid parent for new Row';
     }
     return wantarray ? ($me, $me->tables) : $me;
 }
@@ -152,8 +151,8 @@ sub _column_idx {
 
 =head3 C<column>
 
-  $query->column($column_name);
-  $query->column($alias_or_column_name, 1);
+  $row->column($column_name);
+  $row->column($alias_or_column_name, 1);
 
 Returns a column reference from the name or alias.
 By default only column names are searched, set the second argument to true to check column aliases and names.
@@ -198,7 +197,7 @@ sub value {
         croak 'The field '.$$me->{DBO}{dbd_class}->_qi($me, $col->[0]{Name}, $col->[1]).' was not included in this query';
     }
     return $$me->{hash}{$col} if exists $$me->{hash}{$col};
-    croak 'No such column: '.$col;
+    croak 'No such column: '.$$me->{DBO}{dbd_class}->_qi($me, $col);
 }
 
 =head3 C<load>

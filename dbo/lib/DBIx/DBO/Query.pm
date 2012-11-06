@@ -458,8 +458,8 @@ sub _del_where {
 
 ##
 # This will add an arrayref to the $ref given.
-# The arrayref will contain 5 values:
-#  $op, $fld_func, $fld, $val_func, $val, $force
+# The arrayref will contain 8 values:
+#  $op, $fld, $fld_func, $fld_opt, $val, $val_func, $val_opt, $force
 #  $op is the operator (those supported differ by DBD)
 #  $fld_func is undef or a scalar of the form '? AND ?' or 'POSITION(? IN ?)'
 #  $fld is an arrayref of columns/values for use with $fld_func
