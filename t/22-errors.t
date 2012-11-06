@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use Test::DBO ExampleP => 'ExampleP';
-use Test::DBO Sponge => 'Sponge', tests => 35;
+use Test::DBO Sponge => 'Sponge', tests => 39;
 
 MySponge::db::setup([qw(id name)], [123, 'vlyon']);
 
@@ -13,7 +13,6 @@ MySponge::db::setup([qw(id name)], [123, 'vlyon']);
     };
     local $Carp::Verbose = 0;
     DBIx::DBO->import(
-        AutoReconnect => 0,
         DebugSQL => 0,
         QuoteIdentifier => 1,
         CacheQuery => 0,
@@ -29,6 +28,9 @@ like $@, qr/^Too many arguments for DBIx::DBO::new /, 'DBIx::DBO->new takes only
 
 eval { DBIx::DBO->new(1, 2, \3) };
 like $@, qr/^3rd argument to DBIx::DBO::new is not a HASH reference /, 'DBIx::DBO->new 3rd arg must be a HASH';
+
+eval { DBIx::DBO->new(undef, undef, {dbd => ''}) };
+like $@, qr/^Can't create the DBO, unknown database driver /, 'DBIx::DBO->new requires a DBD';
 
 eval { DBIx::DBO->new(123, undef) };
 like $@, qr/^Invalid read-write database handle /, 'DBIx::DBO->new validate read-write $dbh';
@@ -75,6 +77,9 @@ like $@, qr/^Wrong number of fields\/values, called with 3 while needing 1 /, 'W
 
 eval { $q->where('id', 'BETWEEN', [1,2,3]) };
 like $@, qr/^Invalid value argument, BETWEEN requires 2 values /, 'BETWEEN requires 2 values';
+
+eval { $q->show($t2) };
+like $@, qr/^Invalid table to show /, 'Validate table in show';
 
 eval { $q->join_on($t2) };
 like $@, qr/^Invalid table object to join onto /, 'Validate table in JOIN ON';
@@ -131,10 +136,19 @@ like $@, qr/^No such column: "WrongColumn" /, 'Empty row';
 
 $dbo->disconnect;
 eval { $dbo->connect_readonly };
-like $@, qr/^Can't connect to data source '' /, 'AutoReconnect is off by default';
+like $@, qr/^Can't auto-connect as AutoReconnect was not set /, 'AutoReconnect is off by default';
 
+$dbo->config(AutoReconnect => 1);
 $dbo->connect_readonly('DBI:Sponge:');
-eval { $dbo->connect_readonly('') };
+eval { $dbo->connect_readonly };
+is $@, '', 'AutoReconnect is on';
+
+$dbo->config(AutoReconnect => 0);
+$dbo->connect_readonly('DBI:Sponge:');
+eval { $dbo->connect_readonly };
+like $@, qr/Can't auto-connect as AutoReconnect was not set /, 'AutoReconnect is off';
+
+eval { $dbo->connect('') };
 like $@, qr/^Can't connect to data source '' /, 'Empty DSN';
 
 eval { $dbo->connect_readonly('DBI:ExampleP:') };

@@ -175,6 +175,9 @@ sub connect {
         if ($me->config('AutoReconnect')) {
             $me->{ConnectArgs} = scalar @ConnectArgs unless defined $me->{ConnectArgs};
             $conn = $me->{ConnectArgs};
+        } else {
+            undef $ConnectArgs[$me->{ConnectArgs}] if defined $me->{ConnectArgs};
+            delete $me->{ConnectArgs};
         }
 #        $conn = $me->{ConnectArgs} //= scalar @ConnectArgs if $me->config('AutoReconnect');
         $me->{dbh} = $me->_connect($conn, @_) or return;
@@ -195,6 +198,9 @@ sub connect_readonly {
         if ($me->config('AutoReconnect')) {
             $me->{ConnectReadOnlyArgs} = scalar @ConnectArgs unless defined $me->{ConnectReadOnlyArgs};
             $conn = $me->{ConnectReadOnlyArgs};
+        } else {
+            undef $ConnectArgs[$me->{ConnectReadOnlyArgs}] if defined $me->{ConnectReadOnlyArgs};
+            delete $me->{ConnectReadOnlyArgs};
         }
 #        $conn = $me->{ConnectReadOnlyArgs} //= scalar @ConnectArgs if $me->config('AutoReconnect');
         $me->{rdbh} = $me->_connect($conn, @_) or return;
@@ -245,9 +251,11 @@ sub _connect {
 
         # If a conn index is given then store the connection args
         $ConnectArgs[$conn_idx] = \@conn if defined $conn_idx;
-    } else {
+    } elsif (defined $conn_idx and $ConnectArgs[$conn_idx]) {
         # If a conn index is given then retrieve the connection args
-        @conn = @{$ConnectArgs[$conn_idx]} if defined $conn_idx;
+        @conn = @{$ConnectArgs[$conn_idx]};
+    } else {
+        croak "Can't auto-connect as AutoReconnect was not set";
     }
 
     local @DBIx::DBO::CARP_NOT = qw(DBI);

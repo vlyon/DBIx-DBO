@@ -22,7 +22,7 @@ if ($dbo->do("CREATE DATABASE $quoted_db")) {
     $quoted_db = $dbo->{dbd_class}->_qi($dbo, $Test::DBO::test_db);
 }
 
-plan tests => 102;
+plan tests => 105;
 
 # Create the DBO (3 tests)
 pass "Connect to MySQL $quoted_db database";
@@ -36,7 +36,7 @@ $Test::DBO::can{multi_table_update} = 1;
 $Test::DBO::can{auto_increment_id} = 'INT NOT NULL AUTO_INCREMENT PRIMARY KEY';
 $Test::DBO::can{truncate} = 1;
 
-# Table methods: do, select* (27 tests)
+# Table methods: do, select* (28 tests)
 my $t = Test::DBO::basic_methods($dbo);
 
 # Pick a random available collation
@@ -53,10 +53,10 @@ if (my $collation = $dbo->selectrow_hashref('SHOW TABLE STATUS LIKE ?', undef, s
 # Advanced table methods: insert, update, delete (2 tests)
 Test::DBO::advanced_table_methods($dbo, $t);
 
-# Row methods: (14 tests)
+# Row methods: (15 tests)
 Test::DBO::row_methods($dbo, $t);
 
-# Query methods: (28 tests)
+# Query methods: (29 tests)
 my $q = Test::DBO::query_methods($dbo, $t);
 
 # MySQL CalcFoundRows: (2 tests)
