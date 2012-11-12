@@ -1043,6 +1043,8 @@ sub STORABLE_freeze {
 
     local $me->{sth};
     local $me->{Active};
+    local $me->{hash};
+    local $me->{Row};
     local $me->{cache}{idx} = 0 if exists $me->{cache};
     return Storable::nfreeze($me);
 }
@@ -1050,10 +1052,6 @@ sub STORABLE_freeze {
 sub STORABLE_thaw {
     my($me, $cloning, @frozen) = @_;
     %$me = %{ Storable::thaw(@frozen) };
-    if (exists $me->{Row} and exists ${$me->{Row}}->{Parent}) {
-        ${$me->{Row}}->{Parent} = $me;
-        Scalar::Util::weaken ${$me->{Row}}->{Parent};
-    }
 }
 
 sub DESTROY {
