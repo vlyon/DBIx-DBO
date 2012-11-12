@@ -55,6 +55,7 @@ Module::Build->subclass(code => q(
     sub ACTION_testcover {
         $ENV{DEVEL_COVER_OPTIONS} = '-ignore,^Test/,-coverage,all,pod-also_private-STORABLE_'
             unless exists $ENV{DEVEL_COVER_OPTIONS};
+        print "DEVEL_COVER_OPTIONS = $ENV{DEVEL_COVER_OPTIONS}\n";
         shift->SUPER::ACTION_testcover;
     }
 ))->new(%build)->create_build_script();
