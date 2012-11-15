@@ -6,6 +6,7 @@ package # Hide from PAUSE
 use 5.008;
 use strict;
 use warnings;
+use sigtrap qw(die normal-signals);
 
 use Scalar::Util qw(blessed reftype);
 use Test::More;

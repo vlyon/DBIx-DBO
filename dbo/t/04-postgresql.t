@@ -57,14 +57,14 @@ my $quoted_sch = $dbo->{dbd_class}->_qi($dbo, $Test::DBO::test_sch);
 if (ok $dbo->do("CREATE SCHEMA $quoted_sch"), "Create $quoted_sch test schema") {
     Test::DBO::todo_cleanup("DROP SCHEMA $quoted_sch CASCADE");
 } else {
-    note sql_err($dbo);
+    diag sql_err($dbo);
 }
 
 my $quoted_seq = $dbo->{dbd_class}->_qi($dbo, $Test::DBO::test_sch, 'dbo_test_seq');
 $dbo->do("CREATE SEQUENCE $quoted_seq START WITH 5")
     and Test::DBO::todo_cleanup("DROP SEQUENCE $quoted_seq")
     and $Test::DBO::can{auto_increment_id} = " INT PRIMARY KEY DEFAULT nextval('$quoted_seq')"
-    or note sql_err($dbo);
+    or diag sql_err($dbo);
 
 # Table methods: do, select*, ... (28 tests)
 my $t = Test::DBO::basic_methods($dbo);
