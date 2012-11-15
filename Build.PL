@@ -23,7 +23,7 @@ my %build = (
     recommends => {
         'DBD::mysql' => 4.004,
         'DBD::Pg' => 2,
-        'DBD::SQLite' => '1.30',
+        'DBD::SQLite' => '1.31',
         'DBD::Oracle' => 1.13,
     },
     meta_merge => {
