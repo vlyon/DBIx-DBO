@@ -3,6 +3,7 @@ use warnings;
 
 use Storable;
 use Test::DBO Sponge => 'Sponge', tests => 26;
+note 'Storable v'.$Storable::VERSION;
 note 'Testing with: CacheQuery => '.DBIx::DBO->config('CacheQuery');
 
 MySponge::db::setup([qw(id name age)], [1, 'one', 1], [7, 'test', 123], [3, 'three', 333], [999, 'end', 0]);
@@ -53,8 +54,9 @@ $r = $q->fetch or die sql_err($q);
 ok $frozen = Storable::freeze($r), 'Freeze Row (after fetch)';
 isa_ok $thawed = Storable::thaw($frozen), 'DBIx::DBO::Row', 'Thawed';
 @{$$thawed->{DBO}}{qw(dbh rdbh)} = @$dbo{qw(dbh rdbh)};
-{ # Detach Parent
-    local $$r->{Parent};
+$r->_detach; # Detach from Parent
+SKIP: {
+    skip 'Storable v2.38 required to freeze attached Row objects', 1 if $Storable::VERSION < 2.38;
     is_deeply $thawed, $r, 'Same Row';
 }
 

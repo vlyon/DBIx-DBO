@@ -25,6 +25,7 @@ my %build = (
         'DBD::Pg' => 2,
         'DBD::SQLite' => 1.31,
         'DBD::Oracle' => 1.13,
+        'Storable' => 2.38,
     },
     meta_merge => {
         resources => {
