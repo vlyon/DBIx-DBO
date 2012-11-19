@@ -535,6 +535,30 @@ sub DESTROY {
 
 __END__
 
+=head1 STORABLE
+
+L<Storable> hooks have been added to these objects to make freezing and thawing possible.
+When a C<DBIx::DBO> object is frozen the read-only and read-write databse handles are not stored with the object, so you'll have to reconnect them afterwards.
+
+  my $query = $dbo->query('customers');
+  $query->where('status', '=', 'payment due');
+  my $frozen = Storable::nfreeze($query);
+  
+  ...
+  
+  my $query = Storable::thaw($frozen);
+  # Replace the DBO after thawing
+  $query->dbo = $dbo;
+  while (my $row = $query->fetch) {
+  ...
+
+Please note that Storable before version 2.38 was unable to store Row objects correctly.
+This only affected Row objects that had not detached from the parent Query object.
+To force a Row to detach, simply call the private C<_detach> method on the row.
+
+  $row->_detach;
+  my $frozen = Storable::nfreeze($row);
+
 =head1 SUBCLASSING
 
 For details on subclassing the C<Query> or C<Row> objects see: L<DBIx::DBO::Query/"SUBCLASSING"> and L<DBIx::DBO::Row/"SUBCLASSING">.
