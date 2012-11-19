@@ -8,52 +8,49 @@ note 'Testing with: CacheQuery => '.DBIx::DBO->config('CacheQuery');
 
 MySponge::db::setup([qw(id name age)], [1, 'one', 1], [7, 'test', 123], [3, 'three', 333], [999, 'end', 0]);
 
+my $dbo;
+my $frozen;
+my $thawed;
+sub freeze_thaw {
+    my $obj = shift;
+    (my $type = my $class = ref $obj) =~ s/.*:://;
+
+    ok $frozen = Storable::freeze($obj), join ' ', 'Freeze', $type, @_;
+    isa_ok $thawed = Storable::thaw($frozen), $class, 'Thawed';
+    @{$thawed->dbo}{qw(dbh rdbh)} = @$dbo{qw(dbh rdbh)};
+}
+
 # Create the DBO
 my $dbh = MySponge->connect('DBI:Sponge:') or die $DBI::errstr;
-my $dbo = DBIx::DBO->new($dbh);
-
-ok my $frozen = Storable::freeze($dbo), 'Freeze DBO';
-isa_ok my $thawed = Storable::thaw($frozen), 'DBIx::DBO', 'Thawed';
-@$thawed{qw(dbh rdbh)} = @$dbo{qw(dbh rdbh)};
+$dbo = DBIx::DBO->new($dbh);
+freeze_thaw($dbo);
 is_deeply $thawed, $dbo, 'Same DBO';
 
 my $t = $dbo->table($Test::DBO::test_tbl) or die sql_err($dbo);
-
-ok $frozen = Storable::freeze($t), 'Freeze Table';
-isa_ok $thawed = Storable::thaw($frozen), 'DBIx::DBO::Table', 'Thawed';
-@{$thawed->{DBO}}{qw(dbh rdbh)} = @$dbo{qw(dbh rdbh)};
+freeze_thaw($t);
 is_deeply $thawed, $t, 'Same Table';
 
 my $q = $dbo->query($t) or die sql_err($dbo);
 $q->show($t ** 'id', $t);
-
-ok $frozen = Storable::freeze($q), 'Freeze Query';
-isa_ok $thawed = Storable::thaw($frozen), 'DBIx::DBO::Query', 'Thawed';
-@{$thawed->{DBO}}{qw(dbh rdbh)} = @$dbo{qw(dbh rdbh)};
+freeze_thaw($q);
 is_deeply $thawed, $q, 'Same Query';
 
-my $r = $t->fetch_row(id => 7) or die sql_err($t);
-
-ok $frozen = Storable::freeze($r), 'Freeze Row';
-isa_ok $thawed = Storable::thaw($frozen), 'DBIx::DBO::Row', 'Thawed';
-@{$$thawed->{DBO}}{qw(dbh rdbh)} = @$dbo{qw(dbh rdbh)};
+my $r = $t->fetch_row(id => 1) or die sql_err($t);
+freeze_thaw($r);
 is_deeply $thawed, $r, 'Same Row';
 
 $q->run;
 
-ok $frozen = Storable::freeze($q), 'Freeze Query (after run)';
-isa_ok $thawed = Storable::thaw($frozen), 'DBIx::DBO::Query', 'Thawed';
-@{$thawed->{DBO}}{qw(dbh rdbh)} = @$dbo{qw(dbh rdbh)};
+freeze_thaw($q, '(after run)');
 { # Reset the active query
-    local(@$q{qw(sth Active hash Row)});
+    local(@$q{qw(sth Row)});
+    local(@$q{qw(Active hash)}) = 0 unless exists $q->{cache};;
     is_deeply $thawed, $q, 'Same Query';
 }
 
 $r = $q->fetch or die sql_err($q);
 
-ok $frozen = Storable::freeze($r), 'Freeze Row (after fetch)';
-isa_ok $thawed = Storable::thaw($frozen), 'DBIx::DBO::Row', 'Thawed';
-@{$$thawed->{DBO}}{qw(dbh rdbh)} = @$dbo{qw(dbh rdbh)};
+freeze_thaw($r, '(after fetch)');
 $r->_detach; # Detach from Parent
 SKIP: {
     skip 'Storable v2.38 required to freeze attached Row objects', 1 if $Storable::VERSION < 2.38;
@@ -62,21 +59,19 @@ SKIP: {
 
 $q->fetch or die sql_err($q);
 
-ok $frozen = Storable::freeze($r), 'Freeze Row (after fetch & detach)';
-isa_ok $thawed = Storable::thaw($frozen), 'DBIx::DBO::Row', 'Thawed';
-@{$$thawed->{DBO}}{qw(dbh rdbh)} = @$dbo{qw(dbh rdbh)};
+freeze_thaw($r, '(after fetch & detach)');
 is_deeply $thawed, $r, 'Same Row';
 
-ok $frozen = Storable::freeze($q), 'Freeze Query (after fetch)';
-isa_ok $thawed = Storable::thaw($frozen), 'DBIx::DBO::Query', 'Thawed';
+freeze_thaw($q, '(after fetch)');
 @{$thawed->{DBO}}{qw(dbh rdbh)} = @$dbo{qw(dbh rdbh)};
 { # Reset the active query
-    local(@$q{qw(sth Active hash Row)});
+    local(@$q{qw(sth Row)});
+    local(@$q{qw(Active hash)}) = 0 unless exists $q->{cache};;
     local $q->{cache}{idx} = 0 if exists $q->{cache};
     is_deeply $thawed, $q, 'Same Query';
 
     if ($thawed->config('CacheQuery')) {
-        is_deeply scalar $thawed->fetch, scalar $q->fetch, 'Same Row from $q->fetch';
+        is_deeply $thawed->fetch, $q->fetch, 'Same Row from $q->fetch';
     } else {
         is_deeply \@{$thawed->fetch}, [999,'end',0], 'Same Row from $q->fetch';
     }
