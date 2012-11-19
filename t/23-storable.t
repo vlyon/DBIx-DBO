@@ -3,7 +3,7 @@ use warnings;
 
 use Storable;
 use Test::DBO Sponge => 'Sponge', tests => 26;
-note 'Storable v'.$Storable::VERSION;
+note 'Storable '.$Storable::VERSION;
 note 'Testing with: CacheQuery => '.DBIx::DBO->config('CacheQuery');
 
 MySponge::db::setup([qw(id name age)], [1, 'one', 1], [7, 'test', 123], [3, 'three', 333], [999, 'end', 0]);
