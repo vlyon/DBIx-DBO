@@ -4,6 +4,8 @@ use warnings;
 my $dbo;
 use Test::DBO Pg => 'PostgreSQL', try_connect => \$dbo;
 
+$SIG{__WARN__} = sub { $_[-1] =~ /\n$/ ? note @_ : warn @_ };
+
 my $drop_db;
 my $quoted_db;
 
