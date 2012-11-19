@@ -1,5 +1,9 @@
 Revision history for DBIx-DBO
 
+0.31	Nov 19, 2012
+	- Fix detaching of Rows with Storable v2.38 only.
+	- Better testing output.
+
 0.30	Nov 6, 2012
 	- Fixed AutoReconnect issues.
 	- Fixed the having() and unhaving() methods.
