@@ -1042,9 +1042,9 @@ sub STORABLE_freeze {
     return unless defined $me->{sth};
 
     local $me->{sth};
-    local $me->{Active};
-    local $me->{hash};
     local $me->{Row};
+    local $me->{hash} unless exists $me->{cache};
+    local $me->{Active} = 0 unless exists $me->{cache};
     local $me->{cache}{idx} = 0 if exists $me->{cache};
     return Storable::nfreeze($me);
 }
