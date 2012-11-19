@@ -135,6 +135,8 @@ sub import {
         try_to_connect($opt{try_connect});
     }
 
+    note "DBD::$dbd ".${ $::DBD::{$dbd.'::'}{VERSION} } if exists $opt{try_connect} or exists $opt{connect_ok};
+
     return unless exists $opt{tests};
 
     if (exists $opt{connect_ok}) {
