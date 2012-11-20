@@ -24,10 +24,10 @@ MySponge::db::setup([qw(id name)], [123, 'vlyon']);
 }
 
 eval { DBIx::DBO->new(1, 2, 3, 4) };
-like $@, qr/^Too many arguments for DBIx::DBO::new /, 'DBIx::DBO->new takes only 3 args';
+like $@, qr/^Too many arguments for (DBIx::DBO::new|\(eval\)) /, 'DBIx::DBO->new takes only 3 args';
 
 eval { DBIx::DBO->new(1, 2, \3) };
-like $@, qr/^3rd argument to DBIx::DBO::new is not a HASH reference /, 'DBIx::DBO->new 3rd arg must be a HASH';
+like $@, qr/^3rd argument to (DBIx::DBO::new|\(eval\)) is not a HASH reference /, 'DBIx::DBO->new 3rd arg must be a HASH';
 
 eval { DBIx::DBO->new(undef, undef, {dbd => ''}) };
 like $@, qr/^Can't create the DBO, unknown database driver /, 'DBIx::DBO->new requires a DBD';
