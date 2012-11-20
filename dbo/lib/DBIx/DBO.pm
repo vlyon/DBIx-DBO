@@ -514,17 +514,28 @@ sub STORABLE_freeze {
     my $me = $_[0];
     return unless ref $me->{dbh} or ref $me->{rdbh};
 
-    my($dbh, $rdbh) = @$me{qw(dbh rdbh)};
+    my %stash = map { $_ => $me->{$_} } qw(dbh rdbh ConnectArgs ConnectReadOnlyArgs);
     $me->{dbh} = "$me->{dbh}" if defined $me->{dbh};
     $me->{rdbh} = "$me->{rdbh}" if defined $me->{rdbh};
+    for (qw(ConnectArgs ConnectReadOnlyArgs)) {
+        defined $me->{$_} ? $me->{$_} = $ConnectArgs[$me->{$_}] : delete $me->{$_};
+    }
+
     my $frozen = Storable::nfreeze($me);
-    @$me{qw(dbh rdbh)} = ($dbh, $rdbh);
+    defined $stash{$_} and $me->{$_} = $stash{$_} for qw(dbh rdbh ConnectArgs ConnectReadOnlyArgs);
     return $frozen;
 }
 
 sub STORABLE_thaw {
     my($me, $cloning, $frozen) = @_;
     %$me = %{ Storable::thaw($frozen) };
+    if ($me->config('AutoReconnect')) {
+        for (qw(ConnectArgs ConnectReadOnlyArgs)) {
+            $me->{$_} = push(@ConnectArgs, $me->{$_}) - 1 if $me->{$_};
+        }
+    } else {
+        delete $me->{$_} for qw(ConnectArgs ConnectReadOnlyArgs);
+    }
 }
 
 sub DESTROY {
