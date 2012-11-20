@@ -74,6 +74,7 @@ sub tables {
 }
 
 sub _table_alias {
+    undef;
 }
 
 =head3 C<name>
