@@ -508,11 +508,11 @@ sub STORABLE_freeze {
     my $me = $_[0];
     return unless ref $me->{dbh} or ref $me->{rdbh};
 
-    my %stash = map { $_ => $me->{$_} } qw(dbh rdbh ConnectArgs ConnectReadOnlyArgs);
-    $me->{dbh} = "$me->{dbh}" if defined $me->{dbh};
-    $me->{rdbh} = "$me->{rdbh}" if defined $me->{rdbh};
+    my %stash = map { $_ => delete $me->{$_} } qw(dbh rdbh ConnectArgs ConnectReadOnlyArgs);
+    $me->{dbh} = "$stash{dbh}" if defined $stash{dbh};
+    $me->{rdbh} = "$stash{rdbh}" if defined $stash{rdbh};
     for (qw(ConnectArgs ConnectReadOnlyArgs)) {
-        defined $me->{$_} ? $me->{$_} = $ConnectArgs[$me->{$_}] : delete $me->{$_};
+        $me->{$_} = $ConnectArgs[$stash{$_}] if defined $stash{$_};
     }
 
     my $frozen = Storable::nfreeze($me);

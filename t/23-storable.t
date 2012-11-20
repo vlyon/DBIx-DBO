@@ -17,12 +17,14 @@ sub freeze_thaw {
 
     ok $frozen = Storable::freeze($obj), join ' ', 'Freeze', $type, @_;
     isa_ok $thawed = Storable::thaw($frozen), $class, 'Thawed';
-    @{$thawed->dbo}{qw(dbh rdbh)} = @$dbo{qw(dbh rdbh)};
+    exists $dbo->{$_} and $thawed->dbo->{$_} = $dbo->{$_} for qw(dbh rdbh);
 }
 
 # Create the DBO
 my $dbh = MySponge->connect('DBI:Sponge:') or die $DBI::errstr;
 $dbo = DBIx::DBO->new($dbh);
+$dbo->config('AutoReconnect', int rand 2);
+note 'AutoReconnect => '.$dbo->config('AutoReconnect');
 freeze_thaw($dbo);
 is_deeply $thawed, $dbo, 'Same DBO';
 
@@ -63,7 +65,6 @@ freeze_thaw($r, '(after fetch & detach)');
 is_deeply $thawed, $r, 'Same Row';
 
 freeze_thaw($q, '(after fetch)');
-@{$thawed->{DBO}}{qw(dbh rdbh)} = @$dbo{qw(dbh rdbh)};
 { # Reset the active query
     local(@$q{qw(sth Row)});
     local(@$q{qw(Active hash)}) = 0 unless exists $q->{cache};;
