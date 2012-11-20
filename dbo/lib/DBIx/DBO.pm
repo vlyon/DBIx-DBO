@@ -423,30 +423,24 @@ The I<read-only> C<DBI> handle, or if there is no I<read-only> connection, the I
 sub dbo { $_[0] }
 
 sub _handle {
-    my $me = shift;
-    my $handle = shift;
-    my($d, $c) = $handle ne 'read-only' ? qw(dbh ConnectArgs) : qw(rdbh ConnectReadOnlyArgs);
-    croak "No $handle handle connected" unless defined $me->{$d};
+    my($me, $type) = @_;
+    # $type can be 'read-only', 'read-write' or false (which means try read-only then read-write)
+    $type ||= defined $me->{rdbh} ? 'read-only' : 'read-write';
+    my($d, $c) = $type ne 'read-only' ? qw(dbh ConnectArgs) : qw(rdbh ConnectReadOnlyArgs);
+    croak "No $type handle connected" unless defined $me->{$d};
     # Automatically reconnect, but only if possible and needed
     $me->{$d} = $me->_connect($me->{$c}) if exists $me->{$c} and not $me->{$d}->ping;
-    return $me->{$d};
+    $me->{$d};
 }
 
 sub dbh {
     my $me = shift;
-    if (my $handle = $me->config('UseHandle')) {
-        return $me->_handle($handle);
-    }
-    $me->_handle('read-write');
+    $me->_handle($me->config('UseHandle') || 'read-write');
 }
 
 sub rdbh {
     my $me = shift;
-    if (my $handle = $me->config('UseHandle')) {
-        return $me->_handle($handle);
-    }
-    return $me->dbh unless defined $me->{rdbh};
-    $me->_handle('read-only');
+    $me->_handle($me->config('UseHandle'));
 }
 
 =head3 C<config>
