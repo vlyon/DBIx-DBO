@@ -38,7 +38,12 @@ BEGIN {
     if ($ENV{DBO_CARP_VERBOSE}) {
         diag "DBO_CARP_VERBOSE=$ENV{DBO_CARP_VERBOSE}";
         $Carp::Verbose = $ENV{DBO_CARP_VERBOSE};
+    } elsif ($ENV{AUTOMATED_TESTING}) {
+        $Carp::Verbose = 1;
     }
+
+    # Remove CARP_NOT during tests
+    @DBIx::DBO::DBD::CARP_NOT = ();
 
     # Store the last SQL executed, and show debug info
     {
@@ -111,6 +116,9 @@ sub import {
         }
         plan skip_all => "Can't load $dbd driver: $_ is required";
     }
+
+    # Remove CARP_NOT during tests
+    @DBIx::DBO::DBD::CARP_NOT = ();
 
     {
         no strict 'refs';
@@ -198,14 +206,15 @@ sub basic_methods {
 
     # Create a test table with a multi-column primary key
     if ($dbo->do("CREATE TABLE $quoted_table ($quoted_cols[2] VARCHAR(20), $quoted_cols[1] INT, $quoted_cols[0] VARCHAR(8), PRIMARY KEY ($quoted_cols[0], $quoted_cols[1]))")) {
-        pass 'Create the test table';
+        pass 'Create the test table: '.$quoted_table;
 
         # Create a table object
         $t = $dbo->table([undef, $test_tbl]);
         isa_ok $t, 'DBIx::DBO::Table', '$t';
 
         # Check the Primary Keys
-        is_deeply $t->{PrimaryKeys}, ['type', 'id'], 'Check PrimaryKeys';
+        is_deeply $t->{PrimaryKeys}, ['type', 'id'], 'Check PrimaryKeys'
+            or diag Test::DBO::Dump($t);
 
         # Recreate our test table
         $dbo->do("DROP TABLE $quoted_table") && $dbo->do($create_table)
@@ -703,7 +712,7 @@ sub Dump {
         elsif (reftype $val eq 'REF')  { _Find_Seen(\%seen, \@_no_recursion, $$val) }
         $d->Seen(\%seen);
     }
-    print $d->Dump;
+    defined wantarray ? return $d->Dump : print $d->Dump;
 }
 
 sub _Find_Seen {
