@@ -18,7 +18,7 @@ sub _get_table_schema {
         'TABLE,VIEW,GLOBAL TEMPORARY,LOCAL TEMPORARY,SYSTEM TABLE')->fetchall_arrayref({});
     # Then if we found nothing, try any type
     $info = $me->rdbh->table_info(undef, $q_schema, $q_table)->fetchall_arrayref({}) if $info and @$info == 0;
-    croak 'Invalid table: '.$class->_qi($me, $table) unless $info and @$info == 1 and $info->[0]{pg_table} eq $table;
+    croak 'Invalid table: '.$class->_qi($me, $schema, $table) unless $info and @$info == 1 and $info->[0]{pg_table} eq $table;
     return $info->[0]{pg_schema};
 }
 
@@ -31,7 +31,7 @@ sub _get_column_info {
     $q_table =~ s/([\\_%])/\\$1/g;
 
     my $cols = $me->rdbh->column_info(undef, $q_schema, $q_table, '%')->fetchall_arrayref({});
-    croak 'Invalid table: '.$class->_qi($me, $table) unless @$cols;
+    croak 'Invalid table: '.$class->_qi($me, $schema, $table) unless @$cols;
 
     map { $_->{pg_column} => $_->{ORDINAL_POSITION} } @$cols;
 }
