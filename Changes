@@ -1,5 +1,10 @@
 Revision history for DBIx-DBO
 
+0.32	Nov 26, 2012
+	- Improve MySQL schema logic.
+	- Better diag messages during testing.
+	- Storable freeze/thaw bug fixes.
+
 0.31	Nov 19, 2012
 	- Fix detaching of Rows with Storable v2.38 only.
 	- Better testing output.
