@@ -214,7 +214,9 @@ sub basic_methods {
 
         # Check the Primary Keys
         is_deeply $t->{PrimaryKeys}, ['type', 'id'], 'Check PrimaryKeys'
-            or diag Test::DBO::Dump($t);
+            or diag Test::DBO::Dump($t),
+Test::DBO::Dump($dbo->rdbh->column_info(undef, $test_sch, $test_tbl, '%')->fetchall_arrayref({}), 'column_info'),
+Test::DBO::Dump($dbo->rdbh->primary_key_info(undef, $test_sch, $test_tbl)->fetchall_arrayref({}), 'primary_key_info');
 
         # Recreate our test table
         $dbo->do("DROP TABLE $quoted_table") && $dbo->do($create_table)
