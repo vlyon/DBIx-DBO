@@ -8,8 +8,16 @@ use Carp qw(croak);
 sub _get_table_schema {
     my($class, $me, $schema, $table) = @_;
 
-    ($schema) = $me->rdbh->selectrow_array('SELECT DATABASE()') unless defined $schema and length $schema;
-    $class->SUPER::_get_table_schema($me, $schema, $table);
+    if (defined $schema and length $schema) {
+        (my $q_schema = $me->rdbh->quote($schema)) =~ s/([\\_%])/\\$1/g;
+        my($got_schema) = $me->selectrow_array('SHOW DATABASES LIKE '.$q_schema);
+        croak 'Invalid table: '.$class->_qi($me, $schema, $table) unless defined $got_schema;
+        return $got_schema;
+    }
+
+    ($schema) = $me->selectrow_array('SELECT DATABASE()');
+    croak 'Invalid table: '.$class->_qi($me, $table).' (No database selected)' unless defined $schema;
+    return $schema;
 }
 
 sub _set_table_key_info {
