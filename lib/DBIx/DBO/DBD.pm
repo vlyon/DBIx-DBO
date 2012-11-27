@@ -114,8 +114,13 @@ sub _qi {
 }
 
 sub _sql {
-    my($class, $me, $sql, @bind) = @_;
+    my $class = shift;
+    my $me = shift;
+    if (my $hook = $me->config('HookSQL')) {
+        $hook->($me, @_);
+    }
     my $dbg = $me->config('DebugSQL') or return;
+    my($sql, @bind) = @_;
 
     require Carp::Heavy if eval "$Carp::VERSION < 1.12";
     my $loc = Carp::short_error_loc();
