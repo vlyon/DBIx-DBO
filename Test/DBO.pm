@@ -42,21 +42,13 @@ BEGIN {
         $Carp::Verbose = 1;
     }
 
-    # Remove CARP_NOT during tests
-    @DBIx::DBO::DBD::CARP_NOT = ();
-
     # Store the last SQL executed, and show debug info
-    {
-        no warnings 'redefine';
-        package # Hide from PAUSE
-            DBIx::DBO::DBD;
-        *DBIx::DBO::DBD::_sql = sub {
-            my $class = shift;
+    DBIx::DBO->config(HookSQL => sub {
             my $me = shift;
             my $loc = Carp::short_error_loc();
             my %i = Carp::caller_info($loc);
-            @{(Scalar::Util::reftype($me) eq 'REF' ? $$me : $me)->{LastSQL}} = ($i{'sub'}, @_);
-            my $dbg = $me->config('DebugSQL') or return;
+            $me->config(LastSQL => [$i{'sub'}, @_]);
+            my $dbg = $ENV{DBO_DEBUG_SQL} or return;
             my $trace;
             if ($dbg > 1) {
                 $trace = "\t$i{sub_name} called at $i{file} line $i{line}\n";
@@ -66,8 +58,23 @@ BEGIN {
             }
             my $sql = shift;
             Test::More::diag "DEBUG_SQL: $sql\nDEBUG_SQL: (".join(', ', map $me->rdbh->quote($_), @_).")\n".$trace;
+        });
+
+    {
+        no warnings 'redefine';
+        # Remove CARP_NOT during tests
+        package # Hide from PAUSE
+            DBIx::DBO;
+        *DBIx::DBO::croak =
+        *DBIx::DBO::Query::croak =
+        *DBIx::DBO::Table::croak =
+        *DBIx::DBO::Row::croak = sub {
+            local @DBIx::DBO::DBD::CARP_NOT = () if $Carp::Verbose;
+            local $Carp::CarpLevel = $Carp::CarpLevel + 1 if $Carp::Verbose;
+            &Carp::croak;
         };
-        package
+        # Fix SvREFCNT with Devel::Cover
+        package # Hide from PAUSE
             DBIx::DBO::Query;
         *DBIx::DBO::Query::SvREFCNT = sub {
             return Devel::Peek::SvREFCNT($_[0]) - 1;
@@ -117,9 +124,6 @@ sub import {
         plan skip_all => "Can't load $dbd driver: $_ is required";
     }
 
-    # Remove CARP_NOT during tests
-    @DBIx::DBO::DBD::CARP_NOT = ();
-
     {
         no strict 'refs';
         *{caller().'::sql_err'} = \&sql_err;
@@ -160,7 +164,7 @@ sub import {
 
 sub sql_err {
     my $me = shift;
-    my($cmd, $sql, @bind) = @{(Scalar::Util::reftype($me) eq 'REF' ? $$me : $me)->{LastSQL}};
+    my($cmd, $sql, @bind) = @{$me->config('LastSQL')};
     $sql =~ s/^/  /mg;
     my @err = ($DBI::errstr || $me->rdbh->errstr || '???');
     unshift @err, 'Bind Values: ('.join(', ', map $me->rdbh->quote($_), @bind).')' if @bind;
