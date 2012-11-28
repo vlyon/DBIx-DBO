@@ -64,7 +64,7 @@ $q->limit(2);
 $q->config(CalcFoundRows => 1);
 like $q->sql, qr/ SQL_CALC_FOUND_ROWS /, 'Use SQL_CALC_FOUND_ROWS in MySQL';
 $q->found_rows;
-is $q->{LastSQL}[1], 'SELECT FOUND_ROWS()', 'Use FOUND_ROWS() in MySQL';
+is $q->config('LastSQL')->[1], 'SELECT FOUND_ROWS()', 'Use FOUND_ROWS() in MySQL';
 
 # Advanced query methods: (15 tests)
 Test::DBO::advanced_query_methods($dbo, $t, $q);
