@@ -230,6 +230,16 @@ sub _build_from {
     $h->{from};
 }
 
+sub _parse_col_val {
+    my($class, $me, $col, %c) = @_;
+    unless (defined $c{Aliases}) {
+        (my $method = (caller(1))[3]) =~ s/.*:://;
+        $c{Aliases} = $class->_alias_preference($me, $method);
+    }
+    return $class->_parse_val($me, $col, Check => 'Column', %c) if ref $col;
+    return [ $class->_parse_col($me, $col, $c{Aliases}) ];
+}
+
 # In some cases column aliases can be used, but this differs by DB and where in the statement it's used.
 # The $method is the method we were called from: (join_on|column|where|having|_del_where|order_by|group_by)
 # This method provides a way for DBs to override the default which is always 1 except for join_on.
