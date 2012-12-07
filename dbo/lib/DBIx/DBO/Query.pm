@@ -197,7 +197,7 @@ sub show {
             next;
         }
         # If the $fld is just a scalar use it as a column name not a value
-        push @{$me->{build_data}{Showing}}, [ $me->_parse_col_val($fld, Aliases => 0) ];
+        push @{$me->{build_data}{Showing}}, [ $me->{DBO}{dbd_class}->_parse_col_val($me, $fld, Aliases => 0) ];
     }
 }
 
@@ -275,9 +275,9 @@ sub join_on {
     my $t2 = shift;
     my $i = $me->_table_idx($t2) or croak 'Invalid table object to join onto';
 
-    my($col1, $col1_func, $col1_opt) = $me->_parse_col_val(shift);
+    my($col1, $col1_func, $col1_opt) = $me->{DBO}{dbd_class}->_parse_col_val($me, shift);
     my $op = shift;
-    my($col2, $col2_func, $col2_opt) = $me->_parse_col_val(shift);
+    my($col2, $col2_func, $col2_opt) = $me->{DBO}{dbd_class}->_parse_col_val($me, shift);
 
     # Validate the fields
     $me->_validate_where_fields(@$col1, @$col2);
@@ -375,7 +375,7 @@ sub where {
     my $me = shift;
 
     # If the $fld is just a scalar use it as a column name not a value
-    my($fld, $fld_func, $fld_opt) = $me->_parse_col_val(shift);
+    my($fld, $fld_func, $fld_opt) = $me->{DBO}{dbd_class}->_parse_col_val($me, shift);
     my $op = shift;
     my($val, $val_func, $val_opt) = $me->{DBO}{dbd_class}->_parse_val($me, shift, Check => 'Auto');
 
@@ -425,7 +425,7 @@ sub _del_where {
 
     if (@_) {
         require Data::Dumper;
-        my($fld, $fld_func, $fld_opt) = $me->_parse_col_val(shift);
+        my($fld, $fld_func, $fld_opt) = $me->{DBO}{dbd_class}->_parse_col_val($me, shift);
         # TODO: Validate the fields?
 
         return unless exists $me->{build_data}{$clause.'_Data'};
@@ -518,18 +518,6 @@ sub _add_where {
     push @{$ref}, [ $op, $fld, $fld_func, $fld_opt, $val, $val_func, $val_opt, $opt{FORCE} ];
 }
 
-sub _parse_col_val {
-    my $me = shift;
-    my $col = shift;
-    my %c = (Check => 'Column', @_);
-    unless (defined $c{Aliases}) {
-        (my $method = (caller(1))[3]) =~ s/.*:://;
-        $c{Aliases} = $me->{DBO}{dbd_class}->_alias_preference($me, $method);
-    }
-    return $me->{DBO}{dbd_class}->_parse_val($me, $col, %c) if ref $col;
-    return [ $me->{DBO}{dbd_class}->_parse_col($me, $col, $c{Aliases}) ];
-}
-
 =head3 C<open_bracket>, C<close_bracket>
 
   $query->open_bracket('OR');
@@ -593,7 +581,7 @@ sub group_by {
     undef $me->{build_data}{group};
     undef @{$me->{build_data}{GroupBy}};
     for my $col (@_) {
-        my @group = $me->_parse_col_val($col);
+        my @group = $me->{DBO}{dbd_class}->_parse_col_val($me, $col);
         push @{$me->{build_data}{GroupBy}}, \@group;
     }
 }
@@ -610,7 +598,7 @@ sub having {
     my $me = shift;
 
     # If the $fld is just a scalar use it as a column name not a value
-    my($fld, $fld_func, $fld_opt) = $me->_parse_col_val(shift);
+    my($fld, $fld_func, $fld_opt) = $me->{DBO}{dbd_class}->_parse_col_val($me, shift);
     my $op = shift;
     my($val, $val_func, $val_opt) = $me->{DBO}{dbd_class}->_parse_val($me, shift, Check => 'Auto');
 
@@ -660,7 +648,7 @@ sub order_by {
     undef $me->{build_data}{order};
     undef @{$me->{build_data}{OrderBy}};
     for my $col (@_) {
-        my @order = $me->_parse_col_val($col);
+        my @order = $me->{DBO}{dbd_class}->_parse_col_val($me, $col);
         push @{$me->{build_data}{OrderBy}}, \@order;
     }
 }

@@ -164,9 +164,9 @@ Fetch the first matching row from the table returning the value in one column.
 
 sub fetch_value {
     my($me, $col) = splice @_, 0, 2;
-    $col = $me->{DBO}{dbd_class}->_parse_col($me, $col);
-    my $sql = 'SELECT '.$me->{DBO}{dbd_class}->_qi($me, $col->[1]).' FROM '.$me->_quoted_name;
     my @bind;
+    $col = $me->{DBO}{dbd_class}->_build_val($me, \@bind, $me->{DBO}{dbd_class}->_parse_col_val($me, $col));
+    my $sql = "SELECT $col FROM ".$me->_quoted_name;
     $sql .= ' WHERE '.$_ if $_ = $me->{DBO}{dbd_class}->_build_quick_where($me, \@bind, @_);
     my $ref = $me->{DBO}{dbd_class}->_selectrow_arrayref($me, $sql, undef, @bind);
     return $ref && $ref->[0];
@@ -198,9 +198,9 @@ Fetch all matching rows from the table returning an arrayref of the values in on
 
 sub fetch_column {
     my($me, $col) = splice @_, 0, 2;
-    $col = $me->{DBO}{dbd_class}->_parse_col($me, $col);
-    my $sql = 'SELECT '.$me->{DBO}{dbd_class}->_qi($me, $col->[1]).' FROM '.$me->_quoted_name;
     my @bind;
+    $col = $me->{DBO}{dbd_class}->_build_val($me, \@bind, $me->{DBO}{dbd_class}->_parse_col_val($me, $col));
+    my $sql = "SELECT $col FROM ".$me->_quoted_name;
     $sql .= ' WHERE '.$_ if $_ = $me->{DBO}{dbd_class}->_build_quick_where($me, \@bind, @_);
     $me->{DBO}{dbd_class}->_sql($me, $sql, @bind);
     return $me->rdbh->selectcol_arrayref($sql, undef, @bind);
