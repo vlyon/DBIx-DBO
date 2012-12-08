@@ -46,7 +46,7 @@ unless ($quoted_db) {
     $quoted_db = $dbo->_qi($Test::DBO::test_db);
 }
 
-plan tests => 105;
+plan tests => 108;
 # Connect & init (3 tests)
 pass "Connect to PostgreSQL $quoted_db database";
 isa_ok $dbo, 'DBIx::DBO', '$dbo';
@@ -77,7 +77,7 @@ Test::DBO::advanced_table_methods($dbo, $t);
 # Row methods: (15 tests)
 Test::DBO::row_methods($dbo, $t);
 
-# Query methods: (29 tests)
+# Query methods: (32 tests)
 my $q = Test::DBO::query_methods($dbo, $t);
 
 # Advanced query methods: (15 tests)

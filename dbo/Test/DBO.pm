@@ -424,6 +424,7 @@ sub query_methods {
     is $q->dbo, $dbo, 'Method DBIx::DBO::Query->dbo';
 
     # Default sql = select everything
+    is_deeply [$q->columns], [qw(id name)], 'Method DBIx::DBO::Query->columns';
     my $sql = $q->sql;
     is $sql, "SELECT * FROM $quoted_table", 'Method DBIx::DBO::Query->sql';
 
@@ -457,7 +458,7 @@ sub query_methods {
     is $r_str, "$r", 'Re-use the same row object';
 
     # Access methods
-    is_deeply [$q->columns], [qw(id name)], 'Method DBIx::DBO::Query->columns';
+    is_deeply [$q->columns], [qw(id name)], 'Method DBIx::DBO::Query->columns (after fetch)';
     is $r->{name}, 'John Doe', 'Access row as a hashref';
     is $r->[0], 1, 'Access row as an arrayref';
 
@@ -523,7 +524,9 @@ sub query_methods {
     # Update & Load a Row with aliased columns
     $q->show('name', {COL => 'id', AS => 'key'});
     $q->group_by;
+    is_deeply [$q->columns], [qw(name key)], 'Method DBIx::DBO::Query->columns (with aliases)';
     $r = $q->fetch;
+    is_deeply [$q->columns], [qw(name key)], 'Method DBIx::DBO::Query->columns (after fetch)';
     ok $r->update(id => $r->{key}), 'Can update a Row despite using aliases' or diag sql_err($r);
     ok $r->load(id => 5), 'Can load a Row despite using aliases' or diag sql_err($r);
 

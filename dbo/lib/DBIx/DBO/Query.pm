@@ -141,7 +141,37 @@ Return a list of column names.
 =cut
 
 sub columns {
-    @{$_[0]->{Columns}};
+    my($me) = @_;
+
+    @{$me->{Columns}} = do {
+        if (@{$me->{build_data}{Showing}}) {
+            map {
+                UNIVERSAL::isa($_, 'DBIx::DBO::Table') ? ($_->columns) : $me->_build_col_val_name(@$_)
+            } @{$me->{build_data}{Showing}};
+        } else {
+            map { $_->columns } @{$me->{Tables}};
+        }
+    } unless @{$me->{Columns}};
+
+    @{$me->{Columns}};
+}
+
+sub _build_col_val_name {
+    my($me, $fld, $func, $opt) = @_;
+    return $opt->{AS} if exists $opt->{AS};
+
+    my @ary = map {
+        if (not ref $_) {
+            $me->rdbh->quote($_);
+        } elsif (UNIVERSAL::isa($_, 'DBIx::DBO::Column')) {
+            $_->[1];
+        } elsif (ref $_ eq 'SCALAR') {
+            $$_;
+        }
+    } @$fld;
+    return $ary[0] unless defined $func;
+    $func =~ s/$DBIx::DBO::DBD::placeholder/shift @ary/ego;
+    return $func;
 }
 
 =head3 C<column>
@@ -190,10 +220,12 @@ sub show {
     undef $me->{build_data}{from};
     undef $me->{build_data}{show};
     undef @{$me->{build_data}{Showing}};
+    undef @{$me->{Columns}};
     for my $fld (@_) {
         if (UNIVERSAL::isa($fld, 'DBIx::DBO::Table')) {
             croak 'Invalid table to show' unless defined $me->_table_idx($fld);
             push @{$me->{build_data}{Showing}}, $fld;
+            push @{$me->{Columns}}, $fld->columns;
             next;
         }
         # If the $fld is just a scalar use it as a column name not a value
@@ -257,6 +289,9 @@ sub join_table {
     push @{$me->{Join_Brackets}}, [];
     undef $me->{sql};
     undef $me->{build_data}{from};
+    undef $me->{build_data}{show};
+    push @{$me->{build_data}{Showing}}, $tbl if @{$me->{build_data}{Showing} ||= []};
+    undef @{$me->{Columns}};
     return $tbl;
 }
 
