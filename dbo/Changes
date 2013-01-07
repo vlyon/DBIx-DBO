@@ -1,5 +1,9 @@
 Revision history for DBIx-DBO
 
+0.33	Jan 7, 2013
+	- Add the HookSQL config.
+	- Accept complex expressions for columns in Table methods.
+
 0.32	Nov 26, 2012
 	- Improve MySQL schema logic.
 	- Better diag messages during testing.
