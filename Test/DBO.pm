@@ -111,17 +111,17 @@ sub import {
     unless (eval { DBIx::DBO::DBD->_require_dbd_class($dbd) }) {
         if ($@ =~ /^Can't locate ([\w\/]+)\.pm in \@INC /m) {
             # Module is not installed
-            ($_ = $1) =~ s'/'::'g;
-        } elsif ($@ =~ /^([\w:]+ version [\d\.]+) required/m) {
+            ($_ = "$1 is required") =~ s'/'::'g;
+        } elsif ($@ =~ /^([\w:]+ version [\d\.]+ required.*?) at /m) {
             # Module is not correct version
             ($_ = $1);
-        } elsif ($@ =~ /^\Q$dbd_name\E is not yet supported/m) {
+        } elsif ($@ =~ /^(\Q$dbd_name\E is not yet supported)/m) {
             # DBM is not yet supported
-            plan skip_all => "Can't load $dbd driver: $dbd_name is not yet supported";
+            ($_ = $1);
         } else {
             die $@;
         }
-        plan skip_all => "Can't load $dbd driver: $_ is required";
+        plan skip_all => "Can't load $dbd driver: $_";
     }
 
     {
