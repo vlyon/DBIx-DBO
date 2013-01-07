@@ -2,6 +2,8 @@ use strict;
 use warnings;
 use DBD::SQLite 1.31;
 
+BEGIN { die 'DBD::SQLite version 1.31 required (but not version 1.38_01)' if $DBD::SQLite::VERSION eq '1.38_01' }
+
 package # hide from PAUSE
     DBIx::DBO::DBD::SQLite;
 use Carp 'croak';
