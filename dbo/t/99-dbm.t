@@ -18,10 +18,10 @@ my $t = Test::DBO::basic_methods($dbo);
 # Skip... (No tests)
 Test::DBO::skip_advanced_table_methods($dbo, $t);
 
-# Row methods: (15 tests)
+# Row methods: (19 tests)
 Test::DBO::row_methods($dbo, $t);
 
-# Query methods: (32 tests)
+# Query methods: (28 tests)
 my $q = Test::DBO::query_methods($dbo, $t);
 
 # Skip... (No tests)

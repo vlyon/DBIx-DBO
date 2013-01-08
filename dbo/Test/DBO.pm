@@ -390,14 +390,20 @@ sub row_methods {
 
     is $r->dbo, $dbo, 'Method DBIx::DBO::Row->dbo';
 
-    is $$r->{array}, undef, 'Row is empty';
+    ok $r->is_empty, 'Method DBIx::DBO::Row->is_empty';
     is_deeply [$r->columns], [qw(id name)], 'Method DBIx::DBO::Row->columns';
 
     ok $r->load(id => 2, name => 'Jane Smith'), 'Method DBIx::DBO::Row->load' or diag sql_err($r);
     is_deeply $$r->{array}, [ 2, 'Jane Smith' ], 'Row loaded correctly';
 
+    # Access methods
+    is $r->[1], 'Jane Smith', 'Access row as an arrayref';
+    is $r->{name}, 'Jane Smith', 'Access row as a hashref';
+    is $r->value('name'), 'Jane Smith', 'Method DBIx::DBO::Row->value';
+    is $r->value($t->column('name')), 'Jane Smith', 'Method DBIx::DBO::Row->value (using Table->column)';
+
     is $r->update(name => 'Someone Else'), 1, 'Method DBIx::DBO::Row->update' or diag sql_err($r);
-    is $$r->{array}, undef, 'Row is empty again';
+    ok $r->is_empty, 'Row is empty again';
     is_deeply \@{$r->load(id => 2)}, [ 2, 'Someone Else' ], 'Row updated correctly' or diag sql_err($r);
 
     $r->update(name => 'Nobody', $t ** 'name' => 'Anybody') or diag sql_err($r);
@@ -454,20 +460,12 @@ sub query_methods {
     $r = $q->fetch;
     ok $r->isa('DBIx::DBO::Row'), 'Method DBIx::DBO::Query->fetch';
     is $r_str, "$r", 'Re-use the same row object';
-
-    # Access methods
     is_deeply [$q->columns], [qw(id name)], 'Method DBIx::DBO::Query->columns (after fetch)';
-    is $r->{name}, 'John Doe', 'Access row as a hashref';
-    is $r->[0], 1, 'Access row as an arrayref';
 
     # Fetch another row
     $r_str = "$r";
     $r = $q->fetch;
     isnt $r_str, "$r", 'Row detaches during fetch when a ref still exists';
-
-    # More access methods
-    is $r->value($t->column('name')), 'Jane Smith', 'Access row via method DBIx::DBO::Row::value';
-    is $r ** $t ** 'name', 'Jane Smith', 'Access row via shortcut method **';
 
     # Re-run the query
     $q->run or diag sql_err($q);
@@ -548,13 +546,13 @@ sub advanced_query_methods {
     $q->show({ FUNC => 'UPPER(?)', COL => 'name', AS => 'name' }, 'id', 'name');
     ok $q->run && $q->fetch->{name} eq 'JOHN DOE', 'Method DBIx::DBO::Query->show' or diag sql_err($q);
 
-    is $q->row ** $t ** 'name', 'John Doe', 'Access specific column';
+    is $q->row->value($t ** 'name'), 'John Doe', 'Access specific column';
     is_deeply [$q->row->columns], [qw(name id name)], 'Method DBIx::DBO::Row->columns (aliased)';
     is_deeply [$q->columns], [qw(name id name)], 'Method DBIx::DBO::Query->columns (aliased)';
 
     # Show whole tables
     $q->show({ FUNC => "'who?'", AS => 'name' }, $t);
-    is $q->fetch ** $t ** 'name', 'John Doe', 'Access specific column from a shown table';
+    is $q->fetch->value($t ** 'name'), 'John Doe', 'Access specific column from a shown table';
 
     # Check case sensitivity of LIKE
     my $case_sensitive = $dbo->selectrow_arrayref($case_sensitivity_sql, undef, 'a', 'A') or diag sql_err($dbo);
