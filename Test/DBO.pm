@@ -403,8 +403,9 @@ sub row_methods {
     is $r->value($t->column('name')), 'Jane Smith', 'Method DBIx::DBO::Row->value (using Table->column)';
 
     is $r->update(name => 'Someone Else'), 1, 'Method DBIx::DBO::Row->update' or diag sql_err($r);
-    ok $r->is_empty, 'Row is empty again';
-    is_deeply \@{$r->load(id => 2)}, [ 2, 'Someone Else' ], 'Row updated correctly' or diag sql_err($r);
+    is_deeply \@$r, [ 2, 'Someone Else' ], 'Row updated correctly (internal)' or diag Test::DBO::Dump($r);
+    $r->load(id => 2) or diag sql_err($r);
+    is_deeply \@$r, [ 2, 'Someone Else' ], 'Row updated correctly (external)' or diag Test::DBO::Dump($r);
 
     $r->update(name => 'Nobody', $t ** 'name' => 'Anybody') or diag sql_err($r);
     is_deeply \@{$r->load(id => 2)}, [ 2, 'Anybody' ], 'Row update removes duplicates' or diag sql_err($r);

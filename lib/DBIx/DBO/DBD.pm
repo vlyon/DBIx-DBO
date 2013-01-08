@@ -352,7 +352,7 @@ sub _build_val {
     push @ary, 'Error';
     $func =~ s/$placeholder/shift @ary/ego;
     # At this point all the values should have been used and @ary must only have 1 item!
-    die "Number of placeholders and values don't match @ary!" if @ary != 1;
+    die "Number of placeholders and values don't match!" if @ary != 1;
     return $func.$extra;
 }
 
@@ -591,9 +591,29 @@ sub _safe_bulk_insert {
 
 # Row methods
 sub _reset_row_on_update {
-    my($class, $me, @update) = @_;
-    # TODO: Reload/update instead of leaving the row empty?
-    # To update the Row object is difficult because columns may have been aliased
+    my($class, $me, $build_data, @update) = @_;
+    # Set the row values if they are simple expressions
+    my @cant_update;
+    for (my $i = 0; $i < @update; $i += 2) {
+        # Keep a list of columns we can't update, and skip them
+        next if $cant_update[ $me->_column_idx($update[0]) ] = (
+            defined $update[1][1] or @{$update[1][0]} != 1 or (
+                ref $update[1][0][0] and (
+                    not UNIVERSAL::isa($update[1][0][0], 'DBIx::DBO::Column')
+                        or $cant_update[ $me->_column_idx($update[1][0][0]) ]
+                )
+            )
+        );
+        my($col, $val) = splice @update, $i, 2;
+        $val = $val->[0][0];
+        $val = $$me->{array}[ $me->_column_idx($val) ] if ref $val;
+        $$me->{array}[ $me->_column_idx($col) ] = $val;
+        $i -= 2;
+    }
+    # If there are no columns we couldn't update then return
+    grep $_, @cant_update or return;
+    # TODO: Attempt reload
+    # If we can't update or reload then empty the Row
     undef $$me->{array};
     $$me->{hash} = {};
 }
