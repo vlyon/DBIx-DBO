@@ -53,10 +53,10 @@ if (my $collation = $dbo->selectrow_hashref('SHOW TABLE STATUS LIKE ?', undef, s
 # Advanced table methods: insert, update, delete (2 tests)
 Test::DBO::advanced_table_methods($dbo, $t);
 
-# Row methods: (15 tests)
+# Row methods: (19 tests)
 Test::DBO::row_methods($dbo, $t);
 
-# Query methods: (32 tests)
+# Query methods: (28 tests)
 my $q = Test::DBO::query_methods($dbo, $t);
 
 # MySQL CalcFoundRows: (2 tests)
