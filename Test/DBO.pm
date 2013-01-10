@@ -206,7 +206,8 @@ sub basic_methods {
     my @quoted_cols = map $dbo->{dbd_class}->_qi($dbo, $_), qw(type id name);
     my $t;
     my $create_table = "CREATE TABLE $quoted_table ($quoted_cols[1] ".
-        ($can{auto_increment_id} || 'INT NOT NULL').", $quoted_cols[2] VARCHAR(20))";
+        ($can{auto_increment_id} || 'INT NOT NULL').", $quoted_cols[2] VARCHAR(20)".
+        ($can{auto_increment_id} ? '' : ", PRIMARY KEY ($quoted_cols[1])").')';
 
     # Create a test table with a multi-column primary key
     if ($dbo->do("CREATE TABLE $quoted_table ($quoted_cols[2] VARCHAR(20), $quoted_cols[1] INT, $quoted_cols[0] VARCHAR(8), PRIMARY KEY ($quoted_cols[0], $quoted_cols[1]))")) {
