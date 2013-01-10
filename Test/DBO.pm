@@ -411,6 +411,11 @@ sub row_methods {
     $r->update(name => 'Nobody', $t ** 'name' => 'Anybody') or diag sql_err($r);
     is_deeply \@{$r->load(id => 2)}, [ 2, 'Anybody' ], 'Row update removes duplicates' or diag sql_err($r);
 
+    # UPDATE the primary key and a complex expression, requiring a reload
+    $r->config(OnRowUpdate => 'reload');
+    $r->update(id => 3, name => \"'Uncle Arnie'") or diag sql_err($r);
+    ok !$r->is_empty, 'Row reloaded on update' or $r->load(id => [2, 3]) or diag sql_err($r);
+
     ok $r->delete, 'Method DBIx::DBO::Row->delete' or diag sql_err($r);
     $t->insert(id => 2, name => 'Jane Smith');
 

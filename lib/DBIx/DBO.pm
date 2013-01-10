@@ -9,9 +9,10 @@ use Carp qw(carp croak);
 our $VERSION;
 our %Config = (
     AutoReconnect => 0,
-    DebugSQL => 0,
-    QuoteIdentifier => 1,
     CacheQuery => 0,
+    DebugSQL => 0,
+    OnRowUpdate => 'simple',
+    QuoteIdentifier => 1,
 );
 my $need_c3_initialize;
 my @ConnectArgs;
@@ -463,21 +464,29 @@ Before every operation the connection will be tested via ping() and reconnected 
 Changing this has no effect after the connection has been made.
 Defaults to C<false>.
 
-=item C<DebugSQL>
-
-Set to C<1> or C<2> to warn about each SQL command executed.  C<2> adds a full stack trace.
-Defaults to C<0> (silent).
-
-=item C<QuoteIdentifier>
-
-Boolean setting to control quoting of SQL identifiers (schema, table and column names).
-
 =item C<CacheQuery>
 
 Boolean setting to cause C<Query> objects to cache their entire result for re-use.
 The query will only be executed automatically once.
 To rerun the query, either explicitly call L<run|DBIx::DBO::Query/"run"> or alter the query.
 Defaults to C<false>.
+
+=item C<DebugSQL>
+
+Set to C<1> or C<2> to warn about each SQL command executed.  C<2> adds a full stack trace.
+Defaults to C<0> (silent).
+
+=item C<OnRowUpdate>
+
+Set to C<'empty'>, C<'simple'> or C<'reload'> to define the behaviour of a C<Row> after an L<update|DBIx::DBO::Row/"update">.
+C<'empty'> will simply leave the C<Row> empty after every update.
+C<'simple'> will set the values in the C<Row> if they are not complex expressions, otherwise the C<Row> will be empty.
+C<'reload'> is the same as C<'simple'> except it also tries to reload the C<Row> if possible.
+Defaults to C<'simple'>.
+
+=item C<QuoteIdentifier>
+
+Boolean setting to control quoting of SQL identifiers (schema, table and column names).
 
 =item C<UseHandle>
 
