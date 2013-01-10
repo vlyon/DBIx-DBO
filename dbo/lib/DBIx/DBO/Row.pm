@@ -221,18 +221,20 @@ sub load {
     push @{$$me->{build_data}{Quick_Where}}, @_;
     undef $$me->{build_data}{where};
     my $sql = $$me->{DBO}{dbd_class}->_build_sql_select($me, $$me->{build_data});
+    my @bind = $$me->{DBO}{dbd_class}->_bind_params_select($me, $$me->{build_data});
     $old_qw < 0 ? delete $$me->{build_data}{Quick_Where} : ($#{$$me->{build_data}{Quick_Where}} = $old_qw);
+    delete $$me->{build_data}{where};
+    delete $$me->{build_data}{Where_Bind};
 
-    undef @{$$me->{Columns}};
     undef $$me->{array};
     $$me->{hash} = \my %hash;
-    $$me->{DBO}{dbd_class}->_sql($me, $sql, $$me->{DBO}{dbd_class}->_bind_params_select($me, $$me->{build_data}));
+    $$me->{DBO}{dbd_class}->_sql($me, $sql, @bind);
     my $sth = $me->rdbh->prepare($sql);
-    return unless $sth and $sth->execute($$me->{DBO}{dbd_class}->_bind_params_select($me, $$me->{build_data}));
+    return unless $sth and $sth->execute(@bind);
 
     my $i;
     my @array;
-    for (@{$$me->{Columns}} = @{$sth->{NAME}}) {
+    for (@{$$me->{Columns}}) {
         $i++;
         $sth->bind_col($i, \$hash{$_}) unless exists $hash{$_};
     }
