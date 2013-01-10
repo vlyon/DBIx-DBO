@@ -3,7 +3,7 @@ use warnings;
 
 # Create the DBO (2 tests)
 my $dbo;
-use Test::DBO DBM => 'DBM', tests => 79, tempdir => 1, connect_ok => [\$dbo];
+use Test::DBO DBM => 'DBM', tests => 80, tempdir => 1, connect_ok => [\$dbo];
 
 # In DBM there is no Schema
 undef $Test::DBO::test_db;
@@ -18,7 +18,7 @@ my $t = Test::DBO::basic_methods($dbo);
 # Skip... (No tests)
 Test::DBO::skip_advanced_table_methods($dbo, $t);
 
-# Row methods: (19 tests)
+# Row methods: (20 tests)
 Test::DBO::row_methods($dbo, $t);
 
 # Query methods: (28 tests)

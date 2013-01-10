@@ -226,6 +226,11 @@ sub load {
     delete $$me->{build_data}{where};
     delete $$me->{build_data}{Where_Bind};
 
+    return $me->_load($sql, @bind);
+}
+
+sub _load {
+    my($me, $sql, @bind) = @_;
     undef $$me->{array};
     $$me->{hash} = \my %hash;
     $$me->{DBO}{dbd_class}->_sql($me, $sql, @bind);

@@ -502,6 +502,8 @@ sub _get_config {
 
 sub _set_config {
     my($class, $ref, $opt, $val) = @_;
+    croak "Invalid value for the 'OnRowUpdate' setting"
+        if $opt eq 'OnRowUpdate' and $val and $val ne 'empty' and $val ne 'simple' and $val ne 'reload';
     croak "Invalid value for the 'UseHandle' setting"
         if $opt eq 'UseHandle' and $val and $val ne 'read-only' and $val ne 'read-write';
     my $old = $ref->{$opt};
@@ -592,27 +594,45 @@ sub _safe_bulk_insert {
 # Row methods
 sub _reset_row_on_update {
     my($class, $me, $build_data, @update) = @_;
-    # Set the row values if they are simple expressions
-    my @cant_update;
-    for (my $i = 0; $i < @update; $i += 2) {
-        # Keep a list of columns we can't update, and skip them
-        next if $cant_update[ $me->_column_idx($update[0]) ] = (
-            defined $update[1][1] or @{$update[1][0]} != 1 or (
-                ref $update[1][0][0] and (
-                    not UNIVERSAL::isa($update[1][0][0], 'DBIx::DBO::Column')
-                        or $cant_update[ $me->_column_idx($update[1][0][0]) ]
+    my $on_row_update = $me->config('OnRowUpdate') || 'simple';
+
+    if ($on_row_update ne 'empty') {
+        # Set the row values if they are simple expressions
+        my @cant_update;
+        for (my $i = 0; $i < @update; $i += 2) {
+            # Keep a list of columns we can't update, and skip them
+            next if $cant_update[ $me->_column_idx($update[0]) ] = (
+                defined $update[1][1] or @{$update[1][0]} != 1 or (
+                    ref $update[1][0][0] and (
+                        not UNIVERSAL::isa($update[1][0][0], 'DBIx::DBO::Column')
+                            or $cant_update[ $me->_column_idx($update[1][0][0]) ]
+                    )
                 )
-            )
-        );
-        my($col, $val) = splice @update, $i, 2;
-        $val = $val->[0][0];
-        $val = $$me->{array}[ $me->_column_idx($val) ] if ref $val;
-        $$me->{array}[ $me->_column_idx($col) ] = $val;
-        $i -= 2;
+            );
+            my($col, $val) = splice @update, $i, 2;
+            $val = $val->[0][0];
+            $val = $$me->{array}[ $me->_column_idx($val) ] if ref $val;
+            $$me->{array}[ $me->_column_idx($col) ] = $val;
+            $i -= 2;
+        }
+        # If we were able to update all the columns then return
+        grep $_, @cant_update or return;
+
+        if ($on_row_update eq 'reload') {
+            # Attempt reload
+            my @cols = map $build_data->{Quick_Where}[$_ << 1], 0 .. $#{$build_data->{Quick_Where}} >> 1;
+            my @cidx = map $me->_column_idx($_), @cols;
+            unless (grep $cant_update[$_], @cidx) {
+                my %bd = %{$$me->{build_data}};
+                delete $bd{Where_Data};
+                delete $bd{where};
+                $bd{Quick_Where} = [map { $cols[$_] => $$me->{array}[ $cidx[$_] ] } 0 .. $#cols];
+                my $sql = $class->_build_sql_select($me, \%bd);
+                my @bind = $class->_bind_params_select($me, \%bd);
+                return $me->_load($sql, @bind);
+            }
+        }
     }
-    # If there are no columns we couldn't update then return
-    grep $_, @cant_update or return;
-    # TODO: Attempt reload
     # If we can't update or reload then empty the Row
     undef $$me->{array};
     $$me->{hash} = {};
