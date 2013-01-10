@@ -393,7 +393,7 @@ sub row_methods {
     ok $r->is_empty, 'Method DBIx::DBO::Row->is_empty';
     is_deeply [$r->columns], [qw(id name)], 'Method DBIx::DBO::Row->columns';
 
-    ok $r->load(id => 2, name => 'Jane Smith'), 'Method DBIx::DBO::Row->load' or diag sql_err($r);
+    ok $r->load(id => [2, 3], name => 'Jane Smith'), 'Method DBIx::DBO::Row->load' or diag sql_err($r);
     is_deeply $$r->{array}, [ 2, 'Jane Smith' ], 'Row loaded correctly';
 
     # Access methods

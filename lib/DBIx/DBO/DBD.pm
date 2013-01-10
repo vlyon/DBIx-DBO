@@ -425,7 +425,7 @@ sub _build_quick_where {
                     ' IS ';
                 } elsif (ref $val eq 'ARRAY') {
                     croak 'Invalid value argument, IN requires at least 1 value' unless @$val;
-                    $val = { FUNC => join(',', ('?') x @$val), VAL => $val };
+                    $val = { FUNC => '('.join(',', ('?') x @$val).')', VAL => $val };
                     ' IN ';
                 } elsif (defined $val) {
                     ' = ';
