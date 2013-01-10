@@ -4,7 +4,7 @@ use warnings;
 use Test::DBO ExampleP => 'ExampleP';
 use Test::DBO Sponge => 'Sponge', tests => 39;
 
-MySponge::db::setup([qw(id name)], [123, 'vlyon']);
+MySponge::db::setup([qw(id name age)], [123, 'vlyon', 77]);
 
 {
     my $warn = '';
