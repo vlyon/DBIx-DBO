@@ -1,7 +1,12 @@
 use strict;
 use warnings;
 
-BEGIN { die "DBM is not yet supported!\n" unless $ENV{DBO_ALLOW_DBM} }
+BEGIN {
+    unless ($ENV{DBO_ALLOW_DBM}) {
+        warn "Set \$ENV{DBO_ALLOW_DBM} to a true value to try DBM.\n";
+        die "DBM is not yet supported!\n";
+    }
+}
 use SQL::Statement;
 
 package # hide from PAUSE

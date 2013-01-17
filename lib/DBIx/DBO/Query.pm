@@ -992,6 +992,24 @@ sub _sth {
     $me->{sth} ||= $me->rdbh->prepare($sql);
 }
 
+=head3 C<update>
+
+  $query->update(department => 'Tech');
+  $query->update(salary => { FUNC => '? * 1.10', COL => 'salary' }); # 10% raise
+
+Updates every row in the query with the new values specified.
+Returns the number of rows updated or C<'0E0'> for no rows to ensure the value is true,
+and returns false if there was an error.
+
+=cut
+
+sub update {
+    my $me = shift;
+    my @update = $me->{DBO}{dbd_class}->_parse_set($me, @_);
+    my $sql = $me->{DBO}{dbd_class}->_build_sql_update($me, $me->{build_data}, @update);
+    $me->{DBO}{dbd_class}->_do($me, $sql, undef, $me->{DBO}{dbd_class}->_bind_params_update($me, $me->{build_data}));
+}
+
 =head3 C<finish>
 
   $query->finish;

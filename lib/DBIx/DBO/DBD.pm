@@ -163,6 +163,7 @@ sub _bind_params_select {
 sub _build_sql_update {
     my($class, $me, $h, @arg) = @_;
     croak 'Update is not valid with a GROUP BY clause' if $class->_build_group($me, $h);
+    croak 'Update is not valid with a HAVING clause' if $class->_build_having($me, $h);
     my $sql = 'UPDATE '.$class->_build_from($me, $h);
     $sql .= ' SET '.$class->_build_set($me, $h, @arg);
     $sql .= ' WHERE '.$_ if $_ = $class->_build_where($me, $h);
@@ -672,8 +673,7 @@ sub _require_dbd_class {
     }
     if ($rv) {
         warn @warn if @warn;
-    }
-    else {
+    } else {
         (my $file = $dbd_class.'.pm') =~ s'::'/'g;
         if ($@ !~ / \Q$file\E in \@INC /) {
             (my $err = $@) =~ s/\n.*$//; # Remove the last line
