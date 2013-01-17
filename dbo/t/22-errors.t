@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use Test::DBO ExampleP => 'ExampleP';
-use Test::DBO Sponge => 'Sponge', tests => 39;
+use Test::DBO Sponge => 'Sponge', tests => 40;
 
 MySponge::db::setup([qw(id name age)], [123, 'vlyon', 77]);
 
@@ -103,7 +103,10 @@ eval { $t->delete($t2 ** 'name' => undef) };
 like $@, qr/^Invalid column, the column is from a table not included in this query /, 'Invalid column (another table)';
 
 eval { $t->delete(name => [qw(doesnt exist)]) };
-like $@, qr/^No read-write handle connected /, 'No read-write handle connected';
+like $@, qr/^No read-write handle connected /, 'No read-write handle connected (Table)';
+
+eval { $q->update('id', 'oops') };
+like $@, qr/^No read-write handle connected /, 'No read-write handle connected (Query)';
 
 (my $r, $t) = DBIx::DBO::Row->new($dbo, $t->{Name});
 $r->config(LimitRowDelete => 0);

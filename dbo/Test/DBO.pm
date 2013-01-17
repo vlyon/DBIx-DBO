@@ -503,6 +503,10 @@ sub query_methods {
     $q->where('id', 'NOT IN', 4444);
     ok scalar(() = $q->sql =~ / NOT IN /g) == 1, 'Group multiple IN & NOT IN clauses together';
 
+    $q->order_by;
+    is $q->update(id => { FUNC => '? + 10', COL => 'id' }), 3, 'Method DBIx::DBO::Query->update' or diag sql_err($q);
+    $q->order_by('id');
+
     my $old_sql = $q->sql;
     $q->unwhere('name');
     is $q->sql, $old_sql, 'Method DBIx::DBO::Query->unwhere (before close_bracket)';
@@ -513,7 +517,7 @@ sub query_methods {
     isnt $q->sql, $old_sql, 'Method DBIx::DBO::Query->close_bracket';
 
     $got = $q->col_arrayref({ Columns => [1] });
-    is_deeply $got, [2,4,5,6,7], 'Method DBIx::DBO::Query->unwhere';
+    is_deeply $got, [2,7,14,15,16], 'Method DBIx::DBO::Query->unwhere';
 
     # Reset the Query
     $q->reset;
@@ -531,7 +535,7 @@ sub query_methods {
     $r = $q->fetch;
     is_deeply [$q->columns], [qw(name key)], 'Method DBIx::DBO::Query->columns (after fetch)';
     ok $r->update(id => $r->{key}), 'Can update a Row despite using aliases' or diag sql_err($r);
-    ok $r->load(id => 5), 'Can load a Row despite using aliases' or diag sql_err($r);
+    ok $r->load(id => 15), 'Can load a Row despite using aliases' or diag sql_err($r);
 
     $q->finish;
     return $q;
@@ -570,13 +574,13 @@ sub advanced_query_methods {
     $q->show('id');
     ok $q->where('name', 'LIKE', '%a%'), 'Method DBIx::DBO::Query->where LIKE';
     my $a = $q->col_arrayref or diag sql_err($q);
-    is_deeply $a, [2,4,6,7], 'Method DBIx::DBO::Query->col_arrayref';
-    ok $q->where('id', 'BETWEEN', [2, \6]), 'Method DBIx::DBO::Query->where BETWEEN';
+    is_deeply $a, [2,7,14,16], 'Method DBIx::DBO::Query->col_arrayref';
+    ok $q->where('id', 'BETWEEN', [6, \16]), 'Method DBIx::DBO::Query->where BETWEEN';
     $a = $q->arrayref or diag sql_err($q);
-    is_deeply $a, [[2],[4],[6]], 'Method DBIx::DBO::Query->arrayref';
+    is_deeply $a, [[7],[14],[16]], 'Method DBIx::DBO::Query->arrayref';
     ok $q->where('name', 'IN', ['Harry Harrelson', 'James Bond']), 'Method DBIx::DBO::Query->where IN';
     $a = $q->hashref('id') or diag sql_err($q);
-    is_deeply $a, {4 => {id => 4},6 => {id => 6}}, 'Method DBIx::DBO::Query->hashref';
+    is_deeply $a, {14 => {id => 14},16 => {id => 16}}, 'Method DBIx::DBO::Query->hashref';
 
     # HAVING clause
     my $concat = $dbd eq 'SQLite' ? '? || ?' : 'CONCAT(?, ?)';
@@ -584,15 +588,15 @@ sub advanced_query_methods {
     my $having_col = $dbo->{dbd_class}->_alias_preference($q, 'having') ? 'combo' : \%concat_col;
     $q->show('id', 'name', { %concat_col, AS => 'combo'});
     $q->group_by('id', 'name');
-    $q->having($having_col, '=', '4James Bond');
+    $q->having($having_col, '=', '14James Bond');
     $q->having($having_col, '=', 'ABC-XYZ');
     $q->having($having_col, '=', 'XYZ-ABC');
-    is_deeply [@{$q->fetch}], [4, 'James Bond', '4James Bond'], 'Method DBIx::DBO::Query->having';
+    is_deeply [@{$q->fetch}], [14, 'James Bond', '14James Bond'], 'Method DBIx::DBO::Query->having';
 
-    $q->unhaving($having_col, '=', '4James Bond');
+    $q->unhaving($having_col, '=', '14James Bond');
     is $q->fetch, undef, 'Method DBIx::DBO::Query->unhaving';
     $q->unhaving($having_col);
-    is_deeply [@{$q->fetch}], [4, 'James Bond', '4James Bond'], 'Method DBIx::DBO::Query->unhaving (whole column)';
+    is_deeply [@{$q->fetch}], [14, 'James Bond', '14James Bond'], 'Method DBIx::DBO::Query->unhaving (whole column)';
 
     $q->finish;
 }
@@ -611,7 +615,7 @@ sub join_methods {
     $q->order_by('id');
     $q->show('id');
     $q->distinct(1);
-    is_deeply $q->arrayref, [[1],[2],[4],[5],[6],[7]], 'Method DBIx::DBO::Query->distinct';
+    is_deeply $q->arrayref, [[1],[2],[7],[14],[15],[16]], 'Method DBIx::DBO::Query->distinct';
     $q->distinct(0);
     $q->show($t1, $t2);
 
@@ -623,7 +627,7 @@ sub join_methods {
     is $q->found_rows, 36, 'Method DBIx::DBO::Query->found_rows' or diag sql_err($q);
 
     # JOIN
-    $q->join_on($t2, $t1 ** 'id', '=', { FUNC => '?/2.0', VAL => $t2 ** 'id' });
+    $q->join_on($t2, $t1 ** 'id', '=', { FUNC => '?/7.0', VAL => $t2 ** 'id' });
     $q->order_by({ COL => $t1 ** 'name', ORDER => 'DESC' });
     $q->where($t1 ** 'name', '<', $t2 ** 'name', FORCE => 'OR');
     $q->where($t1 ** 'name', '>', $t2 ** 'name', FORCE => 'OR');
@@ -635,9 +639,9 @@ sub join_methods {
         $q->run or fail 'JOIN ON' or diag sql_err($q) or skip 'No Left Join', 1;
         $r = $q->fetch or fail 'JOIN ON' or skip 'No Left Join', 1;
 
-        is_deeply \@$r, [ 1, 'John Doe', 2, 'Jane Smith' ], 'JOIN ON';
+        is_deeply \@$r, [ 1, 'John Doe', 7, 'Amanda Huggenkiss' ], 'JOIN ON';
         $r->load($t1 ** id => 2) or diag sql_err($r);
-        is_deeply \@$r, [ 2, 'Jane Smith', 4, 'James Bond' ], 'Method DBIx::DBO::Row->load';
+        is_deeply \@$r, [ 2, 'Jane Smith', 14, 'James Bond' ], 'Method DBIx::DBO::Row->load';
     }
 
     # LEFT JOIN
@@ -667,7 +671,7 @@ sub join_methods {
         $q->_sth or diag sql_err($q) or fail 'LEFT JOIN' or skip 'No Left Join', 3;
         $r = $q->fetch or fail 'LEFT JOIN' or skip 'No Left Join', 3;
 
-        is_deeply \@$r, [ 4, 'James Bond', undef, undef ], 'LEFT JOIN';
+        is_deeply \@$r, [ 14, 'James Bond', undef, undef ], 'LEFT JOIN';
         is $r->_column_idx($t2 ** 'id'), 2, 'Method DBIx::DBO::Row->_column_idx';
         is $r->value($t2 ** 'id'), undef, 'Method DBIx::DBO::Row->value';
 
