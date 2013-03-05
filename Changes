@@ -1,5 +1,9 @@
 Revision history for DBIx-DBO
 
+0.34	Mar 5, 2013
+	- Add the Query->update method.
+	- Add OnRowUpdate config option, and ability to reload Row on update.
+
 0.33	Jan 7, 2013
 	- Add the HookSQL config.
 	- Accept complex expressions for columns in Table methods.
