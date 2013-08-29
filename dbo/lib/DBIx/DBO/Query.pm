@@ -271,6 +271,7 @@ sub join_table {
     my($me, $tbl, $type) = @_;
     if (UNIVERSAL::isa($tbl, 'DBIx::DBO::Table')) {
         croak 'This table is already in this query' if $me->_table_idx($tbl);
+        croak 'This table is from a different DBO connection' if $me->{DBO} != $tbl->{DBO};
     } else {
         $tbl = $me->_table_class->new($me->{DBO}, $tbl);
     }
@@ -1167,6 +1168,7 @@ Assume you want to create a C<Query> and C<Row> class for a "Users" table:
   }
   
   sub _row_class { 'My::User' } # Rows are blessed into this class
+
 
   package My::User;
   our @ISA = qw(DBIx::DBO::Row);
