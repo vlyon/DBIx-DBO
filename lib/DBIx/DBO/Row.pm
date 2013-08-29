@@ -60,6 +60,7 @@ sub _init {
 
     $$me->{build_data}{LimitOffset} = [1];
     if ($parent->isa('DBIx::DBO::Query')) {
+        croak 'This query is from a different DBO connection' if $parent->{DBO} != $dbo;
         $$me->{Parent} = $parent;
         # We must weaken this to avoid a circular reference
         weaken $$me->{Parent};
@@ -67,6 +68,7 @@ sub _init {
         $$me->{Columns} = $parent->{Columns};
         $me->_copy_build_data;
     } elsif ($parent->isa('DBIx::DBO::Table')) {
+        croak 'This table is from a different DBO connection' if $parent->{DBO} != $dbo;
         $$me->{build_data} = {
             show => '*',
             Showing => [],

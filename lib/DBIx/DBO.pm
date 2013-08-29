@@ -372,6 +372,7 @@ sub table_info {
 
     my $schema;
     if (UNIVERSAL::isa($table, 'DBIx::DBO::Table')) {
+        croak 'This table is from a different DBO connection' if $table->{DBO} != $me;
         ($schema, $table) = @$table{qw(Schema Name)};
     } else {
         ($schema, $table) = ref $table eq 'ARRAY' ? @$table : $me->{dbd_class}->_unquote_table($me, $table);
