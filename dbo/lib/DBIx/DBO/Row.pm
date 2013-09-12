@@ -10,6 +10,8 @@ use overload '@{}' => sub {${$_[0]}->{array} || []}, '%{}' => sub {${$_[0]}->{ha
 
 sub _table_class { ${$_[0]}->{DBO}->_table_class }
 
+*_isa = \&DBIx::DBO::DBD::_isa;
+
 =head1 NAME
 
 DBIx::DBO::Row - An OO interface to SQL queries and results.  Encapsulates a fetched row of data in an object.
@@ -46,7 +48,7 @@ Can take the same arguments as L<DBIx::DBO::Table/new> or a L<Query|DBIx::DBO::Q
 
 sub new {
     my $proto = shift;
-    UNIVERSAL::isa($_[0], 'DBIx::DBO') or croak 'Invalid DBO Object for new Row';
+    eval { $_[0]->isa('DBIx::DBO') } or croak 'Invalid DBO Object for new Row';
     my $class = ref($proto) || $proto;
     $class->_init(@_);
 }
@@ -95,7 +97,7 @@ sub _copy_build_data {
 sub _copy {
     my($me, $val) = @_;
     return bless [$me, $val->[1]], 'DBIx::DBO::Column'
-        if UNIVERSAL::isa($val, 'DBIx::DBO::Column') and $val->[0] == $$me->{Parent};
+        if _isa($val, 'DBIx::DBO::Column') and $val->[0] == $$me->{Parent};
     ref $val eq 'ARRAY' ? [map $me->_copy($_), @$val] : ref $val eq 'HASH' ? {map $me->_copy($_), %$val} : $val;
 }
 
@@ -139,7 +141,7 @@ sub _column_idx {
     my($me, $col) = @_;
     my $idx = -1;
     for my $shown (@{$$me->{build_data}{Showing}} ? @{$$me->{build_data}{Showing}} : @{$$me->{Tables}}) {
-        if (UNIVERSAL::isa($shown, 'DBIx::DBO::Table')) {
+        if (_isa($shown, 'DBIx::DBO::Table')) {
             if ($col->[0] == $shown and exists $shown->{Column_Idx}{$col->[1]}) {
                 return $idx + $shown->{Column_Idx}{$col->[1]};
             }
@@ -193,7 +195,7 @@ Values in the C<Row> can also be obtained by using the object as an array/hash r
 sub value {
     my($me, $col) = @_;
     croak 'The row is empty' unless $$me->{array};
-    if (UNIVERSAL::isa($col, 'DBIx::DBO::Column')) {
+    if (_isa($col, 'DBIx::DBO::Column')) {
         my $i = $me->_column_idx($col);
         return $$me->{array}[$i] if defined $i;
         croak 'The field '.$$me->{DBO}{dbd_class}->_qi($me, $col->[0]{Name}, $col->[1]).' was not included in this query';

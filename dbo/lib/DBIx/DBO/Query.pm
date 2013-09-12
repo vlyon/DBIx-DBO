@@ -18,6 +18,8 @@ BEGIN {
 sub _table_class { $_[0]{DBO}->_table_class }
 sub _row_class { $_[0]{DBO}->_row_class }
 
+*_isa = \&DBIx::DBO::DBD::_isa;
+
 =head1 NAME
 
 DBIx::DBO::Query - An OO interface to SQL queries and results.  Encapsulates an entire query in an object.
@@ -65,7 +67,7 @@ In list context, the C<Query> object and L<Table|DBIx::DBO::Table> objects will 
 
 sub new {
     my $proto = shift;
-    UNIVERSAL::isa($_[0], 'DBIx::DBO') or croak 'Invalid DBO Object';
+    eval { $_[0]->isa('DBIx::DBO') } or croak 'Invalid DBO Object';
     my $class = ref($proto) || $proto;
     $class->_init(@_);
 }
@@ -146,7 +148,7 @@ sub columns {
     @{$me->{Columns}} = do {
         if (@{$me->{build_data}{Showing}}) {
             map {
-                UNIVERSAL::isa($_, 'DBIx::DBO::Table') ? ($_->columns) : $me->_build_col_val_name(@$_)
+                _isa($_, 'DBIx::DBO::Table') ? ($_->columns) : $me->_build_col_val_name(@$_)
             } @{$me->{build_data}{Showing}};
         } else {
             map { $_->columns } @{$me->{Tables}};
@@ -163,7 +165,7 @@ sub _build_col_val_name {
     my @ary = map {
         if (not ref $_) {
             $me->rdbh->quote($_);
-        } elsif (UNIVERSAL::isa($_, 'DBIx::DBO::Column')) {
+        } elsif (_isa($_, 'DBIx::DBO::Column')) {
             $_->[1];
         } elsif (ref $_ eq 'SCALAR') {
             $$_;
@@ -222,7 +224,7 @@ sub show {
     undef @{$me->{build_data}{Showing}};
     undef @{$me->{Columns}};
     for my $fld (@_) {
-        if (UNIVERSAL::isa($fld, 'DBIx::DBO::Table')) {
+        if (_isa($fld, 'DBIx::DBO::Table')) {
             croak 'Invalid table to show' unless defined $me->_table_idx($fld);
             push @{$me->{build_data}{Showing}}, $fld;
             push @{$me->{Columns}}, $fld->columns;
@@ -269,7 +271,7 @@ Returns the C<Table> object.
 
 sub join_table {
     my($me, $tbl, $type) = @_;
-    if (UNIVERSAL::isa($tbl, 'DBIx::DBO::Table')) {
+    if (_isa($tbl, 'DBIx::DBO::Table')) {
         croak 'This table is already in this query' if $me->_table_idx($tbl);
         croak 'This table is from a different DBO connection' if $me->{DBO} != $tbl->{DBO};
     } else {
@@ -447,7 +449,7 @@ sub unwhere {
 sub _validate_where_fields {
     my $me = shift;
     for my $f (@_) {
-        if (UNIVERSAL::isa($f, 'DBIx::DBO::Column')) {
+        if (_isa($f, 'DBIx::DBO::Column')) {
             $me->{DBO}{dbd_class}->_valid_col($me, $f);
         } elsif (my $type = ref $f) {
             croak 'Invalid value type: '.$type if $type ne 'SCALAR';

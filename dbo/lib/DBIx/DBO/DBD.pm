@@ -4,6 +4,7 @@ package # hide from PAUSE
 use strict;
 use warnings;
 use Carp 'croak';
+use Scalar::Util 'blessed';
 use constant PLACEHOLDER => "\x{b1}\x{a4}\x{221e}";
 
 our @CARP_NOT = qw(DBIx::DBO DBIx::DBO::DBD DBIx::DBO::Table DBIx::DBO::Query DBIx::DBO::Row);
@@ -14,6 +15,10 @@ our @CARP_NOT = qw(DBIx::DBO DBIx::DBO::DBD DBIx::DBO::Table DBIx::DBO::Query DB
 
 our $placeholder = PLACEHOLDER;
 $placeholder = qr/\Q$placeholder/;
+
+sub _isa {
+    blessed $_[0] and $_[0]->isa($_[1]);
+}
 
 sub _init_dbo {
     my($class, $me) = @_;
@@ -211,7 +216,7 @@ sub _build_show {
     return $h->{show} = $distinct.'*' unless @{$h->{Showing}};
     my @flds;
     for my $fld (@{$h->{Showing}}) {
-        push @flds, UNIVERSAL::isa($fld, 'DBIx::DBO::Table')
+        push @flds, _isa($fld, 'DBIx::DBO::Table')
             ? $class->_qi($me, $me->_table_alias($fld) || $fld->{Name}).'.*'
             : $class->_build_val($me, $h->{Show_Bind}, @$fld);
     }
@@ -265,7 +270,7 @@ sub _valid_col {
 sub _parse_col {
     my($class, $me, $col, $_check_aliases) = @_;
     if (ref $col) {
-        return $class->_valid_col($me, $col) if UNIVERSAL::isa($col, 'DBIx::DBO::Column');
+        return $class->_valid_col($me, $col) if _isa($col, 'DBIx::DBO::Column');
         croak 'Invalid column: '.$col;
     }
     # If $_check_aliases is not defined dont accept an alias
@@ -303,7 +308,7 @@ sub _parse_val {
         } else {
             $fld = exists $fld->{VAL} ? $fld->{VAL} : [];
         }
-    } elsif (UNIVERSAL::isa($fld, 'DBIx::DBO::Column')) {
+    } elsif (_isa($fld, 'DBIx::DBO::Column')) {
         return [ $class->_valid_col($me, $fld) ];
     }
     $fld = [$fld] unless ref $fld eq 'ARRAY';
@@ -337,7 +342,7 @@ sub _build_val {
         if (!ref $_) {
             push @$bind, $_;
             '?';
-        } elsif (UNIVERSAL::isa($_, 'DBIx::DBO::Column')) {
+        } elsif (_isa($_, 'DBIx::DBO::Column')) {
             $class->_build_col($me, $_);
         } elsif (ref $_ eq 'SCALAR') {
             $$_;
@@ -605,7 +610,7 @@ sub _reset_row_on_update {
             next if $cant_update[ $me->_column_idx($update[0]) ] = (
                 defined $update[1][1] or @{$update[1][0]} != 1 or (
                     ref $update[1][0][0] and (
-                        not UNIVERSAL::isa($update[1][0][0], 'DBIx::DBO::Column')
+                        not _isa($update[1][0][0], 'DBIx::DBO::Column')
                             or $cant_update[ $me->_column_idx($update[1][0][0]) ]
                     )
                 )

@@ -8,6 +8,8 @@ use overload '**' => \&column, fallback => 1;
 
 sub _row_class { $_[0]{DBO}->_row_class }
 
+*_isa = \&DBIx::DBO::DBD::_isa;
+
 =head1 NAME
 
 DBIx::DBO::Table - An OO interface to SQL queries and results.  Encapsulates a table in an object.
@@ -52,7 +54,7 @@ Tables can be specified by their name or an arrayref of schema and table name or
 
 sub new {
     my $proto = shift;
-    UNIVERSAL::isa($_[0], 'DBIx::DBO') or croak 'Invalid DBO Object';
+    eval { $_[0]->isa('DBIx::DBO') } or croak 'Invalid DBO Object';
     my $class = ref($proto) || $proto;
     $class->_init(@_);
 }
