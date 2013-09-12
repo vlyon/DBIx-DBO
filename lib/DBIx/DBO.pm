@@ -37,6 +37,8 @@ sub _table_class { 'DBIx::DBO::Table' }
 sub _query_class { 'DBIx::DBO::Query' }
 sub _row_class   { 'DBIx::DBO::Row' }
 
+*_isa = \&DBIx::DBO::DBD::_isa;
+
 =head1 NAME
 
 DBIx::DBO - An OO interface to SQL queries and results.  Easily constructs SQL queries, and simplifies processing of the returned data.
@@ -145,12 +147,12 @@ sub new {
         croak '3rd argument to '.(caller(0))[3].' is not a HASH reference';
     }
     if (defined $dbh) {
-        croak 'Invalid read-write database handle' unless UNIVERSAL::isa($dbh, 'DBI::db');
+        croak 'Invalid read-write database handle' unless _isa($dbh, 'DBI::db');
         $new->{dbh} = $dbh;
         $new->{dbd} ||= $dbh->{Driver}{Name};
     }
     if (defined $rdbh) {
-        croak 'Invalid read-only database handle' unless UNIVERSAL::isa($rdbh, 'DBI::db');
+        croak 'Invalid read-only database handle' unless _isa($rdbh, 'DBI::db');
         croak 'The read-write and read-only connections must use the same DBI driver'
             if $dbh and $dbh->{Driver}{Name} ne $rdbh->{Driver}{Name};
         $new->{rdbh} = $rdbh;
@@ -371,7 +373,7 @@ sub table_info {
     croak 'No table name supplied' unless defined $table and length $table;
 
     my $schema;
-    if (UNIVERSAL::isa($table, 'DBIx::DBO::Table')) {
+    if (_isa($table, 'DBIx::DBO::Table')) {
         croak 'This table is from a different DBO connection' if $table->{DBO} != $me;
         ($schema, $table) = @$table{qw(Schema Name)};
     } else {
