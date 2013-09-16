@@ -537,6 +537,8 @@ sub query_methods {
     ok $r->update(id => $r->{key}), 'Can update a Row despite using aliases' or diag sql_err($r);
     ok $r->load(id => 15), 'Can load a Row despite using aliases' or diag sql_err($r);
 
+    isa_ok $q ** 'key', 'DBIx::DBO::Column', q{$q ** $alias};
+
     $q->finish;
     return $q;
 }

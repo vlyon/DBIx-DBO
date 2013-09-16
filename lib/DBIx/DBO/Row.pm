@@ -157,25 +157,41 @@ sub _column_idx {
 =head3 C<column>
 
   $row->column($column_name);
-  $row->column($alias_or_column_name, 1);
 
 Returns a column reference from the name or alias.
-By default only column names are searched, set the second argument to true to check column aliases and names.
 
 =cut
 
 sub column {
-    my($me, $col, $_check_aliases) = @_;
-    if ($_check_aliases) {
-        for my $fld (@{$$me->{build_data}{Showing}}) {
-            return $$me->{Column}{$col} ||= bless [$me, $col], 'DBIx::DBO::Column'
-                if ref($fld) eq 'ARRAY' and exists $fld->[2]{AS} and $col eq $fld->[2]{AS};
-        }
+    my($me, $col) = @_;
+    my @show;
+    @show = @{$$me->{build_data}{Showing}} or @show = @{$$me->{Tables}};
+    for my $fld (@show) {
+        return $$me->{Column}{$col} ||= bless [$me, $col], 'DBIx::DBO::Column'
+            if (_isa($fld, 'DBIx::DBO::Table') and exists $fld->{Column_Idx}{$col})
+            or (ref($fld) eq 'ARRAY' and exists $fld->[2]{AS} and $col eq $fld->[2]{AS});
     }
+    croak 'No such column: '.$$me->{DBO}{dbd_class}->_qi($me, $col);
+}
+
+sub _inner_col {
+    my($me, $col, $_check_aliases) = @_;
+    $_check_aliases = $$me->{DBO}{dbd_class}->_alias_preference($me, 'column') unless defined $_check_aliases;
+    my $column;
+    return $column if $_check_aliases == 1 and $column = $me->_check_alias($col);
     for my $tbl ($me->tables) {
         return $tbl->column($col) if exists $tbl->{Column_Idx}{$col};
     }
+    return $column if $_check_aliases == 2 and $column = $me->_check_alias($col);
     croak 'No such column'.($_check_aliases ? '/alias' : '').': '.$$me->{DBO}{dbd_class}->_qi($me, $col);
+}
+
+sub _check_alias {
+    my($me, $col) = @_;
+    for my $fld (@{$me->{build_data}{Showing}}) {
+        return $me->{Column}{$col} ||= bless [$me, $col], 'DBIx::DBO::Column'
+            if ref($fld) eq 'ARRAY' and exists $fld->[2]{AS} and $col eq $fld->[2]{AS};
+    }
 }
 
 =head3 C<value>

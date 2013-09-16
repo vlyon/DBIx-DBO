@@ -124,6 +124,7 @@ sub column {
         unless exists $me->{Column_Idx}{$col};
     $me->{Column}{$col} ||= bless [$me, $col], 'DBIx::DBO::Column';
 }
+*_inner_col = \&column;
 
 =head3 C<row>
 

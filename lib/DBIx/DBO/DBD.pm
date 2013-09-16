@@ -17,7 +17,10 @@ our $placeholder = PLACEHOLDER;
 $placeholder = qr/\Q$placeholder/;
 
 sub _isa {
-    blessed $_[0] and $_[0]->isa($_[1]);
+    my($me, @class) = @_;
+    if (blessed $me) {
+        $me->isa($_) and return 1 for @class;
+    }
 }
 
 sub _init_dbo {
@@ -274,7 +277,7 @@ sub _parse_col {
         croak 'Invalid column: '.$col;
     }
     # If $_check_aliases is not defined dont accept an alias
-    $me->column($col, $_check_aliases || 0);
+    $me->_inner_col($col, $_check_aliases || 0);
 }
 
 sub _build_col {

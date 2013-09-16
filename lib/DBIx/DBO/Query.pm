@@ -2,8 +2,10 @@ package DBIx::DBO::Query;
 
 use strict;
 use warnings;
-use Devel::Peek 'SvREFCNT';
 use Carp 'croak';
+use Devel::Peek 'SvREFCNT';
+
+use overload '**' => \&column, fallback => 1;
 
 BEGIN {
     if ($] < 5.008_009) {
@@ -181,10 +183,23 @@ sub _build_col_val_name {
   $query->column($alias_or_column_name);
 
 Returns a reference to a column for use with other methods.
+The C<**> method is a shortcut for the C<column> method.
 
 =cut
 
 sub column {
+    my($me, $col) = @_;
+    my @show;
+    @show = @{$me->{build_data}{Showing}} or @show = @{$me->{Tables}};
+    for my $fld (@show) {
+        return $me->{Column}{$col} ||= bless [$me, $col], 'DBIx::DBO::Column'
+            if (_isa($fld, 'DBIx::DBO::Table') and exists $fld->{Column_Idx}{$col})
+            or (ref($fld) eq 'ARRAY' and exists $fld->[2]{AS} and $col eq $fld->[2]{AS});
+    }
+    croak 'No such column: '.$me->{DBO}{dbd_class}->_qi($me, $col);
+}
+
+sub _inner_col {
     my($me, $col, $_check_aliases) = @_;
     $_check_aliases = $me->{DBO}{dbd_class}->_alias_preference($me, 'column') unless defined $_check_aliases;
     my $column;
