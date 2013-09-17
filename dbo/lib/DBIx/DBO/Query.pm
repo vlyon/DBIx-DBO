@@ -287,7 +287,7 @@ Returns the C<Table> object.
 sub join_table {
     my($me, $tbl, $type) = @_;
     if (_isa($tbl, 'DBIx::DBO::Table')) {
-        croak 'This table is already in this query' if $me->_table_idx($tbl);
+        croak 'This table is already in this query' if defined $me->_table_idx($tbl);
         croak 'This table is from a different DBO connection' if $me->{DBO} != $tbl->{DBO};
     } else {
         $tbl = $me->_table_class->new($me->{DBO}, $tbl);
