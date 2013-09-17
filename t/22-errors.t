@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use Test::DBO ExampleP => 'ExampleP';
-use Test::DBO Sponge => 'Sponge', tests => 44;
+use Test::DBO Sponge => 'Sponge', tests => 45;
 
 MySponge::db::setup([qw(id name age)], [123, 'vlyon', 77]);
 
@@ -80,6 +80,9 @@ like $@, qr/^Invalid value argument, BETWEEN requires 2 values /, 'BETWEEN requi
 
 eval { $q->show($t2) };
 like $@, qr/^Invalid table to show /, 'Validate table in show';
+
+eval { $q->join_table($t) };
+like $@, qr/^This table is already in this query /, 'Check duplicate Table objects in join';
 
 eval { $q->join_on($t2) };
 like $@, qr/^Invalid table object to join onto /, 'Validate table in JOIN ON';
