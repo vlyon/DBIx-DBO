@@ -9,7 +9,7 @@ MySponge::db::setup([qw(id alias)], ['vlyon', 22]);
 my $dbh = MySponge->connect('DBI:Sponge:') or die $DBI::errstr;
 my $dbo = DBIx::DBO->new($dbh);
 my $t = $dbo->table($Test::DBO::test_tbl) or die sql_err($dbo);
-my $q = $dbo->query($t) or die sql_err($t);
+my $q = $dbo->query($t) or die sql_err($dbo);
 
 $q->show({COL => 'name', AS => 'id'}, {COL => 'age', AS => 'alias'});
 
