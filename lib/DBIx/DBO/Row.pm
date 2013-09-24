@@ -74,7 +74,7 @@ sub _init {
         $$me->{build_data} = {
             show => '*',
             Showing => [],
-            from => $parent->_quoted_name,
+            from => $parent->_from,
             group => '',
             order => '',
         };
