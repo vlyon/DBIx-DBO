@@ -205,7 +205,7 @@ sub _bind_params_delete {
 }
 
 sub _build_table {
-    my($class, $me, $t) = @_;
+    my($class, $me, $h, $t) = @_;
     my $alias = $me->_table_alias($t);
     $alias = defined $alias ? ' '.$class->_qi($me, $alias) : '';
     $t->_quoted_name.$alias;
@@ -230,9 +230,10 @@ sub _build_from {
     my($class, $me, $h) = @_;
     return $h->{from} if defined $h->{from};
     undef @{$h->{From_Bind}};
-    $h->{from} = $class->_build_table($me, ($me->tables)[0]);
-    for (my $i = 1; $i < $me->tables; $i++) {
-        $h->{from} .= $h->{Join}[$i].$class->_build_table($me, ($me->tables)[$i]);
+    my @tables = $me->tables;
+    $h->{from} = $class->_build_table($me, $h, $tables[0]);
+    for (my $i = 1; $i < @tables; $i++) {
+        $h->{from} .= $h->{Join}[$i].$class->_build_table($me, $h, $tables[$i]);
         $h->{from} .= ' ON '.join(' AND ', $class->_build_where_chunk($me, $h->{From_Bind}, 'OR', $h->{Join_On}[$i]))
             if $h->{Join_On}[$i];
     }
