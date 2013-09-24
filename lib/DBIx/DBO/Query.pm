@@ -131,7 +131,7 @@ sub _table_idx {
 
 sub _table_alias {
     my($me, $tbl) = @_;
-    return undef if $me == $tbl; # This means it's checking for an aliased column
+    return undef if $me == $tbl; # This means it's checking for an aliased column in this Query
     my $i = $me->_table_idx($tbl);
     croak 'The table is not in this query' unless defined $i;
     # Don't use aliases, when there's only 1 table
