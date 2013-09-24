@@ -208,7 +208,7 @@ sub _build_table {
     my($class, $me, $h, $t) = @_;
     my $alias = $me->_table_alias($t);
     $alias = defined $alias ? ' '.$class->_qi($me, $alias) : '';
-    $t->_quoted_name.$alias;
+    $t->_from.$alias;
 }
 
 sub _build_show {

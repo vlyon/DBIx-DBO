@@ -380,7 +380,7 @@ sub row_methods {
     my $dbo = shift;
     my $t = shift;
 
-    my $r = DBIx::DBO::Row->new($dbo, $t->_quoted_name);
+    my $r = DBIx::DBO::Row->new($dbo, $t->_from);
     isa_ok $r, 'DBIx::DBO::Row', '$r (using quoted table name)';
 
     $r = $dbo->row([ @$t{qw(Schema Name)} ]);
@@ -426,7 +426,7 @@ sub row_methods {
 sub query_methods {
     my $dbo = shift;
     my $t = shift;
-    my $quoted_table = $t->_quoted_name;
+    my $quoted_table = $t->_from;
 
     # Create a query object
     my $q = $dbo->query($t);
