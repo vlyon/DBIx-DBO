@@ -66,6 +66,8 @@ sub _init {
         $$me->{Parent} = $parent;
         # We must weaken this to avoid a circular reference
         weaken $$me->{Parent};
+        $parent->columns;
+        $dbo->{dbd_class}->_build_from($parent, $parent->{build_data});
         $$me->{Tables} = [ @{$parent->{Tables}} ];
         $$me->{Columns} = $parent->{Columns};
         $me->_copy_build_data;
@@ -134,8 +136,24 @@ Return a list of column names.
 =cut
 
 sub columns {
-    @{${$_[0]}->{Columns}};
+    my($me) = @_;
+
+    return $$me->{Parent}->columns if $$me->{Parent};
+
+    @{$$me->{Columns}} = do {
+        if (@{$$me->{build_data}{Showing}}) {
+            map {
+                _isa($_, 'DBIx::DBO::Table') ? ($_->columns) : $me->_build_col_val_name(@$_)
+            } @{$$me->{build_data}{Showing}};
+        } else {
+            map { $_->columns } @{$$me->{Tables}};
+        }
+    } unless @{$$me->{Columns}};
+
+    @{$$me->{Columns}};
 }
+
+*_build_col_val_name = \&DBIx::DBO::Query::_build_col_val_name;
 
 sub _column_idx {
     my($me, $col) = @_;
@@ -259,7 +277,7 @@ sub _load {
 
     my $i;
     my @array;
-    for (@{$$me->{Columns}}) {
+    for ($me->columns) {
         $i++;
         $sth->bind_col($i, \$hash{$_}) unless exists $hash{$_};
     }
