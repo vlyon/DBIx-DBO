@@ -57,39 +57,45 @@ isa_ok $r = MyRow->new($dbo, $t), 'MyRow', '$r';
     package # hide from PAUSE
         My::Query;
     use base 'SubClass::Query';
-    my @tables;
+    sub _row_class { 'My::Row' }
     sub new {
-        my $me = shift;
-        my $dbo = shift;
-        @tables = map $dbo->table($_), $Test::DBO::test_tbl unless @tables;
-        $me = $me->SUPER::new($dbo, @tables, @_);
+        my($class, $dbo) = @_;
+        my($me, $t1) = $class->SUPER::new($dbo, $Test::DBO::test_tbl);
+        my $t2 = $me->join_table($Test::DBO::test_tbl, 'JOIN');
+        $me->join_on($t2, $t1 ** 'id', '=', $t2 ** 'id');
         return $me;
     }
-    sub _row_class { 'My::Row' }
 }
 {
     package # hide from PAUSE
         My::Row;
     use base 'SubClass::Row';
-    my @tables;
     sub new {
-        my $me = shift;
-        my $dbo = shift;
-        @tables = map $dbo->table($_), $Test::DBO::test_tbl unless @tables;
-        $me->SUPER::new($dbo, @tables, @_);
+        my($class, $dbo, $parent) = @_;
+        $parent ||= My::Query->new($dbo);
+        return $class->SUPER::new($dbo, $parent);
     }
 }
 
-my $tbl = My::Query->new($dbo);
-isa_ok $tbl, 'My::Query', '$tbl';
-is $tbl->{DBO}{dbd_class}->_build_from($tbl), $tbl->{DBO}{dbd_class}->_qi($tbl, $Test::DBO::test_tbl),
-    'Subclass represents the table automatically';
+sub build_from {
+    my($obj, $build_data) = @_;
+    return $obj->dbo->{dbd_class}->_build_from($obj, $build_data);
+}
+$quoted = $dbo->{dbd_class}->_qi($dbo, $Test::DBO::test_tbl);
+my $from = qq{$quoted "t1" JOIN $quoted "t2" ON "t1"."id" = "t2"."id"};
 
-my $row = My::Row->new($dbo);
-isa_ok $row, 'My::Row', '$row';
-is $$row->{DBO}{dbd_class}->_build_from($row), $$row->{DBO}{dbd_class}->_qi($row, $Test::DBO::test_tbl),
-    'Subclass represents the table automatically';
+$q = My::Query->new($dbo);
+isa_ok $q, 'My::Query', '$q';
+note $q->sql;
+is build_from($q, $q->{build_data}), $from,
+    'Subclassed Query represents the table join automatically';
 
-$row = $tbl->row;
-isa_ok $row, 'My::Row', '$tbl->row';
+$r = My::Row->new($dbo);
+Test::DBO::Dump($r);
+isa_ok $r, 'My::Row', '$r';
+is build_from($r, $$r->{build_data}), $from,
+    'Subclassed Row represents the table join automatically';
+
+$r = $q->row;
+isa_ok $r, 'My::Row', '$q->row';
 

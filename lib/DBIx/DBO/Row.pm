@@ -67,9 +67,9 @@ sub _init {
         # We must weaken this to avoid a circular reference
         weaken $$me->{Parent};
         $parent->columns;
-        $dbo->{dbd_class}->_build_from($parent, $parent->{build_data});
         $$me->{Tables} = [ @{$parent->{Tables}} ];
         $$me->{Columns} = $parent->{Columns};
+        $$me->{build_data}{from} = $dbo->{dbd_class}->_build_from($parent, $parent->{build_data});
         $me->_copy_build_data;
     } elsif ($parent->isa('DBIx::DBO::Table')) {
         croak 'This table is from a different DBO connection' if $parent->{DBO} != $dbo;
@@ -91,7 +91,7 @@ sub _init {
 sub _copy_build_data {
     my $me = $_[0];
     # Store needed build_data
-    for my $f (qw(Showing from From_Bind Quick_Where Where_Data Where_Bind group Group_Bind order Order_Bind)) {
+    for my $f (qw(Showing From_Bind Quick_Where Where_Data Where_Bind group Group_Bind order Order_Bind)) {
         $$me->{build_data}{$f} = $me->_copy($$me->{Parent}{build_data}{$f}) if exists $$me->{Parent}{build_data}{$f};
     }
 }
