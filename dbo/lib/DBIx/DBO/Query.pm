@@ -992,6 +992,7 @@ sub _build_sql {
             undef %{$me->{Row}};
 
             $me->{sql} = $me->{DBO}{dbd_class}->_build_sql_select($me, $me->{build_data});
+            $me->{Row}{from} = $me->{DBO}{dbd_class}->_build_from($me, $me->{build_data});
             $me->{Row}->_copy_build_data;
             return $me->{sql};
         }
