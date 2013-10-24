@@ -246,7 +246,9 @@ sub show {
             next;
         }
         # If the $fld is just a scalar use it as a column name not a value
-        push @{$me->{build_data}{Showing}}, [ $me->{DBO}{dbd_class}->_parse_col_val($me, $fld, Aliases => 0) ];
+        my @col = $me->{DBO}{dbd_class}->_parse_col_val($me, $fld, Aliases => 0);
+        push @{$me->{build_data}{Showing}}, \@col;
+        push @{$me->{Columns}}, $me->_build_col_val_name(@col);
     }
 }
 
