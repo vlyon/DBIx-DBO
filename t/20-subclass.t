@@ -91,7 +91,6 @@ is build_from($q, $q->{build_data}), $from,
     'Subclassed Query represents the table join automatically';
 
 $r = My::Row->new($dbo);
-Test::DBO::Dump($r);
 isa_ok $r, 'My::Row', '$r';
 is build_from($r, $$r->{build_data}), $from,
     'Subclassed Row represents the table join automatically';
