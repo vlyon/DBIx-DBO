@@ -529,11 +529,11 @@ sub query_methods {
         'Method DBIx::DBO::Query->group_by') or diag sql_err($q);
 
     # Update & Load a Row with aliased columns
-    $q->show('name', {COL => 'id', AS => 'key'});
+    $q->show($t, {COL => 'id', AS => 'key'});
     $q->group_by;
-    is_deeply [$q->columns], [qw(name key)], 'Method DBIx::DBO::Query->columns (with aliases)';
+    is_deeply [$q->columns], [qw(id name key)], 'Method DBIx::DBO::Query->columns (with aliases)';
     $r = $q->fetch;
-    is_deeply [$q->columns], [qw(name key)], 'Method DBIx::DBO::Query->columns (after fetch)';
+    is_deeply [$q->columns], [qw(id name key)], 'Method DBIx::DBO::Query->columns (after fetch)';
     ok $r->update(id => $r->{key}), 'Can update a Row despite using aliases' or diag sql_err($r);
     ok $r->load(id => 15), 'Can load a Row despite using aliases' or diag sql_err($r);
 
