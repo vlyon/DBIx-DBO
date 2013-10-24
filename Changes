@@ -1,5 +1,8 @@
 Revision history for DBIx-DBO
 
+0.35	Oct 22, 2013
+	- Minor bug fixes.
+
 0.34	Mar 5, 2013
 	- Add the Query->update method.
 	- Add OnRowUpdate config option, and ability to reload Row on update.
