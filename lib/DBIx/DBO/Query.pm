@@ -310,7 +310,6 @@ sub join_table {
     undef $me->{sql};
     undef $me->{build_data}{from};
     undef $me->{build_data}{show};
-    push @{$me->{build_data}{Showing}}, $tbl if @{$me->{build_data}{Showing} ||= []};
     undef @{$me->{Columns}};
     return $tbl;
 }
