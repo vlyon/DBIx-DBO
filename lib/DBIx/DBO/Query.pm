@@ -478,7 +478,7 @@ sub _validate_where_fields {
         if (_isa($f, 'DBIx::DBO::Column')) {
             $me->{DBO}{dbd_class}->_valid_col($me, $f);
         } elsif (my $type = ref $f) {
-            croak 'Invalid value type: '.$type if $type ne 'SCALAR';
+            croak 'Invalid value type: '.$type if $type ne 'SCALAR' and not _isa($f, 'DBIx::DBO::Query');
         }
     }
 }
@@ -982,6 +982,12 @@ Returns the SQL statement string.
 
 =cut
 
+sub _search_where_chunk {
+    map {
+        ref $_->[0] eq 'ARRAY' ? _search_where_chunk(@$_) : ($_->[1], $_->[4])
+    } @_
+}
+
 our @_RECURSIVE_SQ;
 sub sql {
     my $me = shift;
@@ -994,6 +1000,24 @@ sub sql {
             if ($sq->sql ne ($me->{build_data}{_subqueries}{$sq} ||= '')) {
                 undef $me->{sql};
                 undef $me->{build_data}{show};
+            }
+        }
+    }
+    for my $w (map { $_ ? _search_where_chunk(@$_) : () } @{$me->{build_data}{Join_On}}) {
+        if (@$w == 1 and _isa($w->[0], 'DBIx::DBO::Query')) {
+            my $sq = $w->[0];
+            if ($sq->sql ne ($me->{build_data}{_subqueries}{$sq} ||= '')) {
+                undef $me->{sql};
+                undef $me->{build_data}{from};
+            }
+        }
+    }
+    for my $w (_search_where_chunk(@{$me->{build_data}{Where_Data}})) {
+        if (@$w == 1 and _isa($w->[0], 'DBIx::DBO::Query')) {
+            my $sq = $w->[0];
+            if ($sq->sql ne ($me->{build_data}{_subqueries}{$sq} ||= '')) {
+                undef $me->{sql};
+                undef $me->{build_data}{where};
             }
         }
     }
