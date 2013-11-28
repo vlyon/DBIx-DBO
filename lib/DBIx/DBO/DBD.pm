@@ -175,9 +175,10 @@ sub _build_sql_update {
     croak 'Update is not valid with a HAVING clause' if $class->_build_having($me, $h);
     my $sql = 'UPDATE '.$class->_build_from($me, $h);
     $sql .= ' SET '.$class->_build_set($me, $h, @arg);
-    $sql .= ' WHERE '.$_ if $_ = $class->_build_where($me, $h);
-    $sql .= ' ORDER BY '.$_ if $_ = $class->_build_order($me, $h);
-    $sql .= ' '.$_ if $_ = $class->_build_limit($me, $h);
+    my $clause;
+    $sql .= ' WHERE '.$clause if $clause = $class->_build_where($me, $h);
+    $sql .= ' ORDER BY '.$clause if $clause = $class->_build_order($me, $h);
+    $sql .= ' '.$clause if $clause = $class->_build_limit($me, $h);
     $sql;
 }
 
@@ -192,9 +193,10 @@ sub _build_sql_delete {
     my($class, $me, $h) = @_;
     croak 'Delete is not valid with a GROUP BY clause' if $class->_build_group($me, $h);
     my $sql = 'DELETE FROM '.$class->_build_from($me, $h);
-    $sql .= ' WHERE '.$_ if $_ = $class->_build_where($me, $h);
-    $sql .= ' ORDER BY '.$_ if $_ = $class->_build_order($me, $h);
-    $sql .= ' '.$_ if $_ = $class->_build_limit($me, $h);
+    my $clause;
+    $sql .= ' WHERE '.$clause if $clause = $class->_build_where($me, $h);
+    $sql .= ' ORDER BY '.$clause if $clause = $class->_build_order($me, $h);
+    $sql .= ' '.$clause if $clause = $class->_build_limit($me, $h);
     $sql;
 }
 
