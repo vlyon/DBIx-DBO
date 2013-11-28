@@ -52,7 +52,7 @@ sub _get_column_info {
     $cols = $cols && $cols->fetchall_arrayref({}) || [];
     croak 'Invalid table: '.$class->_qi($me, $schema, $table) unless @$cols;
 
-    map { $_->{COLUMN_NAME} => $_->{ORDINAL_POSITION} } @$cols;
+    return map { $_->{COLUMN_NAME} => $_->{ORDINAL_POSITION} } @$cols;
 }
 
 sub _get_table_info {
@@ -65,7 +65,7 @@ sub _get_table_info {
     $h{PrimaryKeys} = [];
     $class->_set_table_key_info($me, $schema, $table, \%h);
 
-    $me->{TableInfo}{defined $schema ? $schema : ''}{$table} = \%h;
+    return $me->{TableInfo}{defined $schema ? $schema : ''}{$table} = \%h;
 }
 
 sub _set_table_key_info {
@@ -118,7 +118,7 @@ sub _qi {
     return $me->rdbh->quote_identifier(@id) if $me->config('QuoteIdentifier');
     # Strip off any null/undef elements (ie schema)
     shift(@id) while @id and not (defined $id[0] and length $id[0]);
-    join '.', @id;
+    return join '.', @id;
 }
 
 sub _sql {
@@ -153,12 +153,13 @@ sub _build_sql_select {
     my($class, $me, $h) = @_;
     my $sql = 'SELECT '.$class->_build_show($me, $h);
     $sql .= ' FROM '.$class->_build_from($me, $h);
-    $sql .= ' WHERE '.$_ if $_ = $class->_build_where($me, $h);
-    $sql .= ' GROUP BY '.$_ if $_ = $class->_build_group($me, $h);
-    $sql .= ' HAVING '.$_ if $_ = $class->_build_having($me, $h);
-    $sql .= ' ORDER BY '.$_ if $_ = $class->_build_order($me, $h);
-    $sql .= ' '.$_ if $_ = $class->_build_limit($me, $h);
-    $sql;
+    my $clause;
+    $sql .= ' WHERE '.$clause if $clause = $class->_build_where($me, $h);
+    $sql .= ' GROUP BY '.$clause if $clause = $class->_build_group($me, $h);
+    $sql .= ' HAVING '.$clause if $clause = $class->_build_having($me, $h);
+    $sql .= ' ORDER BY '.$clause if $clause = $class->_build_order($me, $h);
+    $sql .= ' '.$clause if $clause = $class->_build_limit($me, $h);
+    return $sql;
 }
 
 sub _bind_params_select {
@@ -206,9 +207,10 @@ sub _bind_params_delete {
 
 sub _build_table {
     my($class, $me, $h, $t) = @_;
+    my $from = $t->_from($h);
     my $alias = $me->_table_alias($t);
     $alias = defined $alias ? ' '.$class->_qi($me, $alias) : '';
-    $t->_from.$alias;
+    return $from.$alias;
 }
 
 sub _build_show {
@@ -223,7 +225,7 @@ sub _build_show {
             ? $class->_qi($me, $me->_table_alias($fld) || $fld->{Name}).'.*'
             : $class->_build_val($me, $h->{Show_Bind}, @$fld);
     }
-    $h->{show} = $distinct.join(', ', @flds);
+    return $h->{show} = $distinct.join(', ', @flds);
 }
 
 sub _build_from {
@@ -374,7 +376,7 @@ sub _build_where {
     my @where;
     push @where, $class->_build_quick_where($me, $h->{Where_Bind}, @{$h->{Quick_Where}}) if exists $h->{Quick_Where};
     push @where, $class->_build_where_chunk($me, $h->{Where_Bind}, 'OR', $h->{Where_Data}) if exists $h->{Where_Data};
-    $h->{where} = join ' AND ', @where;
+    return $h->{where} = join ' AND ', @where;
 }
 
 # Construct the WHERE contents of one set of parentheses
@@ -445,7 +447,7 @@ sub _build_quick_where {
                 }
             } . $class->_build_val($me, $bind, $class->_parse_val($me, $val));
     }
-    join ' AND ', @where;
+    return join ' AND ', @where;
 }
 
 sub _parse_set {
@@ -468,14 +470,14 @@ sub _build_set {
     while (@arg) {
         push @set, $class->_build_col($me, shift @arg).' = '.$class->_build_val($me, $h->{Set_Bind}, @{shift @arg});
     }
-    join ', ', @set;
+    return join ', ', @set;
 }
 
 sub _build_group {
     my($class, $me, $h) = @_;
     return $h->{group} if defined $h->{group};
     undef @{$h->{Group_Bind}};
-    $h->{group} = join ', ', map $class->_build_val($me, $h->{Group_Bind}, @$_), @{$h->{GroupBy}};
+    return $h->{group} = join ', ', map $class->_build_val($me, $h->{Group_Bind}, @$_), @{$h->{GroupBy}};
 }
 
 # Construct the HAVING clause
@@ -485,14 +487,14 @@ sub _build_having {
     undef @{$h->{Having_Bind}};
     my @having;
     push @having, $class->_build_where_chunk($me, $h->{Having_Bind}, 'OR', $h->{Having_Data}) if exists $h->{Having_Data};
-    $h->{having} = join ' AND ', @having;
+    return $h->{having} = join ' AND ', @having;
 }
 
 sub _build_order {
     my($class, $me, $h) = @_;
     return $h->{order} if defined $h->{order};
     undef @{$h->{Order_Bind}};
-    $h->{order} = join ', ', map $class->_build_val($me, $h->{Order_Bind}, @$_), @{$h->{OrderBy}};
+    return $h->{order} = join ', ', map $class->_build_val($me, $h->{Order_Bind}, @$_), @{$h->{OrderBy}};
 }
 
 sub _build_limit {
@@ -501,7 +503,7 @@ sub _build_limit {
     return $h->{limit} = '' unless defined $h->{LimitOffset};
     $h->{limit} = 'LIMIT '.$h->{LimitOffset}[0];
     $h->{limit} .= ' OFFSET '.$h->{LimitOffset}[1] if $h->{LimitOffset}[1];
-    $h->{limit};
+    return $h->{limit};
 }
 
 sub _get_config {
