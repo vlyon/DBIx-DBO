@@ -444,7 +444,7 @@ sub query_methods {
     pass 'Method DBIx::DBO::Query->order_by';
 
     # Get a valid sth
-    isa_ok $q->_sth, 'DBI::st', '$q->_sth';
+    isa_ok $q->_sth, 'DBI::st', '$q->_sth' or diag "SQL command failed: _sth\n  $q->{sql}\n".$q->rdbh->errstr;
 
     # Get a Row object
     my $r = $q->row;
