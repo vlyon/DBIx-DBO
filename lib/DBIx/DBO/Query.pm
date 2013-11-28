@@ -138,6 +138,13 @@ sub _table_alias {
     @{$me->{Tables}} > 1 ? 't'.($i + 1) : ();
 }
 
+sub _from {
+    my($me, $h) = @_;
+    my $sql = $me->{DBO}{dbd_class}->_build_sql_select($me, $me->{build_data});
+    $h->{_subqueries}{$me} = $sql;
+    return "($sql)";
+}
+
 =head3 C<columns>
 
 Return a list of column names.
@@ -222,11 +229,14 @@ sub _check_alias {
 =head3 C<show>
 
   $query->show(@columns);
-  $query->show($table1, {COL => $table2 ** 'name', AS => 'name2'});
-  $query->show($table1 ** 'id', {FUNC => 'UCASE(?)', COL => 'name', AS => 'alias'}, ...
+  $query->show($table1, { COL => $table2 ** 'name', AS => 'name2' });
+  $query->show($table1 ** 'id', { FUNC => 'UCASE(?)', COL => 'name', AS => 'alias' }, ...
 
 Specify which columns to show as an array.  If the array is empty all columns will be shown.
 If you use a Table object, all the columns from that table will be shown.
+You can also add a subquery by passing that Query as the value with an alias, Eg.
+
+  { VAL => $subquery, AS => 'sq' }
 
 =cut
 
@@ -974,6 +984,16 @@ Returns the SQL statement string.
 
 sub sql {
     my $me = shift;
+    # Check for changes to subqueries
+    for my $fld (@{$me->{build_data}{Showing}}) {
+        if (ref $fld eq 'ARRAY' and @{$fld->[0]} == 1 and _isa($fld->[0][0], 'DBIx::DBO::Query')) {
+            my $sq = $fld->[0][0];
+            if ($sq->sql ne ($me->{build_data}{_subqueries}{$sq} ||= '')) {
+                undef $me->{sql};
+                undef $me->{build_data}{show};
+            }
+        }
+    }
     $me->{sql} || $me->_build_sql;
 }
 
@@ -983,6 +1003,7 @@ sub _build_sql {
     undef $me->{hash};
     undef $me->{Row_Count};
     undef $me->{Found_Rows};
+    undef %{$me->{build_data}{_subqueries}};
     delete $me->{cache};
     $me->{Active} = 0;
     if (defined $me->{Row}) {
