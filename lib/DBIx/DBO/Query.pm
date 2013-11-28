@@ -982,12 +982,15 @@ Returns the SQL statement string.
 
 =cut
 
+our @_RECURSIVE_SQ;
 sub sql {
     my $me = shift;
     # Check for changes to subqueries
     for my $fld (@{$me->{build_data}{Showing}}) {
         if (ref $fld eq 'ARRAY' and @{$fld->[0]} == 1 and _isa($fld->[0][0], 'DBIx::DBO::Query')) {
             my $sq = $fld->[0][0];
+            croak 'Recursive subquery found' if grep $sq eq $_, @_RECURSIVE_SQ;
+            local @_RECURSIVE_SQ = (@_RECURSIVE_SQ, $sq);
             if ($sq->sql ne ($me->{build_data}{_subqueries}{$sq} ||= '')) {
                 undef $me->{sql};
                 undef $me->{build_data}{show};
@@ -1003,7 +1006,6 @@ sub _build_sql {
     undef $me->{hash};
     undef $me->{Row_Count};
     undef $me->{Found_Rows};
-    undef %{$me->{build_data}{_subqueries}};
     delete $me->{cache};
     $me->{Active} = 0;
     if (defined $me->{Row}) {
