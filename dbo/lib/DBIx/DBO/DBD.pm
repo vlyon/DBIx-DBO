@@ -354,6 +354,8 @@ sub _build_val {
             $class->_build_col($me, $_);
         } elsif (ref $_ eq 'SCALAR') {
             $$_;
+        } elsif (_isa($_, 'DBIx::DBO::Query')) {
+            $_->_from;
         } else {
             croak 'Invalid field: '.$_;
         }
