@@ -301,6 +301,9 @@ sub join_table {
     if (_isa($tbl, 'DBIx::DBO::Table')) {
         croak 'This table is already in this query' if defined $me->_table_idx($tbl);
         croak 'This table is from a different DBO connection' if $me->{DBO} != $tbl->{DBO};
+    } elsif (_isa($tbl, 'DBIx::DBO::Query')) {
+        # Subquery
+        croak 'This table is from a different DBO connection' if $me->{DBO} != $tbl->{DBO};
     } else {
         $tbl = $me->_table_class->new($me->{DBO}, $tbl);
     }
@@ -1000,6 +1003,13 @@ sub sql {
             if ($sq->sql ne ($me->{build_data}{_subqueries}{$sq} ||= '')) {
                 undef $me->{sql};
                 undef $me->{build_data}{show};
+            }
+        }
+    }
+    for my $sq (@{$me->{Tables}}) {
+        if (_isa($sq, 'DBIx::DBO::Query')) {
+            if ($sq->sql ne ($me->{build_data}{_subqueries}{$sq} ||= '')) {
+                undef $me->{sql};
             }
         }
     }
