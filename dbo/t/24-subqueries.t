@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::DBO Sponge => 'Sponge', tests => 14;
+use Test::DBO Sponge => 'Sponge', tests => 13;
 
 # Create the DBO
 my $dbh = MySponge->connect('DBI:Sponge:') or die $DBI::errstr;
