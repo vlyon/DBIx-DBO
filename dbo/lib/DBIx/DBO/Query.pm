@@ -131,15 +131,20 @@ sub _table_idx {
 
 sub _table_alias {
     my($me, $tbl) = @_;
-    return undef if $me == $tbl; # This means it's checking for an aliased column in this Query
-    my $i = $me->_table_idx($tbl);
-    croak 'The table is not in this query' unless defined $i;
-    # Don't use aliases, when there's only 1 table
-    @{$me->{Tables}} > 1 ? 't'.($i + 1) : ();
+
+    # This means it's checking for an aliased column in this Query
+    return undef if $me == $tbl;
+
+    # Don't use aliases, when there's only 1 table unless its a subquery
+    return undef if $me->tables == 1 and _isa($tbl, 'DBIx::DBO::Table');
+
+    my $_from_alias = $me->{build_data}{_from_alias} ||= {};
+    return $_from_alias->{$tbl} ||= 't'.scalar(keys %$_from_alias);
 }
 
 sub _from {
     my($me, $h) = @_;
+    local($me->{build_data}{_from_alias}, $me->{build_data}{show}, $me->{build_data}{where}, $me->{build_data}{orderby}, $me->{build_data}{groupby}, $me->{build_data}{having}) = ($h->{_from_alias}) if $h;
     my $sql = $me->{DBO}{dbd_class}->_build_sql_select($me, $me->{build_data});
     $h->{_subqueries}{$me} = $sql;
     return "($sql)";
