@@ -1004,11 +1004,11 @@ our @_RECURSIVE_SQ;
 sub sql {
     my $me = shift;
     # Check for changes to subqueries
+    croak 'Recursive subquery found' if grep $me eq $_, @_RECURSIVE_SQ;
     local @_RECURSIVE_SQ = (@_RECURSIVE_SQ, $me);
     for my $fld (@{$me->{build_data}{Showing}}) {
         if (ref $fld eq 'ARRAY' and @{$fld->[0]} == 1 and _isa($fld->[0][0], 'DBIx::DBO::Query')) {
             my $sq = $fld->[0][0];
-            croak 'Recursive subquery found' if grep $sq eq $_, @_RECURSIVE_SQ;
             if ($sq->sql ne ($me->{build_data}{_subqueries}{$sq} ||= '')) {
                 undef $me->{sql};
                 undef $me->{build_data}{show};
