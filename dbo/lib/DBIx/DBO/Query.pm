@@ -734,6 +734,10 @@ sub order_by {
 Limit the maximum number of rows returned to C<$rows>, optionally skipping the first C<$offset> rows.
 When called without arguments or if C<$rows> is undefined, the limit is removed.
 
+NB. Oracle does not support pagging prior to version 12c, so this has been implemented in software,
+, but if an offset is given, an extra column "_DBO_ROWNUM_" is added to the Query to achieve this.
+TODO: Implement the new "FIRST n / NEXT n" clause if connected to a 12c database.
+
 =cut
 
 sub limit {
