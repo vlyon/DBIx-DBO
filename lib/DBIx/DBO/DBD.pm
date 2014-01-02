@@ -235,13 +235,13 @@ sub _build_from {
     return $h->{from} if defined $h->{from};
     undef @{$h->{From_Bind}};
     my @tables = $me->tables;
-    my $from = $class->_build_table($me, $h, $tables[0]);
+    $h->{from} = $class->_build_table($me, $h, $tables[0]);
     for (my $i = 1; $i < @tables; $i++) {
-        $from .= $h->{Join}[$i].$class->_build_table($me, $h, $tables[$i]);
-        $from .= ' ON '.join(' AND ', $class->_build_where_chunk($me, $h->{From_Bind}, 'OR', $h->{Join_On}[$i]))
+        $h->{from} .= $h->{Join}[$i].$class->_build_table($me, $h, $tables[$i]);
+        $h->{from} .= ' ON '.join(' AND ', $class->_build_where_chunk($me, $h->{From_Bind}, 'OR', $h->{Join_On}[$i]))
             if $h->{Join_On}[$i];
     }
-    return $from;
+    return $h->{from};
 }
 
 sub _parse_col_val {
