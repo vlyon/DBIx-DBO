@@ -144,7 +144,7 @@ sub _table_alias {
 
 sub _from {
     my($me, $h) = @_;
-    local($me->{build_data}{_from_alias}, $me->{build_data}{show}, $me->{build_data}{where}, $me->{build_data}{orderby}, $me->{build_data}{groupby}, $me->{build_data}{having}) = ($h->{_from_alias}) if $h;
+    local($me->{build_data}{_from_alias}, $me->{build_data}{from}, $me->{build_data}{show}, $me->{build_data}{where}, $me->{build_data}{orderby}, $me->{build_data}{groupby}, $me->{build_data}{having}) = ($h->{_from_alias}) if $h;
     my $sql = $me->{DBO}{dbd_class}->_build_sql_select($me, $me->{build_data});
     $h->{_subqueries}{$me} = $sql;
     return "($sql)";
@@ -1003,7 +1003,7 @@ sub _search_where_chunk {
 our @_RECURSIVE_SQ;
 sub sql {
     my $me = shift;
-    # Check for changes to subqueries
+    # Check for changes to subqueries and recursion
     croak 'Recursive subquery found' if grep $me eq $_, @_RECURSIVE_SQ;
     local @_RECURSIVE_SQ = (@_RECURSIVE_SQ, $me);
     for my $fld (@{$me->{build_data}{Showing}}) {
@@ -1019,6 +1019,7 @@ sub sql {
         if (_isa($sq, 'DBIx::DBO::Query')) {
             if ($sq->sql ne ($me->{build_data}{_subqueries}{$sq} ||= '')) {
                 undef $me->{sql};
+                undef $me->{build_data}{from};
             }
         }
     }
