@@ -87,6 +87,10 @@ sub _init {
     return wantarray ? ($me, $me->tables) : $me;
 }
 
+sub _build_data {
+    $_[0]->{build_data};
+}
+
 =head3 C<reset>
 
   $query->reset;
@@ -143,10 +147,18 @@ sub _table_alias {
 }
 
 sub _from {
-    my($me, $h) = @_;
-    local($me->{build_data}{_from_alias}, $me->{build_data}{from}, $me->{build_data}{show}, $me->{build_data}{where}, $me->{build_data}{orderby}, $me->{build_data}{groupby}, $me->{build_data}{having}) = ($h->{_from_alias}) if $h;
-    my $sql = $me->{DBO}{dbd_class}->_build_sql_select($me, $me->{build_data});
-    $h->{_subqueries}{$me} = $sql;
+    my($me, $parent_build_data) = @_;
+    local(
+        $me->{build_data}{_from_alias},
+        $me->{build_data}{from},
+        $me->{build_data}{show},
+        $me->{build_data}{where},
+        $me->{build_data}{orderby},
+        $me->{build_data}{groupby},
+        $me->{build_data}{having}
+    ) = ($parent_build_data->{_from_alias});
+    my $sql = $me->{DBO}{dbd_class}->_build_sql_select($me);
+    $parent_build_data->{_subqueries}{$me} = $sql;
     return "($sql)";
 }
 
@@ -762,7 +774,7 @@ You can specify a slice by including a 'Slice' or 'Columns' attribute in C<%attr
 sub arrayref {
     my($me, $attr) = @_;
     $me->{DBO}{dbd_class}->_selectall_arrayref($me, $me->sql, $attr,
-        $me->{DBO}{dbd_class}->_bind_params_select($me, $me->{build_data}));
+        $me->{DBO}{dbd_class}->_bind_params_select($me));
 }
 
 =head3 C<hashref>
@@ -778,7 +790,7 @@ C<$key_field> defines which column, or columns, are used as keys in the returned
 sub hashref {
     my($me, $key, $attr) = @_;
     $me->{DBO}{dbd_class}->_selectall_hashref($me, $me->sql, $key, $attr,
-        $me->{DBO}{dbd_class}->_bind_params_select($me, $me->{build_data}));
+        $me->{DBO}{dbd_class}->_bind_params_select($me));
 }
 
 =head3 C<col_arrayref>
@@ -792,7 +804,7 @@ Run the query using L<DBI-E<gt>selectcol_arrayref|DBI/"selectcol_arrayref"> whic
 
 sub col_arrayref {
     my($me, $attr) = @_;
-    my($sql, @bind) = ($me->sql, $me->{DBO}{dbd_class}->_bind_params_select($me, $me->{build_data}));
+    my($sql, @bind) = ($me->sql, $me->{DBO}{dbd_class}->_bind_params_select($me));
     $me->{DBO}{dbd_class}->_sql($me, $sql, @bind);
     my $sth = $me->rdbh->prepare($sql, $attr) or return;
     unless (defined $attr->{Columns}) {
@@ -900,9 +912,9 @@ sub run {
 
 sub _execute {
     my $me = shift;
-    $me->{DBO}{dbd_class}->_sql($me, $me->sql, $me->{DBO}{dbd_class}->_bind_params_select($me, $me->{build_data}));
+    $me->{DBO}{dbd_class}->_sql($me, $me->sql, $me->{DBO}{dbd_class}->_bind_params_select($me));
     $me->_sth or return;
-    $me->{sth}->execute($me->{DBO}{dbd_class}->_bind_params_select($me, $me->{build_data}));
+    $me->{sth}->execute($me->{DBO}{dbd_class}->_bind_params_select($me));
 }
 
 sub _bind_cols_to_hash {
@@ -960,9 +972,9 @@ sub count_rows {
     my $old_sb = delete $me->{build_data}{Show_Bind};
     $me->{build_data}{show} = '1';
 
-    my $sql = 'SELECT COUNT(*) FROM ('.$me->{DBO}{dbd_class}->_build_sql_select($me, $me->{build_data}).') t';
+    my $sql = 'SELECT COUNT(*) FROM ('.$me->{DBO}{dbd_class}->_build_sql_select($me).') t';
     my($count) = $me->{DBO}{dbd_class}->_selectrow_array($me, $sql, undef,
-        $me->{DBO}{dbd_class}->_bind_params_select($me, $me->{build_data}));
+        $me->{DBO}{dbd_class}->_bind_params_select($me));
 
     $me->{build_data}{Show_Bind} = $old_sb if $old_sb;
     undef $me->{build_data}{show};
@@ -1067,7 +1079,7 @@ sub _build_sql {
     }
     undef @{$me->{Columns}};
 
-    $me->{sql} = $me->{DBO}{dbd_class}->_build_sql_select($me, $me->{build_data});
+    $me->{sql} = $me->{DBO}{dbd_class}->_build_sql_select($me);
 }
 
 # Get the DBI statement handle for the query.
@@ -1093,8 +1105,8 @@ and returns false if there was an error.
 sub update {
     my $me = shift;
     my @update = $me->{DBO}{dbd_class}->_parse_set($me, @_);
-    my $sql = $me->{DBO}{dbd_class}->_build_sql_update($me, $me->{build_data}, @update);
-    $me->{DBO}{dbd_class}->_do($me, $sql, undef, $me->{DBO}{dbd_class}->_bind_params_update($me, $me->{build_data}));
+    my $sql = $me->{DBO}{dbd_class}->_build_sql_update($me, @update);
+    $me->{DBO}{dbd_class}->_do($me, $sql, undef, $me->{DBO}{dbd_class}->_bind_params_update($me));
 }
 
 =head3 C<finish>

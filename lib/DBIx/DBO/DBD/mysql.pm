@@ -62,8 +62,8 @@ sub _calc_found_rows {
 }
 
 sub _build_sql_select {
-    my($class, $me, @arg) = @_;
-    my $sql = $class->SUPER::_build_sql_select($me, @arg);
+    my($class, $me) = @_;
+    my $sql = $class->SUPER::_build_sql_select($me);
     $sql =~ s/SELECT /SELECT SQL_CALC_FOUND_ROWS / if $me->config('CalcFoundRows');
     return $sql;
 }
