@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::DBO Sponge => 'Sponge', tests => 13;
+use Test::DBO Sponge => 'Sponge', tests => 15;
 
 # Create the DBO
 my $dbh = MySponge->connect('DBI:Sponge:') or die $DBI::errstr;
@@ -91,6 +91,13 @@ pop @{$q->{build_data}{Join_On}[1]};
 
 # Add a join to a subquery
 $sq_cc->join_table($dd);
-$dd_sql = '(SELECT 1 FROM cc t3, dd t4) t2';
+$sq_cc->show();
+$dd_sql = '(SELECT * FROM cc t3, dd t4) t2';
 is $q->sql, "SELECT $aa_sql FROM bb t1 JOIN $dd_sql ON $ee_sql = 3 WHERE $ff_sql = 7", 'Add a join to the subquery';
+
+# Refer to a subquery in show()
+$q->show({VAL => $sq_aa, AS => 'sq_aa'}, $sq_cc);
+is $q->sql, "SELECT $aa_sql, t2.* FROM bb t1 JOIN $dd_sql ON $ee_sql = 3 WHERE $ff_sql = 7", 'Refer to a subquery in DBIx::DBO->show';
+
+is_deeply [$q->columns], [qw(sq_aa id name age id name age)], 'Columns discovered correctly from subqueries';
 

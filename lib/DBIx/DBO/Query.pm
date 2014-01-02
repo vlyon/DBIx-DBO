@@ -174,7 +174,7 @@ sub columns {
     @{$me->{Columns}} = do {
         if (@{$me->{build_data}{Showing}}) {
             map {
-                _isa($_, 'DBIx::DBO::Table') ? ($_->columns) : $me->_build_col_val_name(@$_)
+                _isa($_, 'DBIx::DBO::Table', 'DBIx::DBO::Query') ? ($_->columns) : $me->_build_col_val_name(@$_)
             } @{$me->{build_data}{Showing}};
         } else {
             map { $_->columns } @{$me->{Tables}};
@@ -266,7 +266,7 @@ sub show {
     undef @{$me->{build_data}{Showing}};
     undef @{$me->{Columns}};
     for my $fld (@_) {
-        if (_isa($fld, 'DBIx::DBO::Table')) {
+        if (_isa($fld, 'DBIx::DBO::Table', 'DBIx::DBO::Query')) {
             croak 'Invalid table to show' unless defined $me->_table_idx($fld);
             push @{$me->{build_data}{Showing}}, $fld;
             push @{$me->{Columns}}, $fld->columns;
