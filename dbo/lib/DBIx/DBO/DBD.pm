@@ -227,9 +227,12 @@ sub _build_show {
     return $h->{show} = $distinct.'*' unless @{$h->{Showing}};
     my @flds;
     for my $fld (@{$h->{Showing}}) {
-        push @flds, _isa($fld, 'DBIx::DBO::Table')
-            ? $class->_qi($me, $me->_table_alias($fld) || $fld->{Name}).'.*'
-            : $class->_build_val($me, $h->{Show_Bind}, @$fld);
+        if (_isa($fld, 'DBIx::DBO::Table', 'DBIx::DBO::Query')) {
+            push @flds, $class->_qi($me, $me->_table_alias($fld) || $fld->{Name}).'.*';
+        } else {
+            $h->{_subqueries}{$fld->[0][0]} = $fld->[0][0]->sql if _isa($fld->[0][0], 'DBIx::DBO::Query');
+            push @flds, $class->_build_val($me, $h->{Show_Bind}, @$fld);
+        }
     }
     return $h->{show} = $distinct.join(', ', @flds);
 }
