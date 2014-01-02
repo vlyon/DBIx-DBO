@@ -69,7 +69,7 @@ sub _init {
         $parent->columns;
         $$me->{Tables} = [ @{$parent->{Tables}} ];
         $$me->{Columns} = $parent->{Columns};
-        $$me->{build_data}{from} = $dbo->{dbd_class}->_build_from($parent, $parent->{build_data});
+        $$me->{build_data}{from} = $dbo->{dbd_class}->_build_from($parent);
         $me->_copy_build_data;
     } elsif ($parent->isa('DBIx::DBO::Table')) {
         croak 'This table is from a different DBO connection' if $parent->{DBO} != $dbo;
@@ -101,6 +101,10 @@ sub _copy {
     return bless [$me, $val->[1]], 'DBIx::DBO::Column'
         if _isa($val, 'DBIx::DBO::Column') and $val->[0] == $$me->{Parent};
     ref $val eq 'ARRAY' ? [map $me->_copy($_), @$val] : ref $val eq 'HASH' ? {map $me->_copy($_), %$val} : $val;
+}
+
+sub _build_data {
+    ${$_[0]}->{build_data};
 }
 
 =head3 C<tables>
@@ -206,8 +210,8 @@ sub _inner_col {
 
 sub _check_alias {
     my($me, $col) = @_;
-    for my $fld (@{$me->{build_data}{Showing}}) {
-        return $me->{Column}{$col} ||= bless [$me, $col], 'DBIx::DBO::Column'
+    for my $fld (@{$$me->{build_data}{Showing}}) {
+        return $$me->{Column}{$col} ||= bless [$me, $col], 'DBIx::DBO::Column'
             if ref($fld) eq 'ARRAY' and exists $fld->[2]{AS} and $col eq $fld->[2]{AS};
     }
 }
@@ -258,8 +262,8 @@ sub load {
     my $old_qw = $#{$$me->{build_data}{Quick_Where}};
     push @{$$me->{build_data}{Quick_Where}}, @_;
     undef $$me->{build_data}{where};
-    my $sql = $$me->{DBO}{dbd_class}->_build_sql_select($me, $$me->{build_data});
-    my @bind = $$me->{DBO}{dbd_class}->_bind_params_select($me, $$me->{build_data});
+    my $sql = $$me->{DBO}{dbd_class}->_build_sql_select($me);
+    my @bind = $$me->{DBO}{dbd_class}->_bind_params_select($me);
     $old_qw < 0 ? delete $$me->{build_data}{Quick_Where} : ($#{$$me->{build_data}{Quick_Where}} = $old_qw);
     delete $$me->{build_data}{where};
     delete $$me->{build_data}{Where_Bind};
@@ -319,12 +323,12 @@ sub update {
     my $me = shift;
     croak "Can't update an empty row" unless $$me->{array};
     my @update = $$me->{DBO}{dbd_class}->_parse_set($me, @_);
-    my $build_data = $$me->{DBO}{dbd_class}->_build_data_matching_this_row($me);
-    $build_data->{LimitOffset} = [1] if $me->config('LimitRowUpdate') and $me->tables == 1;
-    my $sql = $$me->{DBO}{dbd_class}->_build_sql_update($me, $build_data, @update);
+    local $$me->{build_data} = $$me->{DBO}{dbd_class}->_build_data_matching_this_row($me);
+    $$me->{build_data}{LimitOffset} = ($me->config('LimitRowUpdate') and $me->tables == 1) ? [1] : undef;
+    my $sql = $$me->{DBO}{dbd_class}->_build_sql_update($me, @update);
 
-    my $rv = $$me->{DBO}{dbd_class}->_do($me, $sql, undef, $$me->{DBO}{dbd_class}->_bind_params_update($me, $build_data));
-    $$me->{DBO}{dbd_class}->_reset_row_on_update($me, $build_data, @update) if $rv and $rv > 0;
+    my $rv = $$me->{DBO}{dbd_class}->_do($me, $sql, undef, $$me->{DBO}{dbd_class}->_bind_params_update($me));
+    $$me->{DBO}{dbd_class}->_reset_row_on_update($me, @update) if $rv and $rv > 0;
     return $rv;
 }
 
@@ -345,13 +349,13 @@ otherwise ALL rows matching the current row will be deleted.
 sub delete {
     my $me = shift;
     croak "Can't delete an empty row" unless $$me->{array};
-    my $build_data = $$me->{DBO}{dbd_class}->_build_data_matching_this_row($me);
-    $build_data->{LimitOffset} = [1] if $me->config('LimitRowDelete') and $me->tables == 1;
-    my $sql = $$me->{DBO}{dbd_class}->_build_sql_delete($me, $build_data, @_);
+    local $$me->{build_data} = $$me->{DBO}{dbd_class}->_build_data_matching_this_row($me);
+    $$me->{build_data}{LimitOffset} = ($me->config('LimitRowDelete') and $me->tables == 1) ? [1] : undef;
+    my $sql = $$me->{DBO}{dbd_class}->_build_sql_delete($me, @_);
 
     undef $$me->{array};
     $$me->{hash} = {};
-    $$me->{DBO}{dbd_class}->_do($me, $sql, undef, $$me->{DBO}{dbd_class}->_bind_params_delete($me, $build_data));
+    $$me->{DBO}{dbd_class}->_do($me, $sql, undef, $$me->{DBO}{dbd_class}->_bind_params_delete($me));
 }
 
 =head3 C<is_empty>
