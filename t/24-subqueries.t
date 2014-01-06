@@ -1,7 +1,9 @@
 use strict;
 use warnings;
 
-use Test::DBO Sponge => 'Sponge', tests => 15;
+use Test::DBO Sponge => 'Sponge', tests => 18;
+
+MySponge::db::setup([qw(sq_aa id name age id name age)], [1, 123, 'vlyon', 33, 123, 'vlyon', 33]);
 
 # Create the DBO
 my $dbh = MySponge->connect('DBI:Sponge:') or die $DBI::errstr;
@@ -100,4 +102,10 @@ $q->show({VAL => $sq_aa, AS => 'sq_aa'}, $sq_cc);
 is $q->sql, "SELECT $aa_sql, t2.* FROM bb t1 JOIN $dd_sql ON $ee_sql = 3 WHERE $ff_sql = 7", 'Refer to a subquery in DBIx::DBO->show';
 
 is_deeply [$q->columns], [qw(sq_aa id name age id name age)], 'Columns discovered correctly from subqueries';
+isa_ok eval { $q ** 'id' }, 'DBIx::DBO::Column', q{$query ** 'id'};
+
+# Fetch a row
+my $r;
+ok $r = $q->fetch, 'Fetch a Row';
+isa_ok eval { $r->column('id') }, 'DBIx::DBO::Column', q{$row->column('id')};
 

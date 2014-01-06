@@ -191,6 +191,7 @@ sub column {
     for my $fld (@show) {
         return $$me->{Column}{$col} ||= bless [$me, $col], 'DBIx::DBO::Column'
             if (_isa($fld, 'DBIx::DBO::Table') and exists $fld->{Column_Idx}{$col})
+            or (_isa($fld, 'DBIx::DBO::Query') and eval { $fld->column($col) })
             or (ref($fld) eq 'ARRAY' and exists $fld->[2]{AS} and $col eq $fld->[2]{AS});
     }
     croak 'No such column: '.$$me->{DBO}{dbd_class}->_qi($me, $col);
