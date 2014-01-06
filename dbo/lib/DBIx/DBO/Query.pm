@@ -148,6 +148,7 @@ sub _table_alias {
 
 sub _from {
     my($me, $parent_build_data) = @_;
+    $parent_build_data->{_subqueries}{$me} = $me->sql;
     local(
         $me->{build_data}{_from_alias},
         $me->{build_data}{from},
@@ -157,9 +158,7 @@ sub _from {
         $me->{build_data}{groupby},
         $me->{build_data}{having}
     ) = ($parent_build_data->{_from_alias});
-    my $sql = $me->{DBO}{dbd_class}->_build_sql_select($me);
-    $parent_build_data->{_subqueries}{$me} = $sql;
-    return "($sql)";
+    return '('.$me->{DBO}{dbd_class}->_build_sql_select($me).')';
 }
 
 =head3 C<columns>
@@ -218,6 +217,7 @@ sub column {
     for my $fld (@show) {
         return $me->{Column}{$col} ||= bless [$me, $col], 'DBIx::DBO::Column'
             if (_isa($fld, 'DBIx::DBO::Table') and exists $fld->{Column_Idx}{$col})
+            or (_isa($fld, 'DBIx::DBO::Query') and eval { $fld->column($col) })
             or (ref($fld) eq 'ARRAY' and exists $fld->[2]{AS} and $col eq $fld->[2]{AS});
     }
     croak 'No such column: '.$me->{DBO}{dbd_class}->_qi($me, $col);
