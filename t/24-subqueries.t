@@ -98,10 +98,11 @@ $dd_sql = '(SELECT * FROM cc t3, dd t4) t2';
 is $q->sql, "SELECT $aa_sql FROM bb t1 JOIN $dd_sql ON $ee_sql = 3 WHERE $ff_sql = 7", 'Add a join to the subquery';
 
 # Refer to a subquery in show()
-$q->show({VAL => $sq_aa, AS => 'sq_aa'}, $sq_cc);
+$q->show({VAL => $sq_aa}, $sq_cc);
+$aa_sql = '(SELECT 1 FROM aa)';
 is $q->sql, "SELECT $aa_sql, t2.* FROM bb t1 JOIN $dd_sql ON $ee_sql = 3 WHERE $ff_sql = 7", 'Refer to a subquery in DBIx::DBO->show';
 
-is_deeply [$q->columns], [qw(sq_aa id name age id name age)], 'Columns discovered correctly from subqueries';
+is_deeply [$q->columns], [$aa_sql, qw(id name age id name age)], 'Columns discovered correctly from subqueries';
 isa_ok eval { $q ** 'id' }, 'DBIx::DBO::Column', q{$query ** 'id'};
 
 # Fetch a row

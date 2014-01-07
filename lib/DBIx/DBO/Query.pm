@@ -194,6 +194,8 @@ sub _build_col_val_name {
             $_->[1];
         } elsif (ref $_ eq 'SCALAR') {
             $$_;
+        } elsif (_isa($_, 'DBIx::DBO::Query')) {
+            $_->_from($me->{build_data});
         }
     } @$fld;
     return $ary[0] unless defined $func;
@@ -204,6 +206,7 @@ sub _build_col_val_name {
 =head3 C<column>
 
   $query->column($alias_or_column_name);
+  $query ** $column_name;
 
 Returns a reference to a column for use with other methods.
 The C<**> method is a shortcut for the C<column> method.
