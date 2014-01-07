@@ -147,7 +147,7 @@ sub columns {
     @{$$me->{Columns}} = do {
         if (@{$$me->{build_data}{Showing}}) {
             map {
-                _isa($_, 'DBIx::DBO::Table') ? ($_->columns) : $me->_build_col_val_name(@$_)
+                _isa($_, 'DBIx::DBO::Table', 'DBIx::DBO::Query') ? ($_->columns) : $me->_build_col_val_name(@$_)
             } @{$$me->{build_data}{Showing}};
         } else {
             map { $_->columns } @{$$me->{Tables}};
