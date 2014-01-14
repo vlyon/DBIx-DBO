@@ -18,7 +18,7 @@ my $need_c3_initialize;
 my @ConnectArgs;
 
 BEGIN {
-    $VERSION = '0.35';
+    $VERSION = '0.40';
     # The C3 method resolution order is required.
     if ($] < 5.009_005) {
         require MRO::Compat;
@@ -658,7 +658,7 @@ Please report any bugs or feature requests to C<bug-dbix-dbo AT rt.cpan.org>, or
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2009-2013 Vernon Lyon, all rights reserved.
+Copyright 2009-2014 Vernon Lyon, all rights reserved.
 
 This package is free software; you can redistribute it and/or modify it under the same terms as Perl itself.
 

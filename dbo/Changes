@@ -1,5 +1,10 @@
 Revision history for DBIx-DBO
 
+0.40	Jan 14, 2014
+	- Added new subquery capabilities.
+	- Implemented ROWNUM pagging for Oracle. (Victor)
+	- Bug fixes.
+
 0.35	Oct 22, 2013
 	- Minor bug fixes.
 
