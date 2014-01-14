@@ -60,10 +60,21 @@ A C<Query> object represents rows from a database (from one or more tables). Thi
 =head3 C<new>
 
   DBIx::DBO::Query->new($dbo, $table1, ...);
+  # or
+  $dbo->query($table1, ...);
 
 Create a new C<Query> object from the tables specified.
 In scalar context, just the C<Query> object will be returned.
 In list context, the C<Query> object and L<Table|DBIx::DBO::Table> objects will be returned for each table specified.
+Tables can be specified with the same arguments as L<DBIx::DBO::Table/new> or another Query can be used as a subquery.
+
+  my($query, $table1, $table2) = DBIx::DBO::Query->new($dbo, 'customers', ['history', 'transactions']);
+
+You can also pass in a Query instead of a Table to use that query as a subquery.
+
+  my $subquery = DBIx::DBO::Query->new($dbo, 'history.transactions');
+  my $query = DBIx::DBO::Query->new($dbo, 'customers', $subquery);
+  # SELECT * FROM customers, (SELECT * FROM history.transactions) t1;
 
 =cut
 
@@ -96,6 +107,7 @@ sub _build_data {
   $query->reset;
 
 Reset the query, start over with a clean slate.
+Resets the columns to return, removes all the WHERE, DISTINCT, HAVING, LIMIT, GROUP BY & ORDER BY clauses.
 
 B<NB>: This will not remove the JOINs or JOIN ON clauses.
 
@@ -111,13 +123,11 @@ sub reset {
     $me->order_by;
     $me->unhaving;
     $me->limit;
-    # FIXME: Should we be deleting this?
-    delete $me->{Config};
 }
 
 =head3 C<tables>
 
-Return a list of L<Table|DBIx::DBO::Table> objects for this query.
+Return a list of L<Table|DBIx::DBO::Table> or Query objects that appear in the C<FROM> clause for this query.
 
 =cut
 
@@ -163,7 +173,7 @@ sub _from {
 
 =head3 C<columns>
 
-Return a list of column names.
+Return a list of column names that will be returned by L<fetch>.
 
 =cut
 
@@ -252,11 +262,13 @@ sub _check_alias {
   $query->show($table1, { COL => $table2 ** 'name', AS => 'name2' });
   $query->show($table1 ** 'id', { FUNC => 'UCASE(?)', COL => 'name', AS => 'alias' }, ...
 
-Specify which columns to show as an array.  If the array is empty all columns will be shown.
-If you use a Table object, all the columns from that table will be shown.
+List which columns to return when we L<fetch>.
+If called without arguments all columns will be shown, C<SELECT * ...>.
+If you use a Table object, all the columns from that table will be shown, C<SELECT table.* ...>
 You can also add a subquery by passing that Query as the value with an alias, Eg.
 
-  { VAL => $subquery, AS => 'sq' }
+  $query->show({ VAL => $subquery, AS => 'sq' }, ...);
+  # SELECT ($subquery_sql) AS sq ...
 
 =cut
 
@@ -285,10 +297,8 @@ sub show {
 =head3 C<distinct>
 
   $query->distinct(1);
-  my $is_distinct = $query->distinct();
 
 Takes a boolean argument to add or remove the DISTINCT clause for the returned rows.
-Returns the previous setting.
 
 =cut
 
@@ -298,21 +308,20 @@ sub distinct {
     undef $me->{build_data}{show};
     my $distinct = $me->{build_data}{Show_Distinct};
     $me->{build_data}{Show_Distinct} = shift() ? 1 : undef if @_;
-    return $distinct;
 }
 
 =head3 C<join_table>
 
   $query->join_table($table, $join_type);
-  $query->join_table([$schema, $table], $join_type);
-  $query->join_table($table_object, $join_type);
 
 Join a table onto the query, creating a L<Table|DBIx::DBO::Table> object if needed.
 This will perform a comma (", ") join unless $join_type is specified.
 
+Tables can be specified with the same arguments as L<DBIx::DBO::Table/new> or another Query can be used as a subquery.
+
 Valid join types are any accepted by the DB.  Eg: C<'JOIN'>, C<'LEFT'>, C<'RIGHT'>, C<undef> (for comma join), C<'INNER'>, C<'OUTER'>, ...
 
-Returns the C<Table> object.
+Returns the Table or Query object added.
 
 =cut
 
@@ -441,6 +450,12 @@ An array reference: C<[1, 3, 5]>  (Used with C<IN> and C<BETWEEN> etc)
 A Column object: C<$table ** 'id'> or C<$table-E<gt>column('id')>
 
   $query->where($table1 ** 'id', '=', $table2 ** 'id');
+
+=item *
+
+A Query object, to be used as a subquery.
+
+  $query->where('id', '>', $subquery);
 
 =item *
 
