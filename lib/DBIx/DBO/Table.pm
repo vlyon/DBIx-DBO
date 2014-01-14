@@ -44,11 +44,11 @@ They can also be used for INSERTs, DELETEs and simple lookups (fetch_*).
 =head3 C<new>
 
   DBIx::DBO::Table->new($dbo, $table);
-  DBIx::DBO::Table->new($dbo, [$schema, $table]);
-  DBIx::DBO::Table->new($dbo, $table_object);
+  # or
+  $dbo->table($table);
 
 Create and return a new C<Table> object.
-Tables can be specified by their name or an arrayref of schema and table name or another C<Table> object.
+The C<$table> argument that specifies the table can be a string containing the table name, C<'customers'> or C<'history.log'>, it can be an arrayref of schema and table name C<['history', 'log']> or as another Table object to clone.
 
 =cut
 
