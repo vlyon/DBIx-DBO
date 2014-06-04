@@ -6,7 +6,7 @@ use Test::DBO Sponge => 'Sponge', tests => 26;
 note 'Storable '.$Storable::VERSION;
 note 'Testing with: CacheQuery => '.DBIx::DBO->config('CacheQuery');
 
-MySponge::db::setup([qw(id name age)], [1, 'one', 1], [7, 'test', 123], [3, 'three', 333], [999, 'end', 0]);
+MySpongeDBI::db::setup([qw(id name age)], [1, 'one', 1], [7, 'test', 123], [3, 'three', 333], [999, 'end', 0]);
 
 my $dbo;
 my $frozen;
@@ -21,8 +21,7 @@ sub freeze_thaw {
 }
 
 # Create the DBO
-my $dbh = MySponge->connect('DBI:Sponge:') or die $DBI::errstr;
-$dbo = DBIx::DBO->new($dbh);
+$dbo = DBIx::DBO->connect('DBI:Sponge:') or die $DBI::errstr;
 $dbo->config('AutoReconnect', int rand 2);
 note 'AutoReconnect => '.$dbo->config('AutoReconnect');
 freeze_thaw($dbo);

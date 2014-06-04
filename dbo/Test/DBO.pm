@@ -792,12 +792,22 @@ sub _get_table_info {
     return $me->{TableInfo}{''}{$table} ||= $fake_table_info;
 }
 
-# When testing via MySponge, fake table contents
+# Replace DBI::connect for testing via MySpongeDBI
+{
+    no warnings 'redefine';
+    my $old_dbi_connect = \&DBI::connect;
+    *DBI::connect = sub {
+        return $old_dbi_connect->('MySpongeDBI', @_[1 .. $#_]) if $_[1] eq 'DBI:Sponge:';
+        goto &$old_dbi_connect;
+    };
+}
+
+# When testing via MySpongeDBI, fake table contents
 package # Hide from PAUSE
-    MySponge::db;
-@MySponge::ISA = ('DBI');
-@MySponge::db::ISA = ('DBI::db');
-@MySponge::st::ISA = ('DBI::st');
+    MySpongeDBI::db;
+@MySpongeDBI::ISA = ('DBI');
+@MySpongeDBI::db::ISA = ('DBI::db');
+@MySpongeDBI::st::ISA = ('DBI::st');
 my @cols;
 my @rows;
 sub setup {

@@ -4,7 +4,7 @@ use warnings;
 use Test::DBO ExampleP => 'ExampleP';
 use Test::DBO Sponge => 'Sponge', tests => 45;
 
-MySponge::db::setup([qw(id name age)], [123, 'vlyon', 77]);
+MySpongeDBI::db::setup([qw(id name age)], [123, 'vlyon', 77]);
 
 {
     my $warn = '';
@@ -38,7 +38,7 @@ like $@, qr/^Invalid read-write database handle /, 'DBIx::DBO->new validate read
 eval { DBIx::DBO->new(undef, 123) };
 like $@, qr/^Invalid read-only database handle /, 'DBIx::DBO->new validate read-only $dbh';
 
-my $dbh1 = MySponge->connect('DBI:Sponge:') or die $DBI::errstr;
+my $dbh1 = DBI->connect('DBI:Sponge:') or die $DBI::errstr;
 my $dbh2 = DBI->connect('DBI:ExampleP:') or die $DBI::errstr;
 
 eval { DBIx::DBO->new($dbh1, $dbh1, {dbd => 'NoDBD'}) };
