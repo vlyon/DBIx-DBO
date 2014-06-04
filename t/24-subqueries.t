@@ -3,11 +3,10 @@ use warnings;
 
 use Test::DBO Sponge => 'Sponge', tests => 18;
 
-MySponge::db::setup([qw(sq_aa id name age id name age)], [1, 123, 'vlyon', 33, 123, 'vlyon', 33]);
+MySpongeDBI::db::setup([qw(sq_aa id name age id name age)], [1, 123, 'vlyon', 33, 123, 'vlyon', 33]);
 
 # Create the DBO
-my $dbh = MySponge->connect('DBI:Sponge:') or die $DBI::errstr;
-my $dbo = DBIx::DBO->new($dbh);
+my $dbo = DBIx::DBO->connect('DBI:Sponge:') or die $DBI::errstr;
 $dbo->config(QuoteIdentifier => 0);
 
 # Create a few Table objects
