@@ -916,6 +916,8 @@ sub run {
         ${$me->{Row}}->{hash} = {};
     }
 
+    delete $me->{Found_Rows};
+
     my $rv = $me->_execute or return undef;
     $me->{Active} = 1;
     $me->_bind_cols_to_hash;
