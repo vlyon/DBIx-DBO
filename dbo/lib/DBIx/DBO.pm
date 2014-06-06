@@ -228,38 +228,34 @@ sub _check_driver {
             "The read-write and read-only connections must use the same DBI driver";
 }
 
+# Our HandleError adds a stack trace to PrintError & RaiseError
+sub _handle_error {
+    if ($Config{DebugSQL} > 1) {
+        $_[0] = Carp::longmess($_[0]);
+        return 0;
+    }
+    carp $_[1]->errstr if $_[1]->{PrintError};
+    croak $_[1]->errstr if $_[1]->{RaiseError};
+    return 1;
+}
+
 sub _connect {
-    my $me = shift;
-    my $conn_idx = shift;
-    my @conn;
+    my($me, $conn_idx, @conn) = @_;
 
-    if (@_) {
-        my($dsn, $user, $auth, $attr) = @_;
-        my %attr = %$attr if ref($attr) eq 'HASH';
-
-        # Add a stack trace to PrintError & RaiseError
-        $attr{HandleError} = sub {
-            if ($Config{DebugSQL} > 1) {
-                $_[0] = Carp::longmess($_[0]);
-                return 0;
-            }
-            carp $_[1]->errstr if $_[1]->{PrintError};
-            croak $_[1]->errstr if $_[1]->{RaiseError};
-            return 1;
-        } unless exists $attr{HandleError};
-
-        # AutoCommit is always on
-        %attr = (PrintError => 0, RaiseError => 1, %attr, AutoCommit => 1);
-        @conn = ($dsn, $user, $auth, \%attr);
-
+    if (@conn) {
         # If a conn index is given then store the connection args
         $ConnectArgs[$conn_idx] = \@conn if defined $conn_idx;
     } elsif (defined $conn_idx and $ConnectArgs[$conn_idx]) {
-        # If a conn index is given then retrieve the connection args
+        # Retrieve the connection args
         @conn = @{$ConnectArgs[$conn_idx]};
     } else {
         croak "Can't auto-connect as AutoReconnect was not set";
     }
+
+    my %attr;
+    %attr = %{$conn[3]} if ref $conn[3] eq 'HASH';
+    # AutoCommit is always on
+    %attr = (HandleError => \&_handle_error, PrintError => 0, RaiseError => 1, %attr, AutoCommit => 1);
 
     local @DBIx::DBO::CARP_NOT = qw(DBI);
     DBI->connect(@conn);
