@@ -5,6 +5,8 @@ use Storable;
 use Test::DBO Sponge => 'Sponge', tests => 26;
 note 'Storable '.$Storable::VERSION;
 note 'Testing with: CacheQuery => '.DBIx::DBO->config('CacheQuery');
+DBIx::DBO->config(AutoReconnect => int rand 2);
+note 'Testing with: AutoReconnect => '.DBIx::DBO->config('AutoReconnect');
 
 MySpongeDBI::db::setup([qw(id name age)], [1, 'one', 1], [7, 'test', 123], [3, 'three', 333], [999, 'end', 0]);
 
@@ -17,13 +19,11 @@ sub freeze_thaw {
 
     ok $frozen = Storable::freeze($obj), join ' ', 'Freeze', $type, @_;
     isa_ok $thawed = Storable::thaw($frozen), $class, 'Thawed';
-    exists $dbo->{$_} and $thawed->dbo->{$_} = $dbo->{$_} for qw(dbh rdbh);
+    exists $dbo->{$_} and $thawed->dbo->{$_} = $dbo->{$_} for qw(dbh rdbh ConnectArgs);
 }
 
 # Create the DBO
 $dbo = DBIx::DBO->connect('DBI:Sponge:') or die $DBI::errstr;
-$dbo->config('AutoReconnect', int rand 2);
-note 'AutoReconnect => '.$dbo->config('AutoReconnect');
 freeze_thaw($dbo);
 is_deeply $thawed, $dbo, 'Same DBO';
 

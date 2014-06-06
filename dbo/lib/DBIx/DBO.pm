@@ -516,6 +516,7 @@ sub STORABLE_freeze {
     my $me = $_[0];
     return unless ref $me->{dbh} or ref $me->{rdbh};
 
+    # Stash the unfreezable bits
     my %stash = map { $_ => delete $me->{$_} } qw(dbh rdbh ConnectArgs ConnectReadOnlyArgs);
     $me->{dbh} = "$stash{dbh}" if defined $stash{dbh};
     $me->{rdbh} = "$stash{rdbh}" if defined $stash{rdbh};
@@ -524,19 +525,21 @@ sub STORABLE_freeze {
     }
 
     my $frozen = Storable::nfreeze($me);
-    defined $stash{$_} and $me->{$_} = $stash{$_} for qw(dbh rdbh ConnectArgs ConnectReadOnlyArgs);
+
+    # Restore the stashed bits
+    for (qw(dbh rdbh ConnectArgs ConnectReadOnlyArgs)) {
+        $me->{$_} = $stash{$_} if defined $stash{$_};
+    }
+
     return $frozen;
 }
 
 sub STORABLE_thaw {
     my($me, $cloning, $frozen) = @_;
+
     %$me = %{ Storable::thaw($frozen) };
-    if ($me->config('AutoReconnect')) {
-        for (qw(ConnectArgs ConnectReadOnlyArgs)) {
-            $me->{$_} = push(@ConnectArgs, $me->{$_}) - 1 if $me->{$_};
-        }
-    } else {
-        delete $me->{$_} for qw(ConnectArgs ConnectReadOnlyArgs);
+    for (qw(ConnectArgs ConnectReadOnlyArgs)) {
+        $me->{$_} = push(@ConnectArgs, $me->{$_}) - 1 if exists $me->{$_};
     }
 }
 
