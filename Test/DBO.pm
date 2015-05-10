@@ -176,7 +176,7 @@ sub sql_err {
 sub connect_dbo {
     my($dsn, $user, $pass) = @_;
     defined $dsn or $dsn = '';
-    DBIx::DBO->connect("DBI:$dbd:$dsn", $user, $pass, {RaiseError => 0});
+    DBIx::DBO->connect("DBI:$dbd:$dsn", $user, $pass, {HandleError => sub { note $_[0]; 1 }});
 }
 
 sub try_to_connect {
