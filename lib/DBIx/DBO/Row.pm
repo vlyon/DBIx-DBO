@@ -412,26 +412,28 @@ sub config {
     $$me->{DBO}{dbd_class}->_get_config($opt, $$me->{Config} ||= {}, defined $$me->{Parent} ? ($$me->{Parent}{Config}) : (), $$me->{DBO}{Config}, \%DBIx::DBO::Config);
 }
 
-*STORABLE_freeze = sub {
-    my($me, $cloning) = @_;
-    return unless exists $$me->{Parent};
+if (eval { Storable->VERSION(2.38) }) {
+    *STORABLE_freeze = sub {
+        my($me, $cloning) = @_;
+        return unless exists $$me->{Parent};
 
-    # Simulate detached row
-    local $$me->{Columns} = [ @{$$me->{Columns}} ];
-    # Save config from Parent
-    my $parent = delete $$me->{Parent};
-    local $$me->{Config} = { %{$parent->{Config}}, $$me->{Config} ? %{$$me->{Config}} : () }
-        if $parent->{Config} and %{$parent->{Config}};
+        # Simulate detached row
+        local $$me->{Columns} = [ @{$$me->{Columns}} ];
+        # Save config from Parent
+        my $parent = delete $$me->{Parent};
+        local $$me->{Config} = { %{$parent->{Config}}, $$me->{Config} ? %{$$me->{Config}} : () }
+            if $parent->{Config} and %{$parent->{Config}};
 
-    my $frozen = Storable::nfreeze($me);
-    $$me->{Parent} = $parent;
-    return $frozen;
-} if $Storable::VERSION >= 2.38;
+        my $frozen = Storable::nfreeze($me);
+        $$me->{Parent} = $parent;
+        return $frozen;
+    };
 
-*STORABLE_thaw = sub {
-    my($me, $cloning, @frozen) = @_;
-    $$me = { %${ Storable::thaw(@frozen) } }; # Copy the hash, or Storable will wipe it out!
-} if $Storable::VERSION >= 2.38;
+    *STORABLE_thaw = sub {
+        my($me, $cloning, @frozen) = @_;
+        $$me = { %${ Storable::thaw(@frozen) } }; # Copy the hash, or Storable will wipe it out!
+    };
+}
 
 sub DESTROY {
     undef %${$_[0]};

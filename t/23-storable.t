@@ -54,7 +54,7 @@ $r = $q->fetch or die sql_err($q);
 freeze_thaw($r, '(after fetch)');
 $r->_detach; # Detach from Parent
 SKIP: {
-    skip 'Storable v2.38 required to freeze attached Row objects', 1 if $Storable::VERSION < 2.38;
+    skip 'Storable v2.38 required to freeze attached Row objects', 1 unless eval { Storable->VERSION(2.38) };
     is_deeply $thawed, $r, 'Same Row';
 }
 
