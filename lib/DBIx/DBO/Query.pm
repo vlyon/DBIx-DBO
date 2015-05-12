@@ -1141,6 +1141,7 @@ This ensures that the next call to L</fetch> will return the first row from the 
 
 sub finish {
     my $me = shift;
+    # Detach or empty the Row
     if (defined $me->{Row}) {
         if (SvREFCNT(${$me->{Row}}) > 1) {
             $me->{Row}->_detach;
@@ -1149,12 +1150,15 @@ sub finish {
             ${$me->{Row}}{hash} = {};
         }
     }
+    # Restart the query
     if (exists $me->{cache}) {
         $me->{cache}{idx} = 0;
     } else {
         $me->{sth}->finish if $me->{sth} and $me->{sth}{Active};
         $me->{Active} = 0;
     }
+    # Ensure the sql will be rebuilt
+    undef $me->{sql};
 }
 
 =head2 Common Methods

@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use Test::DBO ExampleP => 'ExampleP';
-use Test::DBO Sponge => 'Sponge', tests => 45;
+use Test::DBO Sponge => 'Sponge', tests => 47;
 
 MySpongeDBI::db::setup([qw(id name age)], [123, 'vlyon', 77]);
 
@@ -64,6 +64,12 @@ my $t2 = $dbo->table($Test::DBO::test_tbl);
 
 eval { $t->new('no_dbo_object') };
 like $@, qr/^Invalid DBO Object /, 'Requires DBO object';
+
+eval { $dbo->table };
+like $@, qr/^No table name supplied /, 'Valid table arguments';
+
+eval { $dbo->table('') };
+like $@, qr/^No table name supplied /, 'Valid table arguments';
 
 eval { $dbo->table('no_such_table') };
 like $@, qr/^Invalid table: "no_such_table" /, 'Ensure table exists';
