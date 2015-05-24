@@ -299,45 +299,48 @@ sub _build_col {
 }
 
 sub _parse_val {
-    my($class, $me, $fld, %c) = @_;
+    my($class, $me, $val, %c) = @_;
     $c{Check} = '' unless defined $c{Check};
 
+    my @fld;
     my $func;
     my $opt;
-    if (ref $fld eq 'SCALAR') {
+    if (ref $val eq 'SCALAR') {
         croak 'Invalid '.($c{Check} eq 'Column' ? 'column' : 'field').' reference (scalar ref to undef)'
-            unless defined $$fld;
-        $func = $$fld;
-        $fld = [];
-    } elsif (ref $fld eq 'HASH') {
-        $func = $fld->{FUNC} if exists $fld->{FUNC};
-        $opt->{AS} = $fld->{AS} if exists $fld->{AS};
-        if (exists $fld->{ORDER}) {
-            croak 'Invalid ORDER, must be ASC or DESC' if $fld->{ORDER} !~ /^(A|DE)SC$/i;
-            $opt->{ORDER} = uc $fld->{ORDER};
+            unless defined $$val;
+        $func = $$val;
+    } elsif (ref $val eq 'HASH') {
+        $func = $val->{FUNC} if exists $val->{FUNC};
+        $opt->{AS} = $val->{AS} if exists $val->{AS};
+        if (exists $val->{ORDER}) {
+            croak 'Invalid ORDER, must be ASC or DESC' if $val->{ORDER} !~ /^(A|DE)SC$/i;
+            $opt->{ORDER} = uc $val->{ORDER};
         }
-        $opt->{COLLATE} = $fld->{COLLATE} if exists $fld->{COLLATE};
-        if (exists $fld->{COL}) {
-            croak 'Invalid HASH containing both COL and VAL' if exists $fld->{VAL};
-            my @cols = ref $fld->{COL} eq 'ARRAY' ? @{$fld->{COL}} : $fld->{COL};
-            $fld = [ map $class->_parse_col($me, $_, $c{Aliases}), @cols ];
-        } else {
-            $fld = exists $fld->{VAL} ? $fld->{VAL} : [];
+        $opt->{COLLATE} = $val->{COLLATE} if exists $val->{COLLATE};
+        if (exists $val->{COL}) {
+            croak 'Invalid HASH containing both COL and VAL' if exists $val->{VAL};
+            my @cols = ref $val->{COL} eq 'ARRAY' ? @{$val->{COL}} : ($val->{COL});
+            @fld = map $class->_parse_col($me, $_, $c{Aliases}), @cols;
+        } elsif (exists $val->{VAL}) {
+            @fld = ref $val->{VAL} eq 'ARRAY' ? @{$val->{VAL}} : ($val->{VAL});
         }
-    } elsif (_isa($fld, 'DBIx::DBO::Column')) {
-        return [ $class->_valid_col($me, $fld) ];
+    } elsif (ref $val eq 'ARRAY') {
+        @fld = @$val;
+    } elsif (_isa($val, 'DBIx::DBO::Column')) {
+        return [ $class->_valid_col($me, $val) ];
+    } else {
+        @fld = ($val);
     }
-    $fld = [$fld] unless ref $fld eq 'ARRAY';
 
     # Swap placeholders
-    my $with = @$fld;
+    my $with = @fld;
     if (defined $func) {
         my $need = $class->_substitute_placeholders($me, $func);
         croak "The number of params ($with) does not match the number of placeholders ($need)" if $need != $with;
     } elsif ($with != 1 and $c{Check} ne 'Auto') {
         croak 'Invalid '.($c{Check} eq 'Column' ? 'column' : 'field')." reference (passed $with params instead of 1)";
     }
-    return ($fld, $func, $opt);
+    return (\@fld, $func, $opt);
 }
 
 sub _substitute_placeholders {
