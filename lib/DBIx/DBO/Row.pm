@@ -68,7 +68,6 @@ sub _init {
         weaken $$me->{Parent};
         $parent->columns;
         $$me->{Tables} = [ @{$parent->{Tables}} ];
-        $$me->{Columns} = $parent->{Columns};
         $$me->{build_data}{from} = $dbo->{dbd_class}->_build_from($parent);
         $me->_copy_build_data;
     } elsif ($parent->isa('DBIx::DBO::Table')) {
@@ -81,7 +80,6 @@ sub _init {
             order => '',
         };
         $$me->{Tables} = [ $parent ];
-        $$me->{Columns} = $parent->{Columns};
     } else {
         croak 'Invalid parent for new Row';
     }
@@ -144,15 +142,13 @@ sub columns {
 
     return $$me->{Parent}->columns if $$me->{Parent};
 
-    @{$$me->{Columns}} = do {
-        if (@{$$me->{build_data}{Showing}}) {
-            map {
+    $$me->{Columns} ||= [
+        @{$$me->{build_data}{Showing}}
+        ? map {
                 _isa($_, 'DBIx::DBO::Table', 'DBIx::DBO::Query') ? ($_->columns) : $me->_build_col_val_name(@$_)
-            } @{$$me->{build_data}{Showing}};
-        } else {
-            map { $_->columns } @{$$me->{Tables}};
-        }
-    } unless @{$$me->{Columns}};
+            } @{$$me->{build_data}{Showing}}
+        : map { $_->columns } @{$$me->{Tables}}
+    ];
 
     @{$$me->{Columns}};
 }
@@ -294,7 +290,6 @@ sub _load {
 sub _detach {
     my $me = $_[0];
     if (exists $$me->{Parent}) {
-        $$me->{Columns} = [ @{$$me->{Columns}} ];
         $$me->{array} = [ @$me ];
         $$me->{hash} = { %$me };
         undef $$me->{Parent}{Row};
@@ -418,9 +413,9 @@ if (eval { Storable->VERSION(2.38) }) {
         return unless exists $$me->{Parent};
 
         # Simulate detached row
-        local $$me->{Columns} = [ @{$$me->{Columns}} ];
-        # Save config from Parent
         my $parent = delete $$me->{Parent};
+
+        # Save config from Parent
         local $$me->{Config} = { %{$parent->{Config}}, $$me->{Config} ? %{$$me->{Config}} : () }
             if $parent->{Config} and %{$parent->{Config}};
 

@@ -76,5 +76,5 @@ freeze_thaw($q, '(after fetch)');
         is_deeply \@{$thawed->fetch}, [999,'end',0], 'Same Row from $q->fetch';
     }
 }
-is ${$thawed->{Row}}->{Columns}, $thawed->{Columns}, 'Row has not detached';
+is ${$thawed->{Row}}->{Parent}, $thawed, 'Row has not detached';
 
