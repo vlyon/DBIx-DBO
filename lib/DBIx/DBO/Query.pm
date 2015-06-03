@@ -856,7 +856,7 @@ Returns a L<Row|DBIx::DBO::Row> object or undefined if there are no more rows.
 sub fetch {
     my $me = $_[0];
     # Prepare and/or execute the query if needed
-    $me->_sth and ($me->{Active} or $me->run)
+    $me->_sth and (exists $me->{cache} or $me->_sth->{Active} or $me->run)
         or croak $me->rdbh->errstr;
     # Detach the old row if there is still another reference to it
     if (defined $me->{Row} and SvREFCNT(${$me->{Row}}) > 1) {
@@ -879,7 +879,6 @@ sub fetch {
             $$row->{hash} = $me->{hash};
             return $row;
         }
-        $me->{Active} = 0;
     }
     $$row->{hash} = {};
     return;
@@ -919,7 +918,6 @@ sub run {
     delete $me->{Found_Rows};
 
     my $rv = $me->_execute or return undef;
-    $me->{Active} = 1;
     $me->_bind_cols_to_hash;
     if ($me->config('CacheQuery')) {
         $me->{cache}{data} = $me->{sth}->fetchall_arrayref;
@@ -1083,7 +1081,6 @@ sub _build_sql {
     undef $me->{Row_Count};
     undef $me->{Found_Rows};
     delete $me->{cache};
-    $me->{Active} = 0;
     if (defined $me->{Row}) {
         if (SvREFCNT(${$me->{Row}}) > 1) {
             $me->{Row}->_detach;
@@ -1155,7 +1152,6 @@ sub finish {
         $me->{cache}{idx} = 0;
     } else {
         $me->{sth}->finish if $me->{sth} and $me->{sth}{Active};
-        $me->{Active} = 0;
     }
     # Ensure the sql will be rebuilt
     undef $me->{sql};
@@ -1208,7 +1204,6 @@ sub STORABLE_freeze {
     local $me->{sth};
     local $me->{Row};
     local $me->{hash} unless exists $me->{cache};
-    local $me->{Active} = 0 unless exists $me->{cache};
     local $me->{cache}{idx} = 0 if exists $me->{cache};
     return Storable::nfreeze($me);
 }

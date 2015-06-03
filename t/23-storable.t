@@ -45,8 +45,8 @@ $q->run;
 freeze_thaw($q, '(after run)');
 { # Reset the active query
     local(@$q{qw(sth Row)});
-    local(@$q{qw(Active hash)}) = 0 unless exists $q->{cache};;
-    is_deeply $thawed, $q, 'Same Query';
+    local(@$q{qw(hash)}) unless exists $q->{cache};;
+    is_deeply $thawed, $q, 'Same Query (after run)';
 }
 
 $r = $q->fetch or die sql_err($q);
@@ -55,20 +55,20 @@ freeze_thaw($r, '(after fetch)');
 $r->_detach; # Detach from Parent
 SKIP: {
     skip 'Storable v2.38 required to freeze attached Row objects', 1 unless eval { Storable->VERSION(2.38) };
-    is_deeply $thawed, $r, 'Same Row';
+    is_deeply $thawed, $r, 'Same Row (after fetch)';
 }
 
 $q->fetch or die sql_err($q);
 
 freeze_thaw($r, '(after fetch & detach)');
-is_deeply $thawed, $r, 'Same Row';
+is_deeply $thawed, $r, 'Same Row (after fetch & detach)';
 
 freeze_thaw($q, '(after fetch)');
 { # Reset the active query
     local(@$q{qw(sth Row)});
-    local(@$q{qw(Active hash)}) = 0 unless exists $q->{cache};;
+    local(@$q{qw(hash)}) unless exists $q->{cache};;
     local $q->{cache}{idx} = 0 if exists $q->{cache};
-    is_deeply $thawed, $q, 'Same Query';
+    is_deeply $thawed, $q, 'Same Query (after fetch)';
 
     if ($thawed->config('CacheQuery')) {
         is_deeply $thawed->fetch, $q->fetch, 'Same Row from $q->fetch';
