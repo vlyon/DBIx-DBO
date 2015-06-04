@@ -534,15 +534,15 @@ sub query_methods {
     is_deeply [$q->columns], [qw(id name key)], 'Method DBIx::DBO::Query->columns (with aliases)';
     $r = $q->fetch;
     is_deeply [$q->columns], [qw(id name key)], 'Method DBIx::DBO::Query->columns (after fetch)';
+    isa_ok $q ** 'key', 'DBIx::DBO::Column', '$q ** $alias';
+
+    # After changing the Query, test that the Row still works correctly
+    $q->show('id');
+    $q->order_by('id');
     ok $r->update(id => $r->{key}), 'Can update a Row despite using aliases' or diag sql_err($r);
     ok $r->load(id => 15), 'Can load a Row despite using aliases' or diag sql_err($r);
 
-    isa_ok $q ** 'key', 'DBIx::DBO::Column', q{$q ** $alias};
-
     # Limit & limit with Offset
-    $q->show('id');
-    $q->order_by('id');
-
     $q->limit(3);
     $got = [];
     for (my $row; $row = $q->fetch; push @$got, $row->[0]) {}

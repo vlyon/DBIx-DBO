@@ -115,7 +115,7 @@ B<NB>: This will not remove the JOINs or JOIN ON clauses.
 
 sub reset {
     my $me = shift;
-    $me->finish;
+    $me->_inactivate;
     $me->unwhere;
     $me->distinct(0);
     $me->show;
@@ -275,6 +275,7 @@ You can also add a subquery by passing that Query as the value with an alias, Eg
 # TODO: Keep track of all aliases in use and die if a used alias is removed
 sub show {
     my $me = shift;
+    $me->_inactivate;
     undef $me->{sql};
     undef $me->{build_data}{from};
     undef $me->{build_data}{show};
@@ -304,6 +305,7 @@ Takes a boolean argument to add or remove the DISTINCT clause for the returned r
 
 sub distinct {
     my $me = shift;
+    $me->_inactivate;
     undef $me->{sql};
     undef $me->{build_data}{show};
     my $distinct = $me->{build_data}{Show_Distinct};
@@ -336,6 +338,7 @@ sub join_table {
     } else {
         $tbl = $me->_table_class->new($me->{DBO}, $tbl);
     }
+    $me->_inactivate;
     if (defined $type) {
         $type =~ s/^\s*/ /;
         $type =~ s/\s*$/ /;
@@ -379,6 +382,7 @@ sub join_on {
     $me->_validate_where_fields(@$col1, @$col2);
 
     # Force a new search
+    $me->_inactivate;
     undef $me->{sql};
     undef $me->{build_data}{from};
 
@@ -485,6 +489,7 @@ sub where {
     $me->_validate_where_fields(@$fld, @$val);
 
     # Force a new search
+    $me->_inactivate;
     undef $me->{sql};
     undef $me->{build_data}{where};
 
@@ -556,6 +561,7 @@ sub _del_where {
         $me->{$clause.'_Brackets'} = [];
     }
     # This forces a new search
+    $me->_inactivate;
     undef $me->{sql};
     undef $me->{build_data}{lc $clause};
 }
@@ -679,6 +685,7 @@ To remove the GROUP BY clause simply call C<group_by> without any columns.
 
 sub group_by {
     my $me = shift;
+    $me->_inactivate;
     undef $me->{sql};
     undef $me->{build_data}{group};
     undef @{$me->{build_data}{GroupBy}};
@@ -708,6 +715,7 @@ sub having {
     $me->_validate_where_fields(@$fld, @$val);
 
     # Force a new search
+    $me->_inactivate;
     undef $me->{sql};
     undef $me->{build_data}{having};
 
@@ -746,6 +754,7 @@ To remove the ORDER BY clause simply call C<order_by> without any columns.
 
 sub order_by {
     my $me = shift;
+    $me->_inactivate;
     undef $me->{sql};
     undef $me->{build_data}{order};
     undef @{$me->{build_data}{OrderBy}};
@@ -772,6 +781,7 @@ TODO: Implement the new "FIRST n / NEXT n" clause if connected to a 12c database
 
 sub limit {
     my($me, $rows, $offset) = @_;
+    $me->_inactivate;
     undef $me->{sql};
     undef $me->{build_data}{limit};
     return undef $me->{build_data}{LimitOffset} unless defined $rows;
@@ -1016,6 +1026,24 @@ sub found_rows {
     $me->{Found_Rows};
 }
 
+=head3 C<update>
+
+  $query->update(department => 'Tech');
+  $query->update(salary => { FUNC => '? * 1.10', COL => 'salary' }); # 10% raise
+
+Updates every row in the query with the new values specified.
+Returns the number of rows updated or C<'0E0'> for no rows to ensure the value is true,
+and returns false if there was an error.
+
+=cut
+
+sub update {
+    my $me = shift;
+    my @update = $me->{DBO}{dbd_class}->_parse_set($me, @_);
+    my $sql = $me->{DBO}{dbd_class}->_build_sql_update($me, @update);
+    $me->{DBO}{dbd_class}->_do($me, $sql, undef, $me->{DBO}{dbd_class}->_bind_params_update($me));
+}
+
 =head3 C<sql>
 
   my $sql = $query->sql;
@@ -1108,22 +1136,12 @@ sub _sth {
     $me->{sth} ||= $me->rdbh->prepare($sql);
 }
 
-=head3 C<update>
-
-  $query->update(department => 'Tech');
-  $query->update(salary => { FUNC => '? * 1.10', COL => 'salary' }); # 10% raise
-
-Updates every row in the query with the new values specified.
-Returns the number of rows updated or C<'0E0'> for no rows to ensure the value is true,
-and returns false if there was an error.
-
-=cut
-
-sub update {
+sub _inactivate {
     my $me = shift;
-    my @update = $me->{DBO}{dbd_class}->_parse_set($me, @_);
-    my $sql = $me->{DBO}{dbd_class}->_build_sql_update($me, @update);
-    $me->{DBO}{dbd_class}->_do($me, $sql, undef, $me->{DBO}{dbd_class}->_bind_params_update($me));
+    $me->_empty_row;
+    # Reset the query
+    delete $me->{cache};
+    undef $me->{sth};
 }
 
 =head3 C<finish>
@@ -1138,6 +1156,19 @@ This ensures that the next call to L</fetch> will return the first row from the 
 
 sub finish {
     my $me = shift;
+    $me->_empty_row;
+    # Restart the query
+    if (exists $me->{cache}) {
+        $me->{cache}{idx} = 0;
+    } else {
+        $me->{sth}->finish if $me->{sth} and $me->{sth}{Active};
+    }
+    # Ensure the sql will be rebuilt
+    undef $me->{sql};
+}
+
+sub _empty_row {
+    my $me = shift;
     # Detach or empty the Row
     if (defined $me->{Row}) {
         if (SvREFCNT(${$me->{Row}}) > 1) {
@@ -1147,14 +1178,6 @@ sub finish {
             ${$me->{Row}}{hash} = {};
         }
     }
-    # Restart the query
-    if (exists $me->{cache}) {
-        $me->{cache}{idx} = 0;
-    } else {
-        $me->{sth}->finish if $me->{sth} and $me->{sth}{Active};
-    }
-    # Ensure the sql will be rebuilt
-    undef $me->{sql};
 }
 
 =head2 Common Methods
