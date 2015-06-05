@@ -15,9 +15,8 @@ BEGIN {
     require Carp::Heavy if eval "$Carp::VERSION < 1.12";
 
     # Set up DebugSQL if requested
-    if ($ENV{DBO_DEBUG_SQL}) {
-        diag "DBO_DEBUG_SQL=$ENV{DBO_DEBUG_SQL}";
-        DBIx::DBO->config(DebugSQL => $ENV{DBO_DEBUG_SQL});
+    if ($ENV{DBO_TEST_SQL}) {
+        diag "DBO_TEST_SQL=$ENV{DBO_TEST_SQL}";
     }
 
     # Set up $Carp::Verbose if requested
@@ -34,16 +33,19 @@ BEGIN {
             my $loc = Carp::short_error_loc();
             my %i = Carp::caller_info($loc);
             $me->config(LastSQL => [$i{'sub'}, @_]);
-            my $dbg = $ENV{DBO_DEBUG_SQL} or return;
+            my $dbg = $ENV{DBO_TEST_SQL} or return;
             my $trace;
             if ($dbg > 1) {
                 $trace = "\t$i{sub_name} called at $i{file} line $i{line}\n";
+                # Add an extra stack level
+                %i = Carp::caller_info($loc - 1);
+                $trace = "\t$i{sub_name} called at $i{file} line $i{line}\n$trace";
                 $trace .= "\t$i{sub_name} called at $i{file} line $i{line}\n" while %i = Carp::caller_info(++$loc);
             } else {
                 $trace = "\t$i{sub} called at $i{file} line $i{line}\n";
             }
             my $sql = shift;
-            Test::More::diag "DEBUG_SQL: $sql\nDEBUG_SQL: (".join(', ', map $me->rdbh->quote($_), @_).")\n".$trace;
+            Test::More::diag "RUN_SQL: $sql\nRUN_SQL: (".join(', ', map $me->rdbh->quote($_), @_).")\n".$trace;
         });
 
     {
