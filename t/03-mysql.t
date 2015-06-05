@@ -22,7 +22,7 @@ if ($dbo->do("CREATE DATABASE $quoted_db")) {
     $quoted_db = $dbo->{dbd_class}->_qi($dbo, $Test::DBO::test_db);
 }
 
-plan tests => 117;
+plan tests => $Test::DBO::test_count + 7;
 
 # Create the DBO (3 tests)
 pass "Connect to MySQL $quoted_db database";
@@ -36,9 +36,7 @@ $Test::DBO::can{multi_table_update} = 1;
 $Test::DBO::can{auto_increment_id} = 'INT NOT NULL AUTO_INCREMENT PRIMARY KEY';
 $Test::DBO::can{truncate} = 1;
 
-# Table methods: do, select* (28 tests)
 my $t = Test::DBO::basic_methods($dbo);
-
 # Pick a random available collation
 if (my $collation = $dbo->selectrow_hashref('SHOW TABLE STATUS LIKE ?', undef, scalar($t->name))->{Collation}) {
     if (my $charset = $dbo->selectrow_hashref('SHOW COLLATION LIKE ?', undef, $collation)->{Charset}) {
@@ -49,14 +47,8 @@ if (my $collation = $dbo->selectrow_hashref('SHOW TABLE STATUS LIKE ?', undef, s
         }
     }
 }
-
-# Advanced table methods: insert, update, delete (2 tests)
 Test::DBO::advanced_table_methods($dbo, $t);
-
-# Row methods: (20 tests)
 Test::DBO::row_methods($dbo, $t);
-
-# Query methods: (32 tests)
 my $q = Test::DBO::query_methods($dbo, $t);
 
 # MySQL CalcFoundRows: (4 tests)
@@ -67,19 +59,14 @@ $q->finish;
 like $q->sql, qr/ SQL_CALC_FOUND_ROWS /, 'Use SQL_CALC_FOUND_ROWS in MySQL';
 $q->found_rows;
 is $q->config('LastSQL')->[1], 'SELECT FOUND_ROWS()', 'Use FOUND_ROWS() in MySQL';
-
 $q->run;
 $q->found_rows;
 is $q->config('LastSQL')->[1], 'SELECT FOUND_ROWS()', 'Use FOUND_ROWS() in MySQL after every run';
 
-# Advanced query methods: (15 tests)
 Test::DBO::advanced_query_methods($dbo, $t, $q);
-
-# Join methods: (12 tests)
 Test::DBO::join_methods($dbo, $t->{Name});
 
 END {
-    # Cleanup (1 test)
     Test::DBO::cleanup($dbo) if $dbo;
 }
 

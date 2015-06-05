@@ -44,7 +44,7 @@ unless ($quoted_db) {
     $quoted_db = $dbo->_qi($Test::DBO::test_db);
 }
 
-plan tests => 113;
+plan tests => $Test::DBO::test_count + 3;
 # Connect & init (3 tests)
 pass "Connect to PostgreSQL $quoted_db database";
 isa_ok $dbo, 'DBIx::DBO', '$dbo';
@@ -66,26 +66,14 @@ $dbo->do("CREATE SEQUENCE $quoted_seq START WITH 5")
     and $Test::DBO::can{auto_increment_id} = " INT PRIMARY KEY DEFAULT nextval('$quoted_seq')"
     or diag sql_err($dbo);
 
-# Table methods: do, select*, ... (28 tests)
 my $t = Test::DBO::basic_methods($dbo);
-
-# Advanced table methods: insert, update, delete (2 tests)
 Test::DBO::advanced_table_methods($dbo, $t);
-
-# Row methods: (20 tests)
 Test::DBO::row_methods($dbo, $t);
-
-# Query methods: (32 tests)
 my $q = Test::DBO::query_methods($dbo, $t);
-
-# Advanced query methods: (15 tests)
 Test::DBO::advanced_query_methods($dbo, $t, $q);
-
-# Join methods: (12 tests)
 Test::DBO::join_methods($dbo, $t->{Name}, 1);
 
 END {
-    # Cleanup (1 test)
     Test::DBO::cleanup($dbo) if $dbo;
 
     if ($drop_db) {

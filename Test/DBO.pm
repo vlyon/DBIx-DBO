@@ -76,12 +76,11 @@ our $dbd_name;
 our @_cleanup_sql;
 our $case_sensitivity_sql = 'SELECT ? LIKE ?';
 our %can;
+our $test_count = 111;
 
 sub import {
-    my $class = shift;
-    $dbd = shift or return;
-    $dbd_name = shift;
-    my %opt = splice @_;
+    (my $class, $dbd, $dbd_name, my %opt) = @_;
+    defined $dbd or return;
 
     grep $_ eq $dbd, DBI->available_drivers
         or plan skip_all => "No $dbd driver available!";
@@ -136,11 +135,12 @@ sub import {
     note "DBD::$dbd ".${ $::DBD::{$dbd.'::'}{VERSION} } if exists $opt{try_connect} or exists $opt{connect_ok};
 
     return unless exists $opt{tests};
+    $opt{tests} =~ s/^\+(\d+)$/$test_count + $1/e;
 
     if (exists $opt{connect_ok}) {
         my $dbo = connect_ok(@{$opt{connect_ok}}) or plan skip_all => "Can't connect: $DBI::errstr";
 
-        plan tests => $opt{tests};
+        plan tests => $opt{tests} + 2;
         pass "Connect to $dbd_name";
         isa_ok $dbo, 'DBIx::DBO', '$dbo';
     } else {
@@ -357,7 +357,7 @@ sub skip_advanced_table_methods {
     my $dbo = shift;
     my $t = shift;
 
-    note "No advanced table tests for $dbd_name";
+    skip "No advanced table tests for $dbd_name", 2;
     $t->insert(id => 6, name => 'Harry Harrelson') or diag sql_err($t);
     $t->insert(id => 7, name => 'Amanda Huggenkiss') or diag sql_err($t);
 }
@@ -427,7 +427,7 @@ sub query_methods {
 
     # Sort the result
     $q->order_by('id');
-    pass 'Method DBIx::DBO::Query->order_by';
+    like $q->sql, qr/ ORDER BY .*id/, 'Method DBIx::DBO::Query->order_by';
 
     # Get a valid sth
     isa_ok $q->_sth, 'DBI::st', '$q->_sth' or diag "SQL command failed: _sth\n  $q->{sql}\n".$q->rdbh->errstr;
@@ -522,9 +522,10 @@ sub query_methods {
     is_deeply [$q->columns], [qw(id name key)], 'Method DBIx::DBO::Query->columns (after fetch)';
     isa_ok $q ** 'key', 'DBIx::DBO::Column', '$q ** $alias';
 
-    # After changing the Query, test that the Row still works correctly
+    # After changing the Query, test that the Row still works as before
     $q->show('id');
     $q->order_by('id');
+    is join(' ', $r->columns), 'id name key', 'Method DBIx::DBO::Row->columns (unchanged by parent)';
     ok $r->update(id => $r->{key}), 'Can update a Row despite using aliases' or diag sql_err($r);
     ok $r->load(id => 15), 'Can load a Row despite using aliases' or diag sql_err($r);
 
@@ -604,7 +605,7 @@ sub advanced_query_methods {
 }
 
 sub skip_advanced_query_methods {
-    note "No advanced query tests for $dbd_name";
+    skip "No advanced query tests for $dbd_name", 15;
 }
 
 sub join_methods {
@@ -678,6 +679,10 @@ sub join_methods {
     }
 
     $q->finish;
+}
+
+sub skip_join_methods {
+    skip "No query join tests for $dbd_name", 12;
 }
 
 sub todo_cleanup {
