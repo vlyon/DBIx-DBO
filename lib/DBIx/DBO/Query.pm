@@ -154,8 +154,6 @@ sub _from {
     local(
         $me->{build_data}{_from_alias},
         $me->{build_data}{from},
-        $me->{build_data}{where},
-        $me->{build_data}{having}
     ) = ($parent_build_data->{_from_alias});
     return '('.$me->{DBO}{dbd_class}->_build_sql_select($me).')';
 }
@@ -473,10 +471,9 @@ sub where {
 
     # Force a new search
     $me->_inactivate;
-    undef $me->{build_data}{where};
 
-    # Find the current Where_Data reference
-    my $ref = $me->{build_data}{Where_Data} ||= [];
+    # Find the current where reference
+    my $ref = $me->{build_data}{where} ||= [];
     $ref = $ref->[$_] for (@{$me->{Where_Bracket_Refs}});
 
     $me->_add_where($ref, $op, $fld, $fld_func, $fld_opt, $val, $val_func, $val_opt, @_);
@@ -494,7 +491,7 @@ If no column is provided, the I<whole> WHERE clause is removed.
 
 sub unwhere {
     my $me = shift;
-    $me->_del_where('Where', @_);
+    $me->_del_where('where', @_);
 }
 
 sub _validate_where_fields {
@@ -517,10 +514,10 @@ sub _del_where {
         my($fld, $fld_func, $fld_opt) = $me->{DBO}{dbd_class}->_parse_col_val($me, shift);
         # TODO: Validate the fields?
 
-        return unless exists $me->{build_data}{$clause.'_Data'};
-        # Find the current Where_Data reference
-        my $ref = $me->{build_data}{$clause.'_Data'};
-        $ref = $ref->[$_] for (@{$me->{$clause.'_Bracket_Refs'}});
+        return unless exists $me->{build_data}{$clause};
+        # Find the current where reference
+        my $ref = $me->{build_data}{$clause};
+        $ref = $ref->[$_] for (@{$me->{"\u${clause}_Bracket_Refs"}});
 
         local $Data::Dumper::Indent = 0;
         local $Data::Dumper::Maxdepth = 2;
@@ -538,13 +535,12 @@ sub _del_where {
         }
         splice @$ref, $_, 1 for reverse @match;
     } else {
-        delete $me->{build_data}{$clause.'_Data'};
-        $me->{$clause.'_Bracket_Refs'} = [];
-        $me->{$clause.'_Brackets'} = [];
+        delete $me->{build_data}{$clause};
+        $me->{"\u${clause}_Bracket_Refs"} = [];
+        $me->{"\u${clause}_Brackets"} = [];
     }
     # This forces a new search
     $me->_inactivate;
-    undef $me->{build_data}{lc $clause};
 }
 
 ##
@@ -623,7 +619,7 @@ Without any parenthesis C<'AND'> is the preferred aggregator.
 
 sub open_bracket {
     my $me = shift;
-    $me->_open_bracket($me->{Where_Brackets}, $me->{Where_Bracket_Refs}, $me->{build_data}{Where_Data} ||= [], @_);
+    $me->_open_bracket($me->{Where_Brackets}, $me->{Where_Bracket_Refs}, $me->{build_data}{where} ||= [], @_);
 }
 
 sub _open_bracket {
@@ -695,10 +691,9 @@ sub having {
 
     # Force a new search
     $me->_inactivate;
-    undef $me->{build_data}{having};
 
-    # Find the current Having_Data reference
-    my $ref = $me->{build_data}{Having_Data} ||= [];
+    # Find the current having reference
+    my $ref = $me->{build_data}{having} ||= [];
     $ref = $ref->[$_] for (@{$me->{Having_Bracket_Refs}});
 
     $me->_add_where($ref, $op, $fld, $fld_func, $fld_opt, $val, $val_func, $val_opt, @_);
@@ -716,7 +711,7 @@ If no column is provided, the I<whole> HAVING clause is removed.
 
 sub unhaving {
     my $me = shift;
-    $me->_del_where('Having', @_);
+    $me->_del_where('having', @_);
 }
 
 =head3 C<order_by>
@@ -1086,12 +1081,11 @@ sub sql {
             }
         }
     }
-    for my $w (_search_where_chunk(@{$me->{build_data}{Where_Data}})) {
+    for my $w (_search_where_chunk(@{$me->{build_data}{where}})) {
         if (@$w == 1 and _isa($w->[0], 'DBIx::DBO::Query')) {
             my $sq = $w->[0];
             if ($sq->sql ne ($me->{build_data}{_subqueries}{$sq} ||= '')) {
                 undef $me->{sql};
-                undef $me->{build_data}{where};
             }
         }
     }

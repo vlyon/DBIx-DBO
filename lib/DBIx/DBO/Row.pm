@@ -84,7 +84,7 @@ sub _init {
 sub _copy_build_data {
     my $me = $_[0];
     # Store needed build_data
-    for my $f (qw(select From_Bind Quick_Where Where_Data Where_Bind group order)) {
+    for my $f (qw(select From_Bind Quick_Where where group order)) {
         $$me->{build_data}{$f} = $me->_copy($$me->{Parent}{build_data}{$f}) if exists $$me->{Parent}{build_data}{$f};
     }
 }
@@ -257,11 +257,9 @@ sub load {
     # Use Quick_Where to load a row, but make sure to restore its value afterward
     my $old_qw = $#{$$me->{build_data}{Quick_Where}};
     push @{$$me->{build_data}{Quick_Where}}, @_;
-    undef $$me->{build_data}{where};
     my $sql = $$me->{DBO}{dbd_class}->_build_sql_select($me);
     my @bind = $$me->{DBO}{dbd_class}->_bind_params_select($me);
     $old_qw < 0 ? delete $$me->{build_data}{Quick_Where} : ($#{$$me->{build_data}{Quick_Where}} = $old_qw);
-    delete $$me->{build_data}{where};
     delete $$me->{build_data}{Where_Bind};
 
     return $me->_load($sql, @bind);

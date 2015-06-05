@@ -388,12 +388,11 @@ sub _build_val {
 sub _build_where {
     my($class, $me) = @_;
     my $h = $me->_build_data;
-    return $h->{where} if defined $h->{where};
     undef @{$h->{Where_Bind}};
     my @where;
     push @where, $class->_build_quick_where($me, $h->{Where_Bind}, @{$h->{Quick_Where}}) if exists $h->{Quick_Where};
-    push @where, $class->_build_where_chunk($me, $h->{Where_Bind}, 'OR', $h->{Where_Data}) if exists $h->{Where_Data};
-    return $h->{where} = join ' AND ', @where;
+    push @where, $class->_build_where_chunk($me, $h->{Where_Bind}, 'OR', $h->{where}) if exists $h->{where};
+    return join ' AND ', @where;
 }
 
 # Construct the WHERE contents of one set of parentheses
@@ -502,11 +501,10 @@ sub _build_group {
 sub _build_having {
     my($class, $me) = @_;
     my $h = $me->_build_data;
-    return $h->{having} if defined $h->{having};
     undef @{$h->{Having_Bind}};
     my @having;
-    push @having, $class->_build_where_chunk($me, $h->{Having_Bind}, 'OR', $h->{Having_Data}) if exists $h->{Having_Data};
-    return $h->{having} = join ' AND ', @having;
+    push @having, $class->_build_where_chunk($me, $h->{Having_Bind}, 'OR', $h->{having}) if exists $h->{having};
+    return join ' AND ', @having;
 }
 
 sub _build_order {
@@ -659,7 +657,6 @@ sub _reset_row_on_update {
             my @cidx = map $me->_column_idx($_), @cols;
             unless (grep $cant_update[$_], @cidx) {
                 my %bd = %{$$me->{build_data}};
-                delete $bd{Where_Data};
                 delete $bd{where};
                 $bd{Quick_Where} = [map { $cols[$_] => $$me->{array}[ $cidx[$_] ] } 0 .. $#cols];
                 my($sql, @bind) = do {
