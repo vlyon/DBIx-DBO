@@ -513,9 +513,8 @@ sub _build_having {
 sub _build_order {
     my($class, $me) = @_;
     my $h = $me->_build_data;
-    return $h->{order} if defined $h->{order};
     undef @{$h->{Order_Bind}};
-    return $h->{order} = join ', ', map $class->_build_val($me, $h->{Order_Bind}, @$_), @{$h->{OrderBy}};
+    return join ', ', map $class->_build_val($me, $h->{Order_Bind}, @$_), @{$h->{order}};
 }
 
 sub _build_limit {

@@ -155,8 +155,7 @@ sub _from {
         $me->{build_data}{_from_alias},
         $me->{build_data}{from},
         $me->{build_data}{where},
-        $me->{build_data}{orderby},
-        $me->{build_data}{groupby},
+        $me->{build_data}{group},
         $me->{build_data}{having}
     ) = ($parent_build_data->{_from_alias});
     return '('.$me->{DBO}{dbd_class}->_build_sql_select($me).')';
@@ -736,11 +735,10 @@ To remove the ORDER BY clause simply call C<order_by> without any columns.
 sub order_by {
     my $me = shift;
     $me->_inactivate;
-    undef $me->{build_data}{order};
-    undef @{$me->{build_data}{OrderBy}};
+    undef @{$me->{build_data}{order}};
     for my $col (@_) {
         my @order = $me->{DBO}{dbd_class}->_parse_col_val($me, $col);
-        push @{$me->{build_data}{OrderBy}}, \@order;
+        push @{$me->{build_data}{order}}, \@order;
     }
 }
 
