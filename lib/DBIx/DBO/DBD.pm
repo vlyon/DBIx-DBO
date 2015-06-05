@@ -494,9 +494,8 @@ sub _build_set {
 sub _build_group {
     my($class, $me) = @_;
     my $h = $me->_build_data;
-    return $h->{group} if defined $h->{group};
     undef @{$h->{Group_Bind}};
-    return $h->{group} = join ', ', map $class->_build_val($me, $h->{Group_Bind}, @$_), @{$h->{GroupBy}};
+    return join ', ', map $class->_build_val($me, $h->{Group_Bind}, @$_), @{$h->{group}};
 }
 
 # Construct the HAVING clause

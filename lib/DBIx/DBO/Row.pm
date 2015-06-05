@@ -73,7 +73,6 @@ sub _init {
         $$me->{build_data} = {
             select => [],
             from => $parent->_from,
-            group => '',
         };
         $$me->{Tables} = [ $parent ];
     } else {
@@ -85,7 +84,7 @@ sub _init {
 sub _copy_build_data {
     my $me = $_[0];
     # Store needed build_data
-    for my $f (qw(select From_Bind Quick_Where Where_Data Where_Bind group Group_Bind order)) {
+    for my $f (qw(select From_Bind Quick_Where Where_Data Where_Bind group order)) {
         $$me->{build_data}{$f} = $me->_copy($$me->{Parent}{build_data}{$f}) if exists $$me->{Parent}{build_data}{$f};
     }
 }

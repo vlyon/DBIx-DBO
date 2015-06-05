@@ -155,7 +155,6 @@ sub _from {
         $me->{build_data}{_from_alias},
         $me->{build_data}{from},
         $me->{build_data}{where},
-        $me->{build_data}{group},
         $me->{build_data}{having}
     ) = ($parent_build_data->{_from_alias});
     return '('.$me->{DBO}{dbd_class}->_build_sql_select($me).')';
@@ -668,11 +667,10 @@ To remove the GROUP BY clause simply call C<group_by> without any columns.
 sub group_by {
     my $me = shift;
     $me->_inactivate;
-    undef $me->{build_data}{group};
-    undef @{$me->{build_data}{GroupBy}};
+    undef @{$me->{build_data}{group}};
     for my $col (@_) {
         my @group = $me->{DBO}{dbd_class}->_parse_col_val($me, $col);
-        push @{$me->{build_data}{GroupBy}}, \@group;
+        push @{$me->{build_data}{group}}, \@group;
     }
 }
 
