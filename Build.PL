@@ -13,7 +13,7 @@ my %build = (
     },
     build_requires => {
         'Module::Build' => '0.30',
-        'Test::More' => 0.62,
+        'Test::More' => 0.88,
         'File::Temp' => 0,
     },
     requires => {

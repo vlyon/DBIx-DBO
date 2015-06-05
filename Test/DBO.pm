@@ -14,20 +14,6 @@ use DBIx::DBO;
 BEGIN {
     require Carp::Heavy if eval "$Carp::VERSION < 1.12";
 
-    # If we are using a version of Test::More older than 0.82 ...
-    unless (exists $Test::More::{note}) {
-        eval q#
-            sub Test::More::note {
-                local $Test::Builder::{_print_diag} = $Test::Builder::{_print};
-                Test::More->builder->diag(@_);
-            }
-            *note = \&Test::More::note;
-            no strict 'refs';
-            *{caller(2).'::note'} = \&note;
-        #;
-        die $@ if $@;
-    }
-
     # Set up DebugSQL if requested
     if ($ENV{DBO_DEBUG_SQL}) {
         diag "DBO_DEBUG_SQL=$ENV{DBO_DEBUG_SQL}";
