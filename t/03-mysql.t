@@ -41,8 +41,8 @@ my $t = Test::DBO::basic_methods($dbo);
 if (my $collation = $dbo->selectrow_hashref('SHOW TABLE STATUS LIKE ?', undef, scalar($t->name))->{Collation}) {
     if (my $charset = $dbo->selectrow_hashref('SHOW COLLATION LIKE ?', undef, $collation)->{Charset}) {
         note "Table's default character set and collation is '$charset', '$collation'";
-        if (my $ci = $dbo->selectall_arrayref('SHOW COLLATION LIKE ?', {Slice => {}}, $charset.'%')) {
-            my @ci = grep $_ ne $collation, map $_->{Collation}, @$ci;
+        if (my $ci = $dbo->selectall_arrayref('SHOW COLLATION', {Slice => {}})) {
+            my @ci = grep $_ ne $collation, map $_->{Collation}, grep $_->{Charset} eq $charset, @$ci;
             $Test::DBO::can{collate} = $ci[int rand @ci];
         }
     }
