@@ -322,7 +322,7 @@ sub update {
     croak "Can't update an empty row" unless $$me->{array};
     my @update = $$me->{DBO}{dbd_class}->_parse_set($me, @_);
     local $$me->{build_data} = $$me->{DBO}{dbd_class}->_build_data_matching_this_row($me);
-    $$me->{build_data}{LimitOffset} = ($me->config('LimitRowUpdate') and $me->tables == 1) ? [1] : undef;
+    $$me->{build_data}{limit} = ($me->config('LimitRowUpdate') and $me->tables == 1) ? [1] : undef;
     my $sql = $$me->{DBO}{dbd_class}->_build_sql_update($me, @update);
 
     my $rv = $$me->{DBO}{dbd_class}->_do($me, $sql, undef, $$me->{DBO}{dbd_class}->_bind_params_update($me));
@@ -348,7 +348,7 @@ sub delete {
     my $me = shift;
     croak "Can't delete an empty row" unless $$me->{array};
     local $$me->{build_data} = $$me->{DBO}{dbd_class}->_build_data_matching_this_row($me);
-    $$me->{build_data}{LimitOffset} = ($me->config('LimitRowDelete') and $me->tables == 1) ? [1] : undef;
+    $$me->{build_data}{limit} = ($me->config('LimitRowDelete') and $me->tables == 1) ? [1] : undef;
     my $sql = $$me->{DBO}{dbd_class}->_build_sql_delete($me, @_);
 
     undef $$me->{array};

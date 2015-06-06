@@ -753,10 +753,9 @@ TODO: Implement the new "FIRST n / NEXT n" clause if connected to a 12c database
 sub limit {
     my($me, $rows, $offset) = @_;
     $me->_inactivate;
-    undef $me->{build_data}{limit};
-    return undef $me->{build_data}{LimitOffset} unless defined $rows;
+    return undef $me->{build_data}{limit} unless defined $rows;
     /^\d+$/ or croak "Invalid argument '$_' in limit" for grep defined, $rows, $offset;
-    @{$me->{build_data}{LimitOffset}} = ($rows, $offset);
+    @{$me->{build_data}{limit}} = ($rows, $offset);
 }
 
 =head3 C<arrayref>

@@ -517,11 +517,11 @@ sub _build_order {
 sub _build_limit {
     my($class, $me) = @_;
     my $h = $me->_build_data;
-    return $h->{limit} if defined $h->{limit};
-    return $h->{limit} = '' unless defined $h->{LimitOffset};
-    $h->{limit} = 'LIMIT '.$h->{LimitOffset}[0];
-    $h->{limit} .= ' OFFSET '.$h->{LimitOffset}[1] if $h->{LimitOffset}[1];
-    return $h->{limit};
+    return '' unless defined $h->{limit};
+    my $sql = 'LIMIT ';
+    $sql .= $h->{limit}[0] >= 0 ? $h->{limit}[0] : 18446744073709551615;
+    $sql .= ' OFFSET '.$h->{limit}[1] if $h->{limit}[1];
+    return $sql;
 }
 
 sub _get_config {
@@ -556,7 +556,7 @@ sub _rows {
 
 sub _calc_found_rows {
     my($class, $me) = @_;
-    local $me->{build_data}{limit} = '';
+    local $me->{build_data}{limit};
     $me->{Found_Rows} = $me->count_rows;
 }
 

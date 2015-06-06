@@ -28,4 +28,14 @@ sub _save_last_insert_id {
     $sth->{Database}->last_insert_id(undef, @$me{qw(Schema Name)}, undef);
 }
 
+sub _build_limit {
+    my($class, $me) = @_;
+    my $h = $me->_build_data;
+    return '' unless defined $h->{limit};
+    my $sql = 'LIMIT ';
+    $sql .= $h->{limit}[0] >= 0 ? $h->{limit}[0] : -1;
+    $sql .= ' OFFSET '.$h->{limit}[1] if $h->{limit}[1];
+    return $sql;
+}
+
 1;
