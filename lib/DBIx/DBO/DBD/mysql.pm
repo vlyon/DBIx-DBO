@@ -1,4 +1,4 @@
-use strict;
+use 5.014;
 use warnings;
 
 package # hide from PAUSE
@@ -8,8 +8,8 @@ use Carp qw(croak);
 sub _get_table_schema {
     my($class, $me, $schema, $table) = @_;
 
-    if (defined $schema and length $schema) {
-        (my $q_schema = $me->rdbh->quote($schema)) =~ s/([\\_%])/\\$1/g;
+    if (length $schema) {
+        my $q_schema = $me->rdbh->quote($schema) =~ s/([\\_%])/\\$1/gr;
         my($got_schema) = $me->selectrow_array('SHOW DATABASES LIKE '.$q_schema);
         croak 'Invalid table: '.$class->_qi($me, $schema, $table) unless defined $got_schema;
         return $got_schema;
@@ -47,8 +47,8 @@ sub _save_last_insert_id {
 sub _get_config {
     my $class = shift;
     my $val = $class->SUPER::_get_config(@_);
-    # MySQL supports LIMIT on UPDATE/DELETE by default
-    ($_[0] ne 'LimitRowUpdate' and $_[0] ne 'LimitRowDelete' or defined $val) ? $val : 1;
+    # In MySQL support for LIMIT on UPDATE/DELETE is on by default
+    $val // ($_[0] eq 'LimitRowUpdate' || $_[0] eq 'LimitRowDelete' || undef);
 }
 
 # Query
@@ -71,7 +71,7 @@ sub _build_sql_select {
 # MySQL doesn't allow the use of aliases in the WHERE clause
 sub _alias_preference {
     my($class, $me, $method) = @_;
-    $method ||= ((caller(2))[3] =~ /\b(\w+)$/);
+    $method ||= ((caller(2))[3] =~ /\b(\w+)$/)[0];
     return 0 if $method eq 'join_on' or $method eq 'where';
     return 1;
 }

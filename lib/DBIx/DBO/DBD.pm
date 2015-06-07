@@ -1,7 +1,8 @@
 package # hide from PAUSE
     DBIx::DBO::DBD;
 
-use strict;
+use 5.014;
+use mro;
 use warnings;
 use Carp 'croak';
 use Scalar::Util 'blessed';
@@ -65,7 +66,7 @@ sub _get_table_info {
     $h{PrimaryKeys} = [];
     $class->_set_table_key_info($me, $schema, $table, \%h);
 
-    return $me->{TableInfo}{defined $schema ? $schema : ''}{$table} = \%h;
+    return $me->{TableInfo}{$schema // ''}{$table} = \%h;
 }
 
 sub _set_table_key_info {
@@ -117,7 +118,7 @@ sub _qi {
     my($class, $me, @id) = @_;
     return $me->rdbh->quote_identifier(@id) if $me->config('QuoteIdentifier');
     # Strip off any null/undef elements (ie schema)
-    shift(@id) while @id and not (defined $id[0] and length $id[0]);
+    shift(@id) while @id and not length $id[0];
     return join '.', @id;
 }
 
@@ -130,7 +131,6 @@ sub _sql {
     my $dbg = $me->config('DebugSQL') or return;
     my($sql, @bind) = @_;
 
-    require Carp::Heavy if eval "$Carp::VERSION < 1.12";
     my $loc = Carp::short_error_loc();
     my %i = Carp::caller_info($loc);
     my $trace;
@@ -254,10 +254,10 @@ sub _build_from {
 
 sub _parse_col_val {
     my($class, $me, $col, %c) = @_;
-    unless (defined $c{Aliases}) {
-        (my $method = (caller(1))[3]) =~ s/.*:://;
-        $c{Aliases} = $class->_alias_preference($me, $method);
-    }
+    $c{Aliases} //= do {
+        my($method) = (caller(1))[3] =~ /(\w+)$/;
+        $class->_alias_preference($me, $method);
+    };
     return $class->_parse_val($me, $col, Check => 'Column', %c) if ref $col;
     return [ $class->_parse_col($me, $col, $c{Aliases}) ];
 }
@@ -300,7 +300,7 @@ sub _build_col {
 
 sub _parse_val {
     my($class, $me, $val, %c) = @_;
-    $c{Check} = '' unless defined $c{Check};
+    $c{Check} //= '';
 
     my @fld;
     my $func;
@@ -344,7 +344,7 @@ sub _parse_val {
 }
 
 sub _substitute_placeholders {
-    my($class, $me) = @_;
+    #my($class, $me, $func) = @_;
     my $num_placeholders = 0;
     $_[2] =~ s/((?<!\\)(['"`]).*?[^\\]\2|\?)/$1 eq '?' ? (++$num_placeholders, PLACEHOLDER) : $1/eg;
     return $num_placeholders;
@@ -709,9 +709,9 @@ sub _require_dbd_class {
     if ($rv) {
         warn @warn if @warn;
     } else {
-        (my $file = $dbd_class.'.pm') =~ s'::'/'g;
-        if ($@ !~ / \Q$file\E in \@INC /) {
-            (my $err = $@) =~ s/\n.*$//; # Remove the last line
+        my $file = $dbd_class =~ s|::|/|gr;
+        if ("$@" !~ / \Q$file.pm\E in \@INC /) {
+            my $err = $@ =~ s/\n.*$//r; # Remove the last line
             chomp @warn;
             chomp $err;
             croak join "\n", @warn, $err, "Can't load $dbd driver";
@@ -728,10 +728,7 @@ sub _require_dbd_class {
         unless (@{$dbd_class.'::ISA'}) {
             my @isa = map $_->_require_dbd_class($dbd), grep $_->isa(__PACKAGE__), @{$class.'::ISA'};
             @{$dbd_class.'::ISA'} = ($class, @isa);
-            if (@isa) {
-                mro::set_mro($dbd_class, 'c3');
-                Class::C3::initialize() if $] < 5.009_005;
-            }
+            mro::set_mro($dbd_class, 'c3') if @isa;
         }
         push @CARP_NOT, $dbd_class;
         $inheritance{$class}{$dbd} = $dbd_class;

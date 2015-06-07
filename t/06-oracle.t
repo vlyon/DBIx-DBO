@@ -1,4 +1,4 @@
-use strict;
+use 5.014;
 use warnings;
 
 # Allow the use of ORACLE_USERID or DBO_TEST_ORACLE_USER

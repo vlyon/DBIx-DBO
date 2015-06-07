@@ -1,4 +1,4 @@
-use strict;
+use 5.014;
 use warnings;
 
 use Storable;
@@ -15,7 +15,8 @@ my $frozen;
 my $thawed;
 sub freeze_thaw {
     my $obj = shift;
-    (my $type = my $class = ref $obj) =~ s/.*:://;
+    my $class = ref $obj;
+    my $type = $class =~ s/.*:://r;
 
     ok $frozen = Storable::freeze($obj), join ' ', 'Freeze', $type, @_;
     isa_ok $thawed = Storable::thaw($frozen), $class, 'Thawed';

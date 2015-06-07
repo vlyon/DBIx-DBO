@@ -1,6 +1,6 @@
 package DBIx::DBO::Row;
 
-use strict;
+use 5.014;
 use warnings;
 use Carp 'croak';
 use Scalar::Util qw(blessed weaken);

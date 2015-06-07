@@ -1,21 +1,12 @@
 package DBIx::DBO::Query;
 
-use strict;
+use 5.014;
 use warnings;
 use Carp 'croak';
 use Devel::Peek 'SvREFCNT';
+use Hash::Util 'hv_store';
 
 use overload '**' => \&column, fallback => 1;
-
-BEGIN {
-    if ($] < 5.008_009) {
-        require XSLoader;
-        XSLoader::load(__PACKAGE__, $DBIx::DBO::VERSION);
-    } else {
-        require Hash::Util;
-        *_hv_store = \&Hash::Util::hv_store;
-    }
-}
 
 sub _table_class { $_[0]{DBO}->_table_class }
 sub _row_class { $_[0]{DBO}->_row_class }
@@ -955,7 +946,7 @@ sub _bind_cols_to_hash {
             $me->{hash} = \my %hash;
             my $i = 0;
             for (@{$me->{Columns}}) {
-                _hv_store(%hash, $_, $me->{cache}{array}[$i]) unless exists $hash{$_};
+                hv_store(%hash, $_, $me->{cache}{array}[$i]) unless exists $hash{$_};
                 $i++;
             }
         } else {

@@ -1,12 +1,11 @@
-package DBIx::DBO;
-
-use 5.008;
-use strict;
+use 5.014;
 use warnings;
+
+package DBIx::DBO 0.40;
+
 use DBI;
 use Carp qw(carp croak);
 
-our $VERSION;
 our %Config = (
     AutoReconnect => 0,
     CacheQuery => 0,
@@ -14,18 +13,7 @@ our %Config = (
     OnRowUpdate => 'simple',
     QuoteIdentifier => 1,
 );
-my $need_c3_initialize;
 my @ConnectArgs;
-
-BEGIN {
-    $VERSION = '0.40';
-    # The C3 method resolution order is required.
-    if ($] < 5.009_005) {
-        require MRO::Compat;
-    } else {
-        require mro;
-    }
-}
 
 use DBIx::DBO::DBD;
 use DBIx::DBO::Table;
@@ -176,13 +164,11 @@ sub connect {
         croak 'DBO is already connected' if $me->{dbh};
         $me->_check_driver($_[0]) if @_;
         if ($me->config('AutoReconnect')) {
-            $me->{ConnectArgs} = scalar @ConnectArgs unless defined $me->{ConnectArgs};
-            $conn = $me->{ConnectArgs};
+            $conn = $me->{ConnectArgs} //= scalar @ConnectArgs;
         } else {
             undef $ConnectArgs[$me->{ConnectArgs}] if defined $me->{ConnectArgs};
             delete $me->{ConnectArgs};
         }
-#        $conn = $me->{ConnectArgs} //= scalar @ConnectArgs if $me->config('AutoReconnect');
         $me->{dbh} = $me->_connect($conn, @_) or return;
         return $me;
     }
@@ -199,13 +185,11 @@ sub connect_readonly {
         undef $me->{rdbh};
         $me->_check_driver($_[0]) if @_;
         if ($me->config('AutoReconnect')) {
-            $me->{ConnectReadOnlyArgs} = scalar @ConnectArgs unless defined $me->{ConnectReadOnlyArgs};
-            $conn = $me->{ConnectReadOnlyArgs};
+            $conn = $me->{ConnectReadOnlyArgs} //= scalar @ConnectArgs;
         } else {
             undef $ConnectArgs[$me->{ConnectReadOnlyArgs}] if defined $me->{ConnectReadOnlyArgs};
             delete $me->{ConnectReadOnlyArgs};
         }
-#        $conn = $me->{ConnectReadOnlyArgs} //= scalar @ConnectArgs if $me->config('AutoReconnect');
         $me->{rdbh} = $me->_connect($conn, @_) or return;
         return $me;
     }
@@ -366,7 +350,7 @@ Mainly for internal use.
 
 sub table_info {
     my($me, $table) = @_;
-    croak 'No table name supplied' unless defined $table and length $table;
+    croak 'No table name supplied' unless length $table;
 
     my $schema;
     if (_isa($table, 'DBIx::DBO::Table')) {
@@ -374,12 +358,12 @@ sub table_info {
         ($schema, $table) = @$table{qw(Schema Name)};
     } else {
         ($schema, $table) = ref $table eq 'ARRAY' ? @$table : $me->{dbd_class}->_unquote_table($me, $table);
-        defined $schema or $schema = $me->{dbd_class}->_get_table_schema($me, $schema, $table);
+        $schema //= $me->{dbd_class}->_get_table_schema($me, $schema, $table);
 
         $me->{dbd_class}->_get_table_info($me, $schema, $table)
-            unless exists $me->{TableInfo}{defined $schema ? $schema : ''}{$table};
+            unless exists $me->{TableInfo}{$schema // ''}{$table};
     }
-    return ($schema, $table, $me->{TableInfo}{defined $schema ? $schema : ''}{$table});
+    return ($schema, $table, $me->{TableInfo}{$schema // ''}{$table});
 }
 
 =head3 C<disconnect>

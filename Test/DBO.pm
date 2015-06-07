@@ -3,17 +3,15 @@ use Test::More;
 package # Hide from PAUSE
     Test::DBO;
 
-use 5.008;
-use strict;
+use 5.014;
 use warnings;
 use sigtrap qw(die normal-signals);
 
 use Scalar::Util qw(blessed reftype);
 use Test::More;
 use DBIx::DBO;
-BEGIN {
-    require Carp::Heavy if eval "$Carp::VERSION < 1.12";
 
+BEGIN {
     # Set up DebugSQL if requested
     if ($ENV{DBO_TEST_SQL}) {
         diag "DBO_TEST_SQL=$ENV{DBO_TEST_SQL}";
@@ -72,9 +70,9 @@ BEGIN {
 
 our $dbd;
 our $dbd_name;
-(our $test_db = "DBO_${DBIx::DBO::VERSION}_test_db") =~ s/\W/_/g;
-(our $test_sch = "DBO_${DBIx::DBO::VERSION}_test_sch") =~ s/\W/_/g;
-(our $test_tbl = "DBO_${DBIx::DBO::VERSION}_test_tbl") =~ s/\W/_/g;
+our $test_db = "DBO_${DBIx::DBO::VERSION}_test_db" =~ s/\W/_/gr;
+our $test_sch = "DBO_${DBIx::DBO::VERSION}_test_sch" =~ s/\W/_/gr;
+our $test_tbl = "DBO_${DBIx::DBO::VERSION}_test_tbl" =~ s/\W/_/gr;
 our @_cleanup_sql;
 our $case_sensitivity_sql = 'SELECT ? LIKE ?';
 our %can;
@@ -98,7 +96,7 @@ sub import {
     unless (eval { DBIx::DBO::DBD->_require_dbd_class($dbd) }) {
         if ($@ =~ /^Can't locate ([\w\/]+)\.pm in \@INC /m) {
             # Module is not installed
-            ($_ = "$1 is required") =~ s'/'::'g;
+            $_ = "$1 is required" =~ s'/'::'gr;
         } elsif ($@ =~ /^([\w:]+ version [\d\.]+ required.*?) at /m) {
             # Module is not correct version
             ($_ = $1);
@@ -128,7 +126,7 @@ sub import {
     }
 
     # Query tests must produce the same result regardless of caching
-    DBIx::DBO->config(CacheQuery => defined $ENV{DBO_CACHE_QUERY} ? $ENV{DBO_CACHE_QUERY} : int rand 2);
+    DBIx::DBO->config(CacheQuery => $ENV{DBO_CACHE_QUERY} // int rand 2);
 
     if (exists $opt{try_connect}) {
         try_to_connect($opt{try_connect});
@@ -163,7 +161,7 @@ sub sql_err {
 
 sub connect_dbo {
     my($dsn, $user, $pass) = @_;
-    defined $dsn or $dsn = '';
+    $dsn //= '';
     DBIx::DBO->connect("DBI:$dbd:$dsn", $user, $pass, {HandleError => sub { note $_[0]; 1 }});
 }
 
@@ -717,7 +715,7 @@ sub Dump {
             $var = 'r';
         }
     }
-    $var = 'dump' unless defined $var;
+    $var //= 'dump';
     require Data::Dumper;
     local $Data::Dumper::Sortkeys = 1;
     local $Data::Dumper::Quotekeys = 0;

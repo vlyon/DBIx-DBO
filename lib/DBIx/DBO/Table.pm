@@ -1,6 +1,6 @@
 package DBIx::DBO::Table;
 
-use strict;
+use 5.014;
 use warnings;
 use Carp 'croak';
 
@@ -94,7 +94,7 @@ sub name {
 
 sub _from {
     my $me = shift;
-    defined $me->{_from} ? $me->{_from} : ($me->{_from} = $me->{DBO}{dbd_class}->_qi($me, @$me{qw(Schema Name)}));
+    $me->{_from} //= $me->{DBO}{dbd_class}->_qi($me, @$me{qw(Schema Name)});
 }
 
 =head3 C<columns>
