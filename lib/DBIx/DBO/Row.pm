@@ -71,8 +71,7 @@ sub _init {
     } elsif ($parent->isa('DBIx::DBO::Table')) {
         croak 'This table is from a different DBO connection' if $parent->{DBO} != $dbo;
         $$me->{build_data} = {
-            show => '*',
-            Showing => [],
+            select => [],
             from => $parent->_from,
             group => '',
             order => '',
@@ -87,7 +86,7 @@ sub _init {
 sub _copy_build_data {
     my $me = $_[0];
     # Store needed build_data
-    for my $f (qw(Showing From_Bind Quick_Where Where_Data Where_Bind group Group_Bind order Order_Bind)) {
+    for my $f (qw(select From_Bind Quick_Where Where_Data Where_Bind group Group_Bind order Order_Bind)) {
         $$me->{build_data}{$f} = $me->_copy($$me->{Parent}{build_data}{$f}) if exists $$me->{Parent}{build_data}{$f};
     }
 }
@@ -143,10 +142,10 @@ sub columns {
     return $$me->{Parent}->columns if exists $$me->{Parent};
 
     $$me->{Columns} //= [
-        @{$me->_build_data->{Showing}}
+        @{$me->_build_data->{select}}
         ? map {
                 _isa($_, 'DBIx::DBO::Table', 'DBIx::DBO::Query') ? ($_->columns) : $me->_build_col_val_name(@$_)
-            } @{$me->_build_data->{Showing}}
+            } @{$me->_build_data->{select}}
         : map { $_->columns } $me->tables
     ];
 
@@ -159,7 +158,7 @@ sub _column_idx {
     my($me, $col) = @_;
     my $idx = -1;
     my @show;
-    @show = @{$me->_build_data->{Showing}} or @show = $me->tables;
+    @show = @{$me->_build_data->{select}} or @show = $me->tables;
     for my $fld (@show) {
         if (_isa($fld, 'DBIx::DBO::Table')) {
             if ($col->[0] == $fld and exists $fld->{Column_Idx}{$col->[1]}) {
@@ -185,7 +184,7 @@ Returns a column reference from the name or alias.
 sub column {
     my($me, $col) = @_;
     my @show;
-    @show = @{$me->_build_data->{Showing}} or @show = $me->tables;
+    @show = @{$me->_build_data->{select}} or @show = $me->tables;
     for my $fld (@show) {
         return $$me->{Column}{$col} //= bless [$me, $col], 'DBIx::DBO::Column'
             if (_isa($fld, 'DBIx::DBO::Table') and exists $fld->{Column_Idx}{$col})
@@ -209,7 +208,7 @@ sub _inner_col {
 
 sub _check_alias {
     my($me, $col) = @_;
-    for my $fld (@{$me->_build_data->{Showing}}) {
+    for my $fld (@{$me->_build_data->{select}}) {
         return $$me->{Column}{$col} //= bless [$me, $col], 'DBIx::DBO::Column'
             if ref($fld) eq 'ARRAY' and exists $fld->[2]{AS} and $col eq $fld->[2]{AS};
     }

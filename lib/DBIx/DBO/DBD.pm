@@ -221,20 +221,17 @@ sub _build_table {
 sub _build_show {
     my($class, $me) = @_;
     my $h = $me->_build_data;
-    return $h->{show} if defined $h->{show};
     my $distinct = $h->{Show_Distinct} ? 'DISTINCT ' : '';
     undef @{$h->{Show_Bind}};
-    return $h->{show} = $distinct.'*' unless @{$h->{Showing}};
-    my @flds;
-    for my $fld (@{$h->{Showing}}) {
-        if (_isa($fld, 'DBIx::DBO::Table', 'DBIx::DBO::Query')) {
-            push @flds, $class->_qi($me, $me->_table_alias($fld) || $fld->{Name}).'.*';
-        } else {
-            $h->{_subqueries}{$fld->[0][0]} = $fld->[0][0]->sql if _isa($fld->[0][0], 'DBIx::DBO::Query');
-            push @flds, $class->_build_val($me, $h->{Show_Bind}, @$fld);
-        }
-    }
-    return $h->{show} = $distinct.join(', ', @flds);
+    return $distinct.'*' unless @{$h->{select}};
+
+    # Parse a list of columns & tables into fields
+    my @flds = map {
+        _isa($_, 'DBIx::DBO::Table', 'DBIx::DBO::Query')
+        ? $class->_qi($me, $me->_table_alias($_) || $_->{Name}).'.*'
+        : $class->_build_val($me, $h->{Show_Bind}, @$_)
+    } @{$h->{select}};
+    return $distinct.join(', ', @flds);
 }
 
 sub _build_from {
@@ -693,7 +690,7 @@ sub _build_data_matching_this_row {
     }
     my $bd = $me->_build_data;
     my %h = (
-        Showing => $bd->{Showing},
+        select => $bd->{select},
         from => exists $$me->{Parent} ? $class->_build_from($$me->{Parent}) : $bd->{from},
         Quick_Where => \@quick_where
     );

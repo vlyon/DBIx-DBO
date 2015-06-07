@@ -154,7 +154,6 @@ sub _from {
     local(
         $me->{build_data}{_from_alias},
         $me->{build_data}{from},
-        $me->{build_data}{show},
         $me->{build_data}{where},
         $me->{build_data}{orderby},
         $me->{build_data}{groupby},
@@ -173,10 +172,10 @@ sub columns {
     my($me) = @_;
 
     @{$me->{Columns}} = do {
-        if (@{$me->{build_data}{Showing}}) {
+        if (@{$me->{build_data}{select}}) {
             map {
                 _isa($_, 'DBIx::DBO::Table', 'DBIx::DBO::Query') ? ($_->columns) : $me->_build_col_val_name(@$_)
-            } @{$me->{build_data}{Showing}};
+            } @{$me->{build_data}{select}};
         } else {
             map { $_->columns } @{$me->{Tables}};
         }
@@ -218,7 +217,7 @@ The C<**> method is a shortcut for the C<column> method.
 sub column {
     my($me, $col) = @_;
     my @show;
-    @show = @{$me->{build_data}{Showing}} or @show = @{$me->{Tables}};
+    @show = @{$me->{build_data}{select}} or @show = @{$me->{Tables}};
     for my $fld (@show) {
         return $me->{Column}{$col} //= bless [$me, $col], 'DBIx::DBO::Column'
             if (_isa($fld, 'DBIx::DBO::Table') and exists $fld->{Column_Idx}{$col})
@@ -242,7 +241,7 @@ sub _inner_col {
 
 sub _check_alias {
     my($me, $col) = @_;
-    for my $fld (@{$me->{build_data}{Showing}}) {
+    for my $fld (@{$me->{build_data}{select}}) {
         return $me->{Column}{$col} //= bless [$me, $col], 'DBIx::DBO::Column'
             if ref($fld) eq 'ARRAY' and exists $fld->[2]{AS} and $col eq $fld->[2]{AS};
     }
@@ -269,19 +268,18 @@ sub show {
     my $me = shift;
     $me->_inactivate;
     undef $me->{build_data}{from};
-    undef $me->{build_data}{show};
-    undef @{$me->{build_data}{Showing}};
+    undef @{$me->{build_data}{select}};
     undef @{$me->{Columns}};
     for my $fld (@_) {
         if (_isa($fld, 'DBIx::DBO::Table', 'DBIx::DBO::Query')) {
             croak 'Invalid table to show' unless defined $me->_table_idx($fld);
-            push @{$me->{build_data}{Showing}}, $fld;
+            push @{$me->{build_data}{select}}, $fld;
             push @{$me->{Columns}}, $fld->columns;
             next;
         }
         # If the $fld is just a scalar use it as a column name not a value
         my @col = $me->{DBO}{dbd_class}->_parse_col_val($me, $fld, Aliases => 0);
-        push @{$me->{build_data}{Showing}}, \@col;
+        push @{$me->{build_data}{select}}, \@col;
         push @{$me->{Columns}}, $me->_build_col_val_name(@col);
     }
 }
@@ -297,7 +295,6 @@ Takes a boolean argument to add or remove the DISTINCT clause for the returned r
 sub distinct {
     my $me = shift;
     $me->_inactivate;
-    undef $me->{build_data}{show};
     my $distinct = $me->{build_data}{Show_Distinct};
     $me->{build_data}{Show_Distinct} = shift() ? 1 : undef if @_;
 }
@@ -344,7 +341,6 @@ sub join_table {
     push @{$me->{Join_Bracket_Refs}}, [];
     push @{$me->{Join_Brackets}}, [];
     undef $me->{build_data}{from};
-    undef $me->{build_data}{show};
     undef @{$me->{Columns}};
     return $tbl;
 }
@@ -979,15 +975,14 @@ Returns undefined if there is an error.
 sub count_rows {
     my $me = shift;
     local $me->{Config}{CalcFoundRows} = 0;
+    local $me->{build_data}{select} = [[[], 1]];
     my $old_sb = delete $me->{build_data}{Show_Bind};
-    $me->{build_data}{show} = '1';
 
     my $sql = 'SELECT COUNT(*) FROM ('.$me->{DBO}{dbd_class}->_build_sql_select($me).') t';
     my($count) = $me->{DBO}{dbd_class}->_selectrow_array($me, $sql, undef,
         $me->{DBO}{dbd_class}->_bind_params_select($me));
 
     $me->{build_data}{Show_Bind} = $old_sb if $old_sb;
-    undef $me->{build_data}{show};
     return $count;
 }
 
@@ -1070,12 +1065,11 @@ sub _search_where_chunk {
 
 sub sql {
     my $me = shift;
-    for my $fld (@{$me->{build_data}{Showing}}) {
+    for my $fld (@{$me->{build_data}{select}}) {
         if (ref $fld eq 'ARRAY' and @{$fld->[0]} == 1 and _isa($fld->[0][0], 'DBIx::DBO::Query')) {
             my $sq = $fld->[0][0];
             if ($sq->sql ne ($me->{build_data}{_subqueries}{$sq} ||= '')) {
                 undef $me->{sql};
-                undef $me->{build_data}{show};
             }
         }
     }
