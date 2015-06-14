@@ -212,7 +212,7 @@ sub _bind_params_delete {
 
 sub _build_table {
     my($class, $me, $t) = @_;
-    my $from = $t->_from($me->{build_data});
+    my $from = $t->_as_table($me->{build_data});
     my $alias = $me->_table_alias($t);
     $alias = defined $alias ? ' '.$class->_qi($me, $alias) : '';
     return $from.$alias;
@@ -237,16 +237,19 @@ sub _build_show {
 sub _build_from {
     my($class, $me) = @_;
     my $h = $me->_build_data;
-    return $h->{from} if defined $h->{from};
+
+    # Row objects have cached the SQL and bind values
+    return $h->{from_sql} if exists $h->{from_sql};
+
     undef @{$h->{From_Bind}};
     my @tables = $me->tables;
-    $h->{from} = $class->_build_table($me, $tables[0]);
+    my $from = $class->_build_table($me, $tables[0]);
     for (my $i = 1; $i < @tables; $i++) {
-        $h->{from} .= $h->{Join}[$i].$class->_build_table($me, $tables[$i]);
-        $h->{from} .= ' ON '.join(' AND ', $class->_build_where_chunk($me, $h->{From_Bind}, 'OR', $h->{Join_On}[$i]))
+        $from .= $h->{Join}[$i].$class->_build_table($me, $tables[$i]);
+        $from .= ' ON '.join(' AND ', $class->_build_where_chunk($me, $h->{From_Bind}, 'OR', $h->{Join_On}[$i]))
             if $h->{Join_On}[$i];
     }
-    return $h->{from};
+    return $from;
 }
 
 sub _parse_col_val {
@@ -367,7 +370,7 @@ sub _build_val {
         } elsif (ref $_ eq 'SCALAR') {
             $$_;
         } elsif (_isa($_, 'DBIx::DBO::Query')) {
-            $_->_from($me->{build_data});
+            $_->_as_table($me->{build_data});
         } else {
             croak 'Invalid field: '.$_;
         }
@@ -686,7 +689,7 @@ sub _build_data_matching_this_row {
     my $bd = $me->_build_data;
     my %h = (
         select => $bd->{select},
-        from => exists $$me->{Parent} ? $class->_build_from($$me->{Parent}) : $bd->{from},
+        from_sql => exists $$me->{Parent} ? $class->_build_from($$me->{Parent}) : $bd->{from_sql},
         Quick_Where => \@quick_where
     );
     $h{From_Bind} = $bd->{From_Bind} if exists $bd->{From_Bind};

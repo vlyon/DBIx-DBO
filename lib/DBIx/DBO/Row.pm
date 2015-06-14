@@ -72,7 +72,7 @@ sub _init {
         croak 'This table is from a different DBO connection' if $parent->{DBO} != $dbo;
         $$me->{build_data} = {
             select => [],
-            from => $parent->_from,
+            from_sql => $parent->_as_table,
         };
         $$me->{Tables} = [ $parent ];
     } else {
@@ -294,7 +294,7 @@ sub _detach {
         }
         # Save config from Parent
         $$me->{Tables} = [ @{$$me->{Parent}{Tables}} ];
-        $$me->{build_data}{from} = $$me->{DBO}{dbd_class}->_build_from($$me->{Parent});
+        $$me->{build_data}{from_sql} = $$me->{DBO}{dbd_class}->_build_from($$me->{Parent});
         $me->_copy_build_data;
         if ($$me->{Parent}{Config} and %{$$me->{Parent}{Config}}) {
             $$me->{Config} = { %{$$me->{Parent}{Config}}, $$me->{Config} ? %{$$me->{Config}} : () };

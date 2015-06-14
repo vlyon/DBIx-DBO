@@ -148,13 +148,10 @@ sub _table_alias {
     return $_from_alias->{$tbl} //= 't'.scalar(keys %$_from_alias);
 }
 
-sub _from {
+sub _as_table {
     my($me, $parent_build_data) = @_;
     $parent_build_data->{_subqueries}{$me} = $me->sql;
-    local(
-        $me->{build_data}{_from_alias},
-        $me->{build_data}{from},
-    ) = ($parent_build_data->{_from_alias});
+    local $me->{build_data}{_from_alias} = $parent_build_data->{_from_alias};
     return '('.$me->{DBO}{dbd_class}->_build_sql_select($me).')';
 }
 
@@ -192,7 +189,7 @@ sub _build_col_val_name {
         } elsif (ref $_ eq 'SCALAR') {
             $$_;
         } elsif (_isa($_, 'DBIx::DBO::Query')) {
-            $_->_from($me->{build_data});
+            $_->_as_table($me->{build_data});
         }
     } @$fld;
     return $ary[0] unless defined $func;
@@ -263,7 +260,6 @@ You can also add a subquery by passing that Query as the value with an alias, Eg
 sub show {
     my $me = shift;
     $me->_inactivate;
-    undef $me->{build_data}{from};
     undef @{$me->{build_data}{select}};
     undef @{$me->{Columns}};
     for my $fld (@_) {
@@ -336,7 +332,6 @@ sub join_table {
     push @{$me->{build_data}{Join_On}}, undef;
     push @{$me->{Join_Bracket_Refs}}, [];
     push @{$me->{Join_Brackets}}, [];
-    undef $me->{build_data}{from};
     undef @{$me->{Columns}};
     return $tbl;
 }
@@ -365,7 +360,6 @@ sub join_on {
 
     # Force a new search
     $me->_inactivate;
-    undef $me->{build_data}{from};
 
     # Find the current Join_On reference
     my $ref = $me->{build_data}{Join_On}[$i] ||= [];
@@ -1067,7 +1061,6 @@ sub sql {
         if (_isa($sq, 'DBIx::DBO::Query')) {
             if ($sq->sql ne ($me->{build_data}{_subqueries}{$sq} ||= '')) {
                 undef $me->{sql};
-                undef $me->{build_data}{from};
             }
         }
     }
@@ -1076,7 +1069,6 @@ sub sql {
             my $sq = $w->[0];
             if ($sq->sql ne ($me->{build_data}{_subqueries}{$sq} ||= '')) {
                 undef $me->{sql};
-                undef $me->{build_data}{from};
             }
         }
     }
