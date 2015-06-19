@@ -51,6 +51,9 @@ isa_ok $dbo, 'DBIx::DBO', '$dbo';
 
 $Test::DBO::can{truncate} = 1;
 
+# Quiet postgres warnings
+$SIG{__WARN__} = sub { (caller(1))[3] eq 'DBIx::DBO::DBD::_do' ? note @_ : warn @_ };
+
 # Create the schema
 my $drop_sch;
 my $quoted_sch = $dbo->{dbd_class}->_qi($dbo, $Test::DBO::test_sch);
