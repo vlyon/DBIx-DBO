@@ -1165,8 +1165,8 @@ sub _empty_row {
         if (SvREFCNT(${$me->{Row}}) > 1) {
             $me->{Row}->_detach;
         } else {
-            undef ${$me->{Row}}{array};
-            ${$me->{Row}}{hash} = {};
+            undef ${$me->{Row}}->{array};
+            ${$me->{Row}}->{hash} = {};
         }
     }
 }

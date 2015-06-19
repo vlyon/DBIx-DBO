@@ -76,7 +76,7 @@ our $test_tbl = "DBO_${DBIx::DBO::VERSION}_test_tbl" =~ s/\W/_/gr;
 our @_cleanup_sql;
 our $case_sensitivity_sql = 'SELECT ? LIKE ?';
 our %can;
-our $test_count = 111;
+our $test_count = 112;
 
 sub import {
     (my $class, $dbd, $dbd_name, my %opt) = @_;
@@ -464,7 +464,8 @@ sub query_methods {
     $q->run or diag sql_err($q);
     is $q->fetch->{name}, 'John Doe', 'Method DBIx::DBO::Query->run';
     $q->finish;
-    is $q->fetch->{name}, 'John Doe', 'Method DBIx::DBO::Query->finish';
+    ok $q->{Row}->is_empty, 'Method DBIx::DBO::Query->finish (Row is now empty)';
+    is $q->fetch->{name}, 'John Doe', 'Method DBIx::DBO::Query->finish (fetch returns the first Row)';
 
     # Count the number of rows
     1 while $q->fetch;
