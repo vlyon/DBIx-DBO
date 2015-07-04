@@ -76,7 +76,7 @@ our $test_tbl = "DBO_${DBIx::DBO::VERSION}_test_tbl" =~ s/\W/_/gr;
 our @_cleanup_sql;
 our $case_sensitivity_sql = 'SELECT ? LIKE ?';
 our %can;
-our $test_count = 112;
+our $test_count = 114;
 
 sub import {
     (my $class, $dbd, $dbd_name, my %opt) = @_;
@@ -430,7 +430,8 @@ sub query_methods {
     like $q->sql, qr/ ORDER BY .*id/, 'Method DBIx::DBO::Query->order_by';
 
     # Get a valid sth
-    isa_ok $q->_sth, 'DBI::st', '$q->_sth' or diag "SQL command failed: _sth\n  $q->{sql}\n".$q->rdbh->errstr;
+    ok $q->run, 'Method DBIx::DBO::Query->run' or diag sql_err($q);
+    isa_ok $q->{sth}, 'DBI::st', '$q->{sth}';
 
     # Get a Row object
     my $r = $q->row;
@@ -462,7 +463,7 @@ sub query_methods {
 
     # Re-run the query
     $q->run or diag sql_err($q);
-    is $q->fetch->{name}, 'John Doe', 'Method DBIx::DBO::Query->run';
+    is $q->fetch->{name}, 'John Doe', 'Method DBIx::DBO::Query->run (rerun)';
     $q->finish;
     ok $q->{Row}->is_empty, 'Method DBIx::DBO::Query->finish (Row is now empty)';
     is $q->fetch->{name}, 'John Doe', 'Method DBIx::DBO::Query->finish (fetch returns the first Row)';
@@ -517,6 +518,7 @@ sub query_methods {
 
     # Update & Load a Row with aliased columns
     $q->show($t, {COL => 'id', AS => 'key'});
+    $q->order_by({COL => 'id', ORDER => 'DESC' });
     $q->group_by;
     is_deeply [$q->columns], [qw(id name key)], 'Method DBIx::DBO::Query->columns (with aliases)';
     $r = $q->fetch;
@@ -527,6 +529,7 @@ sub query_methods {
     $q->show('id');
     $q->order_by('id');
     is join(' ', $r->columns), 'id name key', 'Method DBIx::DBO::Row->columns (unchanged by parent)';
+    is $r->{key}, 16, 'Alias returns correct value' or diag sql_err($r);
     ok $r->update(id => $r->{key}), 'Can update a Row despite using aliases' or diag sql_err($r);
     ok $r->load(id => 15), 'Can load a Row despite using aliases' or diag sql_err($r);
 
@@ -665,7 +668,7 @@ sub join_methods {
     $q->limit(1, 3);
 
     SKIP: {
-        $q->_sth or diag sql_err($q) or fail 'LEFT JOIN' or skip 'No Left Join', 3;
+        $q->run or diag sql_err($q) or fail 'LEFT JOIN' or skip 'No Left Join', 3;
         $r = $q->fetch or fail 'LEFT JOIN' or skip 'No Left Join', 3;
 
         is_deeply [@$r[0..3]], [14, 'James Bond', undef, undef], 'LEFT JOIN';
@@ -800,17 +803,16 @@ package # Hide from PAUSE
 @MySpongeDBI::ISA = ('DBI');
 @MySpongeDBI::db::ISA = ('DBI::db');
 @MySpongeDBI::st::ISA = ('DBI::st');
-my @cols;
+my $cols;
 my @rows;
 sub setup {
-    @cols = @{shift()};
-    @rows = @_;
+    ($cols, @rows) = @_;
 }
 sub prepare {
     my($dbh, $sql, $attr) = @_;
     $attr ||= {};
-    $attr->{NAME} ||= \@cols;
-    $attr->{rows} ||= \@rows;
+    $attr->{NAME} ||= $cols;
+    $attr->{rows} ||= [ @rows ];
     $dbh->SUPER::prepare($sql, $attr);
 }
 

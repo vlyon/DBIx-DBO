@@ -67,15 +67,10 @@ is_deeply $thawed, $r, 'Same Row (after fetch & detach)';
 freeze_thaw($q, '(after fetch)');
 { # Reset the active query
     local(@$q{qw(sth Row)});
-    local(@$q{qw(hash)}) unless exists $q->{cache};;
+    local(@$q{qw(hash)}) unless exists $q->{cache};
     local $q->{cache}{idx} = 0 if exists $q->{cache};
     is_deeply $thawed, $q, 'Same Query (after fetch)';
-
-    if ($thawed->config('CacheQuery')) {
-        is_deeply $thawed->fetch, $q->fetch, 'Same Row from $q->fetch';
-    } else {
-        is_deeply \@{$thawed->fetch}, [999,'end',0], 'Same Row from $q->fetch';
-    }
+    is_deeply $thawed->fetch, $q->fetch, 'Same Row from $q->fetch';
 }
 is ${$thawed->{Row}}->{Parent}, $thawed, 'Row has not detached';
 
