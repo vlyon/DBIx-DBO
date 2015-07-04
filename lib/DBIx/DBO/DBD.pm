@@ -548,6 +548,9 @@ sub _set_config {
 # Query methods
 sub _rows {
     my($class, $me) = @_;
+    if (exists $me->{cache}) {
+        return $me->{Row_Count} = @{ $me->{cache}{data} };
+    }
     $me->_sth and ($me->{sth}{Executed} or $me->run)
         or croak $me->rdbh->errstr;
     my $rows = $me->_sth->rows;
