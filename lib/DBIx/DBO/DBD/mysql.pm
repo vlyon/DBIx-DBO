@@ -55,7 +55,8 @@ sub _get_config {
 sub _calc_found_rows {
     my($class, $me) = @_;
     if ($me->sql =~ / SQL_CALC_FOUND_ROWS /) {
-        $me->run unless $me->_sth->{Executed};
+        $me->{sth} or $me->run
+            or croak $me->rdbh->errstr;
         return $me->{Found_Rows} = ($class->_selectrow_array($me, 'SELECT FOUND_ROWS()'))[0];
     }
     $class->SUPER::_calc_found_rows($me);

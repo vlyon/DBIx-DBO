@@ -551,9 +551,9 @@ sub _rows {
     if (exists $me->{cache}) {
         return $me->{Row_Count} = @{ $me->{cache}{data} };
     }
-    $me->_sth and ($me->{sth}{Executed} or $me->run)
+    $me->{sth} or $me->run
         or croak $me->rdbh->errstr;
-    my $rows = $me->_sth->rows;
+    my $rows = $me->{sth}->rows;
     $me->{Row_Count} = $rows == -1 ? undef : $rows;
 }
 

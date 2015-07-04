@@ -829,7 +829,7 @@ Returns a L<Row|DBIx::DBO::Row> object or undefined if there are no more rows.
 sub fetch {
     my $me = $_[0];
     # Prepare and/or execute the query if needed
-    $me->_sth and (exists $me->{cache} or $me->_sth->{Active} or $me->run)
+    exists $me->{cache} or ($me->{sth} and $me->{sth}{Active}) or $me->run
         or croak $me->rdbh->errstr;
     # Detach the old row if there is still another reference to it
     if (defined $me->{Row} and SvREFCNT(${$me->{Row}}) > 1) {
@@ -882,15 +882,18 @@ This is called automatically before fetching the first row.
 
 sub run {
     my $me = shift;
-    $me->sql; # Build the SQL and detach the Row if needed
+
     if (defined $me->{Row}) {
         undef ${$me->{Row}}->{array};
         ${$me->{Row}}->{hash} = {};
     }
 
-    delete $me->{Found_Rows};
+    undef $me->{Found_Rows};
 
-    my $rv = $me->_execute or return undef;
+    # Prepare and execute the statement
+    my $rv = $me->_execute
+        or return $me->_inactivate; # Don't leave a failed sth behind
+
     $me->_bind_cols_to_hash;
     if ($me->config('CacheQuery')) {
         $me->{cache}{data} = $me->{sth}->fetchall_arrayref;
@@ -903,9 +906,16 @@ sub run {
 
 sub _execute {
     my $me = shift;
-    $me->{DBO}{dbd_class}->_sql($me, $me->sql, $me->{DBO}{dbd_class}->_bind_params_select($me));
-    $me->_sth or return;
-    $me->{sth}->execute($me->{DBO}{dbd_class}->_bind_params_select($me));
+
+    if ($me->{sth}) {
+        $me->{DBO}{dbd_class}->_sql($me, $me->{sql}, @{ $me->{bind} });
+    } else {
+        $me->{sql} = $me->{DBO}{dbd_class}->_build_sql_select($me);
+        $me->{bind} = [ $me->{DBO}{dbd_class}->_bind_params_select($me) ];
+        $me->{DBO}{dbd_class}->_sql($me, $me->{sql}, @{ $me->{bind} });
+        $me->{sth} = $me->rdbh->prepare($me->{sql});
+    }
+    return $me->{sth} && $me->{sth}->execute(@{ $me->{bind} });
 }
 
 sub _bind_cols_to_hash {
@@ -1041,62 +1051,9 @@ sub _add_up_query {
     weaken $uq->[-1];
 }
 
-sub _search_where_chunk {
-    map {
-        ref $_->[0] eq 'ARRAY' ? _search_where_chunk(@$_) : ($_->[1], $_->[4])
-    } @_
-}
-
 sub sql {
     my $me = shift;
-    for my $fld (@{$me->{build_data}{select}}) {
-        if (ref $fld eq 'ARRAY' and @{$fld->[0]} == 1 and _isa($fld->[0][0], 'DBIx::DBO::Query')) {
-            my $sq = $fld->[0][0];
-            if ($sq->sql ne ($me->{build_data}{_subqueries}{$sq} ||= '')) {
-                undef $me->{sql};
-            }
-        }
-    }
-    for my $sq (@{$me->{Tables}}) {
-        if (_isa($sq, 'DBIx::DBO::Query')) {
-            if ($sq->sql ne ($me->{build_data}{_subqueries}{$sq} ||= '')) {
-                undef $me->{sql};
-            }
-        }
-    }
-    for my $w (map { $_ ? _search_where_chunk(@$_) : () } @{$me->{build_data}{Join_On}}) {
-        if (@$w == 1 and _isa($w->[0], 'DBIx::DBO::Query')) {
-            my $sq = $w->[0];
-            if ($sq->sql ne ($me->{build_data}{_subqueries}{$sq} ||= '')) {
-                undef $me->{sql};
-            }
-        }
-    }
-    for my $w (_search_where_chunk(@{$me->{build_data}{where}})) {
-        if (@$w == 1 and _isa($w->[0], 'DBIx::DBO::Query')) {
-            my $sq = $w->[0];
-            if ($sq->sql ne ($me->{build_data}{_subqueries}{$sq} ||= '')) {
-                undef $me->{sql};
-            }
-        }
-    }
-    $me->{sql} || $me->_build_sql;
-}
-
-sub _build_sql {
-    my $me = shift;
-
-    $me->_inactivate;
-    $me->{sql} = $me->{DBO}{dbd_class}->_build_sql_select($me);
-}
-
-# Get the DBI statement handle for the query.
-# It may not have been executed yet.
-sub _sth {
-    my $me = shift;
-    # Ensure the sql is rebuilt if needed
-    my $sql = $me->sql;
-    $me->{sth} ||= $me->rdbh->prepare($sql);
+    return $me->{DBO}{dbd_class}->_build_sql_select($me);
 }
 
 sub _inactivate {
@@ -1110,6 +1067,7 @@ sub _inactivate {
     delete $me->{cache};
     undef $me->{sth};
     undef $me->{sql};
+    undef $me->{bind};
     undef $me->{hash};
     undef $me->{Row_Count};
     undef $me->{Found_Rows};
@@ -1135,8 +1093,6 @@ sub finish {
     } else {
         $me->{sth}->finish if $me->{sth} and $me->{sth}{Active};
     }
-    # Ensure the sql will be rebuilt
-    undef $me->{sql};
 }
 
 sub _empty_row {

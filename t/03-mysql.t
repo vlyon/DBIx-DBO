@@ -55,7 +55,6 @@ my $q = Test::DBO::query_methods($dbo, $t);
 $q->limit(2);
 unlike $q->sql, qr/ SQL_CALC_FOUND_ROWS /, "Don't use SQL_CALC_FOUND_ROWS by default in MySQL";
 $q->config(CalcFoundRows => 1);
-$q->finish;
 like $q->sql, qr/ SQL_CALC_FOUND_ROWS /, 'Use SQL_CALC_FOUND_ROWS in MySQL';
 $q->found_rows;
 is $q->config('LastSQL')->[1], 'SELECT FOUND_ROWS()', 'Use FOUND_ROWS() in MySQL';
