@@ -882,7 +882,7 @@ sub fetch {
         }
     }
     $$row->{hash} = {};
-    return;
+    return undef;
 }
 
 =head3 C<row>
