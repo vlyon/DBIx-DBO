@@ -63,9 +63,13 @@ sub _init {
     $$me->{build_data}{LimitOffset} = [1];
     if ($parent->isa('DBIx::DBO::Query')) {
         croak 'This query is from a different DBO connection' if $parent->{DBO} != $dbo;
-        $$me->{Parent} = $parent;
         # We must weaken this to avoid a circular reference
+        $$me->{Parent} = $parent;
         weaken $$me->{Parent};
+        # Add a weak ref onto the list of attached_rows to release freed rows
+        push @{ $$me->{Parent}{attached_rows} }, $me;
+        weaken $$me->{Parent}{attached_rows}[-1];
+
         $parent->columns;
         $$me->{Tables} = [ @{$parent->{Tables}} ];
         $$me->{build_data}{from} = $dbo->{dbd_class}->_build_from($parent);
@@ -292,7 +296,9 @@ sub _detach {
     if (exists $$me->{Parent}) {
         $$me->{array} = [ @$me ];
         $$me->{hash} = { %$me };
-        undef $$me->{Parent}{Row};
+        for ($$me->{Parent}{Row}, @{ $$me->{Parent}{attached_rows} }) {
+            undef $_ if defined $_ and $_ == $me;
+        }
         # Save config from Parent
         if ($$me->{Parent}{Config} and %{$$me->{Parent}{Config}}) {
             $$me->{Config} = { %{$$me->{Parent}{Config}}, $$me->{Config} ? %{$$me->{Config}} : () };
@@ -410,18 +416,8 @@ sub config {
 if (eval { Storable->VERSION(2.38) }) {
     *STORABLE_freeze = sub {
         my($me, $cloning) = @_;
-        return unless exists $$me->{Parent};
-
-        # Simulate detached row
-        my $parent = delete $$me->{Parent};
-
-        # Save config from Parent
-        local $$me->{Config} = { %{$parent->{Config}}, $$me->{Config} ? %{$$me->{Config}} : () }
-            if $parent->{Config} and %{$parent->{Config}};
-
-        my $frozen = Storable::nfreeze($me);
-        $$me->{Parent} = $parent;
-        return $frozen;
+        $me->_detach;
+        return;
     };
 
     *STORABLE_thaw = sub {

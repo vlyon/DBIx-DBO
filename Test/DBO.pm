@@ -76,7 +76,7 @@ our $test_tbl = "DBO_${DBIx::DBO::VERSION}_test_tbl" =~ s/\W/_/gr;
 our @_cleanup_sql;
 our $case_sensitivity_sql = 'SELECT ? LIKE ?';
 our %can;
-our $test_count = 114;
+our $test_count = 115;
 
 sub import {
     (my $class, $dbd, $dbd_name, my %opt) = @_;
@@ -436,12 +436,18 @@ sub query_methods {
     # Get a Row object
     my $r = $q->row;
     isa_ok $r, 'DBIx::DBO::Row', '$q->row';
-    my $r_str = "$r";
+    undef $q;
+    ok !exists $$r->{Parent}, 'Row detaches when the parent query is destroyed';
+
+    # Get another attached Row
+    $q = $dbo->query($t);
+    $r = $q->row;
 
     $q->config(Testing => 123);
     is $r->config('Testing'), 123, 'Row gets config from parent Query';
 
     # Alter the SQL to ensure the row is detached and rebuilt
+    my $r_str = "$r";
     $q->order_by('id');
     $r = $q->row;
     isnt $r_str, "$r", 'Row rebuilds SQL and detaches when a ref still exists';

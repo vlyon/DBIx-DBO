@@ -1217,6 +1217,7 @@ sub STORABLE_freeze {
 
     local $me->{sth};
     local $me->{Row};
+    local $me->{attached_rows};
     local $me->{hash} unless exists $me->{cache};
     local $me->{cache}{idx} = 0 if exists $me->{cache};
     return Storable::nfreeze($me);
@@ -1228,6 +1229,12 @@ sub STORABLE_thaw {
 }
 
 sub DESTROY {
+    # Detach any attached Rows
+    if (my $attached_rows = delete $_[0]->{attached_rows} and ${^GLOBAL_PHASE} ne 'DESTRUCT') {
+        for my $row (@$attached_rows) {
+            $row->_detach if defined $row;
+        }
+    }
     undef %{$_[0]};
 }
 
