@@ -680,19 +680,20 @@ sub _build_data_matching_this_row {
     my($class, $me) = @_;
     # Identify the row by the PrimaryKeys if any, otherwise by all Columns
     my @quick_where;
-    for my $tbl (@{$$me->{Tables}}) {
+    for my $tbl ($me->tables) {
         for my $col (map $tbl ** $_, @{$tbl->{ @{$tbl->{PrimaryKeys}} ? 'PrimaryKeys' : 'Columns' }}) {
             my $i = $me->_column_idx($col);
             defined $i or croak 'The '.$class->_qi($me, $tbl->{Name}, $col->[1]).' field needed to identify this row, was not included in this query';
             push @quick_where, $col => $$me->{array}[$i];
         }
     }
+    my $bd = $me->_build_data;
     my %h = (
-        Showing => $$me->{build_data}{Showing},
-        from => $$me->{build_data}{from},
+        Showing => $bd->{Showing},
+        from => exists $$me->{Parent} ? $class->_build_from($$me->{Parent}) : $bd->{from},
         Quick_Where => \@quick_where
     );
-    $h{From_Bind} = $$me->{build_data}{From_Bind} if exists $$me->{build_data}{From_Bind};
+    $h{From_Bind} = $bd->{From_Bind} if exists $bd->{From_Bind};
     return \%h;
 }
 

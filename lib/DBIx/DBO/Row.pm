@@ -60,7 +60,6 @@ sub _init {
     my $me = bless \{ DBO => $dbo, array => undef, hash => {} }, $class;
     $parent = $me->_table_class->new($dbo, $parent) unless blessed $parent;
 
-    $$me->{build_data}{LimitOffset} = [1];
     if ($parent->isa('DBIx::DBO::Query')) {
         croak 'This query is from a different DBO connection' if $parent->{DBO} != $dbo;
         # We must weaken this to avoid a circular reference
@@ -69,11 +68,6 @@ sub _init {
         # Add a weak ref onto the list of attached_rows to release freed rows
         push @{ $$me->{Parent}{attached_rows} }, $me;
         weaken $$me->{Parent}{attached_rows}[-1];
-
-        $parent->columns;
-        $$me->{Tables} = [ @{$parent->{Tables}} ];
-        $$me->{build_data}{from} = $dbo->{dbd_class}->_build_from($parent);
-        $me->_copy_build_data;
     } elsif ($parent->isa('DBIx::DBO::Table')) {
         croak 'This table is from a different DBO connection' if $parent->{DBO} != $dbo;
         $$me->{build_data} = {
@@ -106,7 +100,7 @@ sub _copy {
 }
 
 sub _build_data {
-    ${$_[0]}->{build_data};
+    ${$_[0]}->{build_data} // ${$_[0]}->{Parent}{build_data};
 }
 
 =head3 C<tables>
@@ -116,15 +110,17 @@ Return a list of L<Table|DBIx::DBO::Table> objects for this row.
 =cut
 
 sub tables {
-    @{${$_[0]}->{Tables}};
+    my $me = $_[0];
+    return @{ ${exists $$me->{Parent} ? $$me->{Parent} : $$me}{Tables} };
 }
 
 sub _table_idx {
     my($me, $tbl) = @_;
-    for my $i (0 .. $#{$$me->{Tables}}) {
-        return $i if $tbl == $$me->{Tables}[$i];
+    my $tables = ${exists $$me->{Parent} ? $$me->{Parent} : $$me}{Tables};
+    for my $i (0 .. $#$tables) {
+        return $i if $tbl == $tables->[$i];
     }
-    return;
+    return undef;
 }
 
 sub _table_alias {
@@ -132,7 +128,7 @@ sub _table_alias {
     return undef if $tbl == $me;
     my $i = $me->_table_idx($tbl);
     croak 'The table is not in this query' unless defined $i;
-    @{$$me->{Tables}} > 1 ? 't'.($i + 1) : ();
+    return $me->tables > 1 ? 't'.($i + 1) : ();
 }
 
 =head3 C<columns>
@@ -144,14 +140,14 @@ Return a list of column names.
 sub columns {
     my($me) = @_;
 
-    return $$me->{Parent}->columns if $$me->{Parent};
+    return $$me->{Parent}->columns if exists $$me->{Parent};
 
     $$me->{Columns} ||= [
-        @{$$me->{build_data}{Showing}}
+        @{$me->_build_data->{Showing}}
         ? map {
                 _isa($_, 'DBIx::DBO::Table', 'DBIx::DBO::Query') ? ($_->columns) : $me->_build_col_val_name(@$_)
-            } @{$$me->{build_data}{Showing}}
-        : map { $_->columns } @{$$me->{Tables}}
+            } @{$me->_build_data->{Showing}}
+        : map { $_->columns } $me->tables
     ];
 
     @{$$me->{Columns}};
@@ -162,18 +158,20 @@ sub columns {
 sub _column_idx {
     my($me, $col) = @_;
     my $idx = -1;
-    for my $shown (@{$$me->{build_data}{Showing}} ? @{$$me->{build_data}{Showing}} : @{$$me->{Tables}}) {
-        if (_isa($shown, 'DBIx::DBO::Table')) {
-            if ($col->[0] == $shown and exists $shown->{Column_Idx}{$col->[1]}) {
-                return $idx + $shown->{Column_Idx}{$col->[1]};
+    my @show;
+    @show = @{$me->_build_data->{Showing}} or @show = $me->tables;
+    for my $fld (@show) {
+        if (_isa($fld, 'DBIx::DBO::Table')) {
+            if ($col->[0] == $fld and exists $fld->{Column_Idx}{$col->[1]}) {
+                return $idx + $fld->{Column_Idx}{$col->[1]};
             }
-            $idx += keys %{$shown->{Column_Idx}};
+            $idx += keys %{$fld->{Column_Idx}};
             next;
         }
         $idx++;
-        return $idx if not defined $shown->[1] and @{$shown->[0]} == 1 and $col == $shown->[0][0];
+        return $idx if not defined $fld->[1] and @{$fld->[0]} == 1 and $col == $fld->[0][0];
     }
-    return;
+    return undef;
 }
 
 =head3 C<column>
@@ -187,7 +185,7 @@ Returns a column reference from the name or alias.
 sub column {
     my($me, $col) = @_;
     my @show;
-    @show = @{$$me->{build_data}{Showing}} or @show = @{$$me->{Tables}};
+    @show = @{$me->_build_data->{Showing}} or @show = $me->tables;
     for my $fld (@show) {
         return $$me->{Column}{$col} ||= bless [$me, $col], 'DBIx::DBO::Column'
             if (_isa($fld, 'DBIx::DBO::Table') and exists $fld->{Column_Idx}{$col})
@@ -211,7 +209,7 @@ sub _inner_col {
 
 sub _check_alias {
     my($me, $col) = @_;
-    for my $fld (@{$$me->{build_data}{Showing}}) {
+    for my $fld (@{$me->_build_data->{Showing}}) {
         return $$me->{Column}{$col} ||= bless [$me, $col], 'DBIx::DBO::Column'
             if ref($fld) eq 'ARRAY' and exists $fld->[2]{AS} and $col eq $fld->[2]{AS};
     }
@@ -300,6 +298,9 @@ sub _detach {
             undef $_ if defined $_ and $_ == $me;
         }
         # Save config from Parent
+        $$me->{Tables} = [ @{$$me->{Parent}{Tables}} ];
+        $$me->{build_data}{from} = $$me->{DBO}{dbd_class}->_build_from($$me->{Parent});
+        $me->_copy_build_data;
         if ($$me->{Parent}{Config} and %{$$me->{Parent}{Config}}) {
             $$me->{Config} = { %{$$me->{Parent}{Config}}, $$me->{Config} ? %{$$me->{Config}} : () };
         }

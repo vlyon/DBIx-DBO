@@ -1095,24 +1095,19 @@ sub sql {
 
 sub _build_sql {
     my $me = shift;
-    undef $me->{sth};
-    undef $me->{hash};
-    undef $me->{Row_Count};
-    undef $me->{Found_Rows};
-    delete $me->{cache};
     if (defined $me->{Row}) {
         if (SvREFCNT(${$me->{Row}}) > 1) {
             $me->{Row}->_detach;
         } else {
             undef ${$me->{Row}}->{array};
             undef %{$me->{Row}};
-
-            $me->{sql} = $me->{DBO}{dbd_class}->_build_sql_select($me, $me->{build_data});
-            $me->{Row}{from} = $me->{DBO}{dbd_class}->_build_from($me, $me->{build_data});
-            $me->{Row}->_copy_build_data;
-            return $me->{sql};
         }
     }
+    undef $me->{sth};
+    undef $me->{hash};
+    undef $me->{Row_Count};
+    undef $me->{Found_Rows};
+    delete $me->{cache};
     undef @{$me->{Columns}};
 
     $me->{sql} = $me->{DBO}{dbd_class}->_build_sql_select($me);
