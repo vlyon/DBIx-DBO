@@ -267,7 +267,6 @@ You can also add a subquery by passing that Query as the value with an alias, Eg
 sub show {
     my $me = shift;
     $me->_inactivate;
-    undef $me->{sql};
     undef $me->{build_data}{from};
     undef $me->{build_data}{show};
     undef @{$me->{build_data}{Showing}};
@@ -297,7 +296,6 @@ Takes a boolean argument to add or remove the DISTINCT clause for the returned r
 sub distinct {
     my $me = shift;
     $me->_inactivate;
-    undef $me->{sql};
     undef $me->{build_data}{show};
     my $distinct = $me->{build_data}{Show_Distinct};
     $me->{build_data}{Show_Distinct} = shift() ? 1 : undef if @_;
@@ -343,7 +341,6 @@ sub join_table {
     push @{$me->{build_data}{Join_On}}, undef;
     push @{$me->{Join_Bracket_Refs}}, [];
     push @{$me->{Join_Brackets}}, [];
-    undef $me->{sql};
     undef $me->{build_data}{from};
     undef $me->{build_data}{show};
     undef @{$me->{Columns}};
@@ -374,7 +371,6 @@ sub join_on {
 
     # Force a new search
     $me->_inactivate;
-    undef $me->{sql};
     undef $me->{build_data}{from};
 
     # Find the current Join_On reference
@@ -481,7 +477,6 @@ sub where {
 
     # Force a new search
     $me->_inactivate;
-    undef $me->{sql};
     undef $me->{build_data}{where};
 
     # Find the current Where_Data reference
@@ -553,7 +548,6 @@ sub _del_where {
     }
     # This forces a new search
     $me->_inactivate;
-    undef $me->{sql};
     undef $me->{build_data}{lc $clause};
 }
 
@@ -677,7 +671,6 @@ To remove the GROUP BY clause simply call C<group_by> without any columns.
 sub group_by {
     my $me = shift;
     $me->_inactivate;
-    undef $me->{sql};
     undef $me->{build_data}{group};
     undef @{$me->{build_data}{GroupBy}};
     for my $col (@_) {
@@ -707,7 +700,6 @@ sub having {
 
     # Force a new search
     $me->_inactivate;
-    undef $me->{sql};
     undef $me->{build_data}{having};
 
     # Find the current Having_Data reference
@@ -746,7 +738,6 @@ To remove the ORDER BY clause simply call C<order_by> without any columns.
 sub order_by {
     my $me = shift;
     $me->_inactivate;
-    undef $me->{sql};
     undef $me->{build_data}{order};
     undef @{$me->{build_data}{OrderBy}};
     for my $col (@_) {
@@ -773,7 +764,6 @@ TODO: Implement the new "FIRST n / NEXT n" clause if connected to a 12c database
 sub limit {
     my($me, $rows, $offset) = @_;
     $me->_inactivate;
-    undef $me->{sql};
     undef $me->{build_data}{limit};
     return undef $me->{build_data}{LimitOffset} unless defined $rows;
     /^\d+$/ or croak "Invalid argument '$_' in limit" for grep defined, $rows, $offset;
@@ -1095,21 +1085,8 @@ sub sql {
 
 sub _build_sql {
     my $me = shift;
-    if (defined $me->{Row}) {
-        if (SvREFCNT(${$me->{Row}}) > 1) {
-            $me->{Row}->_detach;
-        } else {
-            undef ${$me->{Row}}->{array};
-            undef %{$me->{Row}};
-        }
-    }
-    undef $me->{sth};
-    undef $me->{hash};
-    undef $me->{Row_Count};
-    undef $me->{Found_Rows};
-    delete $me->{cache};
-    undef @{$me->{Columns}};
 
+    $me->_inactivate;
     $me->{sql} = $me->{DBO}{dbd_class}->_build_sql_select($me);
 }
 
@@ -1128,6 +1105,11 @@ sub _inactivate {
     # Reset the query
     delete $me->{cache};
     undef $me->{sth};
+    undef $me->{sql};
+    undef $me->{hash};
+    undef $me->{Row_Count};
+    undef $me->{Found_Rows};
+    undef @{$me->{Columns}};
 }
 
 =head3 C<finish>
