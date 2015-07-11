@@ -993,8 +993,7 @@ Returns undefined if there is an error or is unable to determine the number of f
 
 sub found_rows {
     my $me = shift;
-    $me->{DBO}{dbd_class}->_calc_found_rows($me) unless defined $me->{Found_Rows};
-    $me->{Found_Rows};
+    return $me->{Found_Rows} // $me->{DBO}{dbd_class}->_calc_found_rows($me);
 }
 
 =head3 C<update>

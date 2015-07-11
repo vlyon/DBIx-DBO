@@ -54,9 +54,12 @@ sub _get_config {
 # Query
 sub _calc_found_rows {
     my($class, $me) = @_;
-    if ($me->sql =~ / SQL_CALC_FOUND_ROWS /) {
-        $me->{sth} or $me->run
-            or croak $me->rdbh->errstr;
+
+    # If sth and sql =~ SQL_CALC_FOUND_ROWS, then SELECT FOUND_ROWS
+    # If no sth and CalcFoundRows, then run, and SELECT FOUND_ROWS
+    if ($me->{sth}
+        ? $me->{sql} =~ / SQL_CALC_FOUND_ROWS /
+        : ($me->config('CalcFoundRows') and $me->run or croak $me->rdbh->errstr)) {
         return $me->{Found_Rows} = ($class->_selectrow_array($me, 'SELECT FOUND_ROWS()'))[0];
     }
     $class->SUPER::_calc_found_rows($me);
@@ -64,9 +67,14 @@ sub _calc_found_rows {
 
 sub _build_sql_select {
     my($class, $me) = @_;
-    my $sql = $class->SUPER::_build_sql_select($me);
-    $sql =~ s/SELECT /SELECT SQL_CALC_FOUND_ROWS / if $me->config('CalcFoundRows');
-    return $sql;
+
+    if (my $cfg = $me->config('CalcFoundRows')) {
+        $me->config('CalcFoundRows', 0); # Don't modify subqueries
+        my $sql = $class->SUPER::_build_sql_select($me) =~ s/^SELECT /SELECT SQL_CALC_FOUND_ROWS /r;
+        $me->config('CalcFoundRows', $cfg);
+        return $sql;
+    }
+    return $class->SUPER::_build_sql_select($me);
 }
 
 # MySQL doesn't allow the use of aliases in the WHERE clause

@@ -22,7 +22,7 @@ if ($dbo->do("CREATE DATABASE $quoted_db")) {
     $quoted_db = $dbo->{dbd_class}->_qi($dbo, $Test::DBO::test_db);
 }
 
-plan tests => $Test::DBO::test_count + 7;
+plan tests => $Test::DBO::test_count + 8;
 
 # Create the DBO (3 tests)
 pass "Connect to MySQL $quoted_db database";
@@ -51,7 +51,7 @@ Test::DBO::advanced_table_methods($dbo, $t);
 Test::DBO::row_methods($dbo, $t);
 my $q = Test::DBO::query_methods($dbo, $t);
 
-# MySQL CalcFoundRows: (4 tests)
+# MySQL CalcFoundRows: (5 tests)
 $q->limit(2);
 unlike $q->sql, qr/ SQL_CALC_FOUND_ROWS /, "Don't use SQL_CALC_FOUND_ROWS by default in MySQL";
 $q->config(CalcFoundRows => 1);
@@ -61,6 +61,12 @@ is $q->config('LastSQL')->[1], 'SELECT FOUND_ROWS()', 'Use FOUND_ROWS() in MySQL
 $q->run;
 $q->found_rows;
 is $q->config('LastSQL')->[1], 'SELECT FOUND_ROWS()', 'Use FOUND_ROWS() in MySQL after every run';
+
+my $sq = $dbo->query($Test::DBO::test_tbl);
+$sq->show({FUNC => 'MAX(?)', COL => 'id'});
+$q->where($sq, '=', \7);
+ok $q->run, "Don't use SQL_CALC_FOUND_ROWS in subqueries" or diag sql_err($q);
+$q->unwhere;
 
 Test::DBO::advanced_query_methods($dbo, $t, $q);
 Test::DBO::join_methods($dbo, $t->{Name});
