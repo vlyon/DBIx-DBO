@@ -144,8 +144,8 @@ sub _table_alias {
     # Don't use aliases, when there's only 1 table unless its a subquery
     return undef if $me->tables == 1 and _isa($tbl, 'DBIx::DBO::Table');
 
-    my $_from_alias = $me->{build_data}{_from_alias} ||= {};
-    return $_from_alias->{$tbl} ||= 't'.scalar(keys %$_from_alias);
+    my $_from_alias = $me->{build_data}{_from_alias} //= {};
+    return $_from_alias->{$tbl} //= 't'.scalar(keys %$_from_alias);
 }
 
 sub _from {
@@ -220,7 +220,7 @@ sub column {
     my @show;
     @show = @{$me->{build_data}{Showing}} or @show = @{$me->{Tables}};
     for my $fld (@show) {
-        return $me->{Column}{$col} ||= bless [$me, $col], 'DBIx::DBO::Column'
+        return $me->{Column}{$col} //= bless [$me, $col], 'DBIx::DBO::Column'
             if (_isa($fld, 'DBIx::DBO::Table') and exists $fld->{Column_Idx}{$col})
             or (_isa($fld, 'DBIx::DBO::Query') and eval { $fld->column($col) })
             or (ref($fld) eq 'ARRAY' and exists $fld->[2]{AS} and $col eq $fld->[2]{AS});
@@ -243,7 +243,7 @@ sub _inner_col {
 sub _check_alias {
     my($me, $col) = @_;
     for my $fld (@{$me->{build_data}{Showing}}) {
-        return $me->{Column}{$col} ||= bless [$me, $col], 'DBIx::DBO::Column'
+        return $me->{Column}{$col} //= bless [$me, $col], 'DBIx::DBO::Column'
             if ref($fld) eq 'ARRAY' and exists $fld->[2]{AS} and $col eq $fld->[2]{AS};
     }
 }
@@ -888,7 +888,7 @@ Returns the L<Row|DBIx::DBO::Row> object for the current row from the query or a
 sub row {
     my $me = $_[0];
     $me->sql; # Build the SQL and detach the Row if needed
-    $me->{Row} ||= $me->_row_class->new($me->{DBO}, $me);
+    $me->{Row} //= $me->_row_class->new($me->{DBO}, $me);
 }
 
 =head3 C<run>
@@ -963,7 +963,6 @@ This uses the DBI C<rows> method which is unreliable in some situations (See L<D
 
 sub rows {
     my $me = shift;
-    $me->sql; # Ensure the Row_Count is cleared if needed
     $me->{DBO}{dbd_class}->_rows($me) unless defined $me->{Row_Count};
     $me->{Row_Count};
 }
@@ -1214,8 +1213,8 @@ See: L<DBIx::DBO/Available_config_options>.
 sub config {
     my $me = shift;
     my $opt = shift;
-    return $me->{DBO}{dbd_class}->_set_config($me->{Config} ||= {}, $opt, shift) if @_;
-    $me->{DBO}{dbd_class}->_get_config($opt, $me->{Config} ||= {}, $me->{DBO}{Config}, \%DBIx::DBO::Config);
+    return $me->{DBO}{dbd_class}->_set_config($me->{Config} //= {}, $opt, shift) if @_;
+    $me->{DBO}{dbd_class}->_get_config($opt, $me->{Config} //= {}, $me->{DBO}{Config}, \%DBIx::DBO::Config);
 }
 
 sub STORABLE_freeze {
@@ -1321,7 +1320,7 @@ Assume you want to create a C<Query> and C<Row> class for a "Users" table:
   sub new {
       my($class, $dbo, $parent) = @_;
       
-      $parent ||= My::Users->new($dbo); # The Row will use the same table as it's parent
+      $parent //= My::Users->new($dbo); # The Row will use the same table as it's parent
       
       $class->SUPER::new($dbo, $parent);
   }

@@ -122,7 +122,7 @@ sub column {
     croak 'Missing argument for column' unless defined $col;
     croak 'Invalid column '.$me->{DBO}{dbd_class}->_qi($me, $col).' in table '.$me->_from
         unless exists $me->{Column_Idx}{$col};
-    $me->{Column}{$col} ||= bless [$me, $col], 'DBIx::DBO::Column';
+    $me->{Column}{$col} //= bless [$me, $col], 'DBIx::DBO::Column';
 }
 *_inner_col = \&column;
 
@@ -367,8 +367,8 @@ See L<DBIx::DBO/Available_config_options>.
 sub config {
     my $me = shift;
     my $opt = shift;
-    return $me->{DBO}{dbd_class}->_set_config($me->{Config} ||= {}, $opt, shift) if @_;
-    $me->{DBO}{dbd_class}->_get_config($opt, $me->{Config} ||= {}, $me->{DBO}{Config}, \%DBIx::DBO::Config);
+    return $me->{DBO}{dbd_class}->_set_config($me->{Config} //= {}, $opt, shift) if @_;
+    $me->{DBO}{dbd_class}->_get_config($opt, $me->{Config} //= {}, $me->{DBO}{Config}, \%DBIx::DBO::Config);
 }
 
 sub DESTROY {

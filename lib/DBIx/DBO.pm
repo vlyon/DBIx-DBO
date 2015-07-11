@@ -137,14 +137,14 @@ sub new {
     if (defined $dbh) {
         croak 'Invalid read-write database handle' unless _isa($dbh, 'DBI::db');
         $new->{dbh} = $dbh;
-        $new->{dbd} ||= $dbh->{Driver}{Name};
+        $new->{dbd} //= $dbh->{Driver}{Name};
     }
     if (defined $rdbh) {
         croak 'Invalid read-only database handle' unless _isa($rdbh, 'DBI::db');
         croak 'The read-write and read-only connections must use the same DBI driver'
             if $dbh and $dbh->{Driver}{Name} ne $rdbh->{Driver}{Name};
         $new->{rdbh} = $rdbh;
-        $new->{dbd} ||= $rdbh->{Driver}{Name};
+        $new->{dbd} //= $rdbh->{Driver}{Name};
     }
     croak "Can't create the DBO, unknown database driver" unless $new->{dbd};
     $new->{dbd_class} = $me->_dbd_class->_require_dbd_class($new->{dbd});
@@ -488,11 +488,11 @@ sub config {
     my($me, $opt) = @_;
     if (@_ > 2) {
         return ref $me
-            ? $me->{dbd_class}->_set_config($me->{Config} ||= {}, $opt, $_[2])
+            ? $me->{dbd_class}->_set_config($me->{Config} //= {}, $opt, $_[2])
             : $me->_dbd_class->_set_config(\%Config, $opt, $_[2]);
     }
     return ref $me
-        ? $me->{dbd_class}->_get_config($opt, $me->{Config} ||= {}, \%Config)
+        ? $me->{dbd_class}->_get_config($opt, $me->{Config} //= {}, \%Config)
         : $me->_dbd_class->_get_config($opt, \%Config);
 }
 

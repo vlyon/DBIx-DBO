@@ -142,7 +142,7 @@ sub columns {
 
     return $$me->{Parent}->columns if exists $$me->{Parent};
 
-    $$me->{Columns} ||= [
+    $$me->{Columns} //= [
         @{$me->_build_data->{Showing}}
         ? map {
                 _isa($_, 'DBIx::DBO::Table', 'DBIx::DBO::Query') ? ($_->columns) : $me->_build_col_val_name(@$_)
@@ -187,7 +187,7 @@ sub column {
     my @show;
     @show = @{$me->_build_data->{Showing}} or @show = $me->tables;
     for my $fld (@show) {
-        return $$me->{Column}{$col} ||= bless [$me, $col], 'DBIx::DBO::Column'
+        return $$me->{Column}{$col} //= bless [$me, $col], 'DBIx::DBO::Column'
             if (_isa($fld, 'DBIx::DBO::Table') and exists $fld->{Column_Idx}{$col})
             or (_isa($fld, 'DBIx::DBO::Query') and eval { $fld->column($col) })
             or (ref($fld) eq 'ARRAY' and exists $fld->[2]{AS} and $col eq $fld->[2]{AS});
@@ -210,7 +210,7 @@ sub _inner_col {
 sub _check_alias {
     my($me, $col) = @_;
     for my $fld (@{$me->_build_data->{Showing}}) {
-        return $$me->{Column}{$col} ||= bless [$me, $col], 'DBIx::DBO::Column'
+        return $$me->{Column}{$col} //= bless [$me, $col], 'DBIx::DBO::Column'
             if ref($fld) eq 'ARRAY' and exists $fld->[2]{AS} and $col eq $fld->[2]{AS};
     }
 }
@@ -410,8 +410,8 @@ See L<DBIx::DBO/Available_config_options>.
 sub config {
     my $me = shift;
     my $opt = shift;
-    return $$me->{DBO}{dbd_class}->_set_config($$me->{Config} ||= {}, $opt, shift) if @_;
-    $$me->{DBO}{dbd_class}->_get_config($opt, $$me->{Config} ||= {}, defined $$me->{Parent} ? ($$me->{Parent}{Config}) : (), $$me->{DBO}{Config}, \%DBIx::DBO::Config);
+    return $$me->{DBO}{dbd_class}->_set_config($$me->{Config} //= {}, $opt, shift) if @_;
+    $$me->{DBO}{dbd_class}->_get_config($opt, $$me->{Config} //= {}, defined $$me->{Parent} ? ($$me->{Parent}{Config}) : (), $$me->{DBO}{Config}, \%DBIx::DBO::Config);
 }
 
 if (eval { Storable->VERSION(2.38) }) {
