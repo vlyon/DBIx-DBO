@@ -1,7 +1,7 @@
 use 5.014;
 use warnings;
 
-use Test::DBO Sponge => 'Sponge', tests => 18;
+use Test::DBO Sponge => 'Sponge', tests => 19;
 
 MySpongeDBI::db::setup([qw(sq_aa id name age id name age)], [1, 123, 'vlyon', 33, 123, 'vlyon', 33]);
 
@@ -96,4 +96,8 @@ isa_ok eval { $q ** 'id' }, 'DBIx::DBO::Column', q{$query ** 'id'};
 my $r;
 ok $r = $q->fetch, 'Fetch a Row';
 isa_ok eval { $r->column('id') }, 'DBIx::DBO::Column', q{$row->column('id')};
+
+# Changes to subqueries are picked up immediately
+$sq_aa->show(\2);
+is $q->{sth}, undef, 'Changes to the subquery inactivate the Query';
 

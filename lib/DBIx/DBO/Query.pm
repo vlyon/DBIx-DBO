@@ -1128,6 +1128,10 @@ sub _sth {
 sub _inactivate {
     my $me = shift;
     $me->_empty_row;
+    # Also inactivate super queries
+    if (exists $me->{up_queries}) {
+        defined $_ and $_->_inactivate for @{ $me->{up_queries} };
+    }
     # Reset the query
     delete $me->{cache};
     undef $me->{sth};
