@@ -5,6 +5,7 @@ use warnings;
 use Carp 'croak';
 use Devel::Peek 'SvREFCNT';
 use Hash::Util 'hv_store';
+use Scalar::Util 'weaken';
 
 use overload '**' => \&column, fallback => 1;
 
@@ -324,6 +325,7 @@ sub join_table {
     } elsif (_isa($tbl, 'DBIx::DBO::Query')) {
         # Subquery
         croak 'This table is from a different DBO connection' if $me->{DBO} != $tbl->{DBO};
+        $tbl->_add_up_query($me);
     } else {
         $tbl = $me->_table_class->new($me->{DBO}, $tbl);
     }
@@ -1033,18 +1035,42 @@ Returns the SQL statement string.
 
 =cut
 
+sub _recursion_check {
+    my($me, @upquery) = @_;
+
+    state @_recursion_check;
+    push @_recursion_check, $me;
+
+    for my $upquery (@upquery) {
+        if (grep $upquery eq $_, @_recursion_check) {
+            undef @_recursion_check;
+            croak 'Recursive subquery found';
+        }
+        exists $upquery->{up_queries}
+            and $upquery->_recursion_check(grep defined($_), @{ $upquery->{up_queries} });
+    }
+
+    pop @_recursion_check;
+}
+
+sub _add_up_query {
+    my($me, $upquery) = @_;
+
+    $me->_recursion_check($upquery);
+
+    my $uq = $me->{up_queries} //= [];
+    push @$uq, $upquery;
+    weaken $uq->[-1];
+}
+
 sub _search_where_chunk {
     map {
         ref $_->[0] eq 'ARRAY' ? _search_where_chunk(@$_) : ($_->[1], $_->[4])
     } @_
 }
 
-our @_RECURSIVE_SQ;
 sub sql {
     my $me = shift;
-    # Check for changes to subqueries and recursion
-    croak 'Recursive subquery found' if grep $me eq $_, @_RECURSIVE_SQ;
-    local @_RECURSIVE_SQ = (@_RECURSIVE_SQ, $me);
     for my $fld (@{$me->{build_data}{Showing}}) {
         if (ref $fld eq 'ARRAY' and @{$fld->[0]} == 1 and _isa($fld->[0][0], 'DBIx::DBO::Query')) {
             my $sq = $fld->[0][0];

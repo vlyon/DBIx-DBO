@@ -340,6 +340,10 @@ sub _parse_val {
     } elsif ($with != 1 and $c{Check} ne 'Auto') {
         croak 'Invalid '.($c{Check} eq 'Column' ? 'column' : 'field')." reference (passed $with params instead of 1)";
     }
+    # Check for subqueries
+    for my $subquery (grep _isa($_, 'DBIx::DBO::Query'), @fld) {
+        $subquery->_add_up_query($me);
+    }
     return (\@fld, $func, $opt);
 }
 

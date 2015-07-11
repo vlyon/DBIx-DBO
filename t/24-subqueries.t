@@ -35,28 +35,24 @@ $q->show({VAL => $sq_aa, AS => 'sq_aa'});
 $aa_sql = '(SELECT * FROM aa) AS sq_aa';
 is $q->sql, "SELECT $aa_sql FROM bb", 'Add a subquery to the SELECT clause';
 
+eval { $sq_aa->show({VAL => $q, AS => 'q'}) };
+like $@, qr/^Recursive subquery found /, 'Check for recursion';
+
 $sq_aa->show(\1);
 $aa_sql = '(SELECT 1 FROM aa) AS sq_aa';
 is $q->sql, "SELECT $aa_sql FROM bb", 'Changes to the subquery also change the Query';
-
-$sq_aa->show({VAL => $q, AS => 'q'});
-eval { $q->sql };
-like $@, qr/^Recursive subquery found /, 'Check for recursion';
-$sq_aa->show(\1);
 
 # WHERE clause subquery
 $q->where($sq_ff, '=', \7);
 $ff_sql = '(SELECT * FROM ff)';
 is $q->sql, "SELECT $aa_sql FROM bb WHERE $ff_sql = 7", 'Add a subquery to the WHERE clause';
 
+eval { $sq_ff->where($q, '=', \7) };
+like $@, qr/^Recursive subquery found /, 'Check for recursion';
+
 $sq_ff->show(\1);
 $ff_sql = '(SELECT 1 FROM ff)';
 is $q->sql, "SELECT $aa_sql FROM bb WHERE $ff_sql = 7", 'Changes to the subquery also change the Query';
-
-$sq_ff->where($q, '=', \7);
-eval { $q->sql };
-like $@, qr/^Recursive subquery found /, 'Check for recursion';
-$sq_ff->unwhere($q);
 
 # JOIN clause subquery
 $q->join_table($sq_cc, 'JOIN');
@@ -67,14 +63,8 @@ $sq_cc->show(\1);
 $cc_sql = '(SELECT 1 FROM cc) t2';
 is $q->sql, "SELECT $aa_sql FROM bb t1 JOIN $cc_sql WHERE $ff_sql = 7", 'Changes to the subquery also change the Query';
 
-$sq_cc->join_table($q);
-eval { $q->sql };
+eval { $sq_cc->join_table($q) };
 like $@, qr/^Recursive subquery found /, 'Check for recursion';
-pop @{$sq_cc->{Tables}};
-pop @{$sq_cc->{build_data}{Join}};
-pop @{$sq_cc->{build_data}{Join_On}};
-pop @{$sq_cc->{Join_Bracket_Refs}};
-pop @{$sq_cc->{Join_Brackets}};
 
 # JOIN ON clause subquery
 $q->join_on($sq_cc, $sq_ee, '=', \3);
@@ -85,10 +75,8 @@ $sq_ee->show(\1);
 $ee_sql = '(SELECT 1 FROM ee)';
 is $q->sql, "SELECT $aa_sql FROM bb t1 JOIN $cc_sql ON $ee_sql = 3 WHERE $ff_sql = 7", 'Changes to the subquery also change the Query';
 
-$q->join_on($sq_cc, $q, '=', \3);
-eval { $q->sql };
+eval { $q->join_on($sq_cc, $q, '=', \3) };
 like $@, qr/^Recursive subquery found /, 'Check for recursion';
-pop @{$q->{build_data}{Join_On}[1]};
 
 # Add a join to a subquery
 $sq_cc->join_table($dd);
