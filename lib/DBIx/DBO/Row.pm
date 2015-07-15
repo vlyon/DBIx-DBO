@@ -413,12 +413,13 @@ if (eval { Storable->VERSION(2.38) }) {
     *STORABLE_freeze = sub {
         my($me, $cloning) = @_;
         $me->_detach;
-        return;
+        my $frozen = Storable::nfreeze($$me);
+        return $frozen;
     };
 
     *STORABLE_thaw = sub {
         my($me, $cloning, @frozen) = @_;
-        $$me = { %${ Storable::thaw(@frozen) } }; # Copy the hash, or Storable will wipe it out!
+        $$me = \%{ Storable::thaw(@frozen) }; # Copy the hash, or Storable will wipe it out
     };
 }
 
