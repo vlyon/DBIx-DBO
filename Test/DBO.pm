@@ -62,8 +62,8 @@ BEGIN {
         # Fix SvREFCNT with Devel::Cover
         package # Hide from PAUSE
             DBIx::DBO::Query;
-        *DBIx::DBO::Query::SvREFCNT = sub {
-            return Devel::Peek::SvREFCNT($_[0]) - 1;
+        *DBIx::DBO::Query::SvREFCNT = sub (\[$@%&*]) {
+            return Devel::Peek::SvREFCNT(${$_[0]}) - 3;
         } if exists $INC{'Devel/Cover.pm'};
     }
 }
@@ -459,7 +459,7 @@ sub query_methods {
     # Fetch the first row
     $r = $q->fetch;
     ok $r->isa('DBIx::DBO::Row'), 'Method DBIx::DBO::Query->fetch';
-    is $r_str, "$r", 'Re-use the same row object';
+    is "$r", $r_str, 'Re-use the same row object';
     is_deeply [$q->columns], [qw(id name)], 'Method DBIx::DBO::Query->columns (after fetch)';
 
     # Fetch another row
