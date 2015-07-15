@@ -6,16 +6,9 @@ package # hide from PAUSE
 use Carp qw(croak);
 
 sub _get_table_schema {
-    my($class, $me, $schema, $table) = @_;
+    my($class, $me, $table) = @_;
 
-    if (length $schema) {
-        my $q_schema = $me->rdbh->quote($schema) =~ s/([\\_%])/\\$1/gr;
-        my($got_schema) = $me->selectrow_array('SHOW DATABASES LIKE '.$q_schema);
-        croak 'Invalid table: '.$class->_qi($me, $schema, $table) unless defined $got_schema;
-        return $got_schema;
-    }
-
-    ($schema) = $me->selectrow_array('SELECT DATABASE()');
+    my($schema) = $me->selectrow_array('SELECT DATABASE()');
     croak 'Invalid table: '.$class->_qi($me, $table).' (No database selected)' unless defined $schema;
     return $schema;
 }

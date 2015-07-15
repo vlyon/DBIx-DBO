@@ -9,17 +9,14 @@ package # hide from PAUSE
 use Carp 'croak';
 
 sub _get_table_schema {
-    my($class, $me, $schema, $table) = @_;
+    my($class, $me, $table) = @_;
 
-    my $q_schema = $schema;
-    my $q_table = $table;
-    $q_schema =~ s/([\\_%])/\\$1/g if defined $q_schema;
-    $q_table =~ s/([\\_%])/\\$1/g;
+    my $q_table = $table =~ s/([\\_%])/\\$1/gr;
 
     # Try just these types
-    my $info = $me->rdbh->table_info(undef, $q_schema, $q_table,
+    my $info = $me->rdbh->table_info(undef, undef, $q_table,
         'TABLE,VIEW,GLOBAL TEMPORARY,LOCAL TEMPORARY,SYSTEM TABLE', {Escape => '\\'})->fetchall_arrayref;
-    croak 'Invalid table: '.$class->_qi($me, $schema, $table) unless $info and @$info == 1 and $info->[0][2] eq $table;
+    croak 'Invalid table: '.$class->_qi($me, $table) unless $info and @$info == 1 and $info->[0][2] eq $table;
     return $info->[0][1];
 }
 

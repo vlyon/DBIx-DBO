@@ -26,7 +26,7 @@ sub _get_table_schema {
 }
 
 sub _get_column_info {
-    my($class, $me, $schema, $table) = @_;
+    my($class, $me, $table) = @_;
     my $q_table = $table;
 
     unless (exists $me->rdbh->{dbm_tables}{$q_table}) {

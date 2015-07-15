@@ -358,7 +358,7 @@ sub table_info {
         ($schema, $table) = @$table{qw(Schema Name)};
     } else {
         ($schema, $table) = ref $table eq 'ARRAY' ? @$table : $me->{dbd_class}->_unquote_table($me, $table);
-        $schema //= $me->{dbd_class}->_get_table_schema($me, $schema, $table);
+        $schema //= $me->{dbd_class}->_get_table_schema($me, $table);
 
         $me->{dbd_class}->_get_table_info($me, $schema, $table)
             unless exists $me->{TableInfo}{$schema // ''}{$table};
