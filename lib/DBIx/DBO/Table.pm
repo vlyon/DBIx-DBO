@@ -2,6 +2,8 @@ package DBIx::DBO::Table;
 
 use 5.014;
 use warnings;
+use DBIx::DBO;
+
 use Carp 'croak';
 
 use overload '**' => \&column, fallback => 1;

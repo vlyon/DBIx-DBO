@@ -2,6 +2,8 @@ package DBIx::DBO::Query;
 
 use 5.014;
 use warnings;
+use DBIx::DBO;
+
 use Carp 'croak';
 use Devel::Peek 'SvREFCNT';
 use Hash::Util 'hv_store';
@@ -9,8 +11,8 @@ use Scalar::Util 'weaken';
 
 use overload '**' => \&column, fallback => 1;
 
-sub _table_class { $_[0]{DBO}->_table_class }
-sub _row_class { $_[0]{DBO}->_row_class }
+sub table_class { $_[0]{DBO}->table_class }
+sub row_class { $_[0]{DBO}->row_class }
 
 *_isa = \&DBIx::DBO::DBD::_isa;
 
@@ -316,7 +318,7 @@ sub join_table {
         croak 'This table is from a different DBO connection' if $me->{DBO} != $tbl->{DBO};
         $tbl->_add_up_query($me);
     } else {
-        $tbl = $me->_table_class->new($me->{DBO}, $tbl);
+        $tbl = $me->table_class->new($me->{DBO}, $tbl);
     }
     $me->_inactivate;
     if (defined $type) {
@@ -868,7 +870,7 @@ Returns the L<Row|DBIx::DBO::Row> object for the current row from the query or a
 sub row {
     my $me = $_[0];
     $me->sql; # Build the SQL and detach the Row if needed
-    $me->{Row} //= $me->_row_class->new($me->{DBO}, $me);
+    $me->{Row} //= $me->row_class->new($me->{DBO}, $me);
 }
 
 =head3 C<run>
@@ -1228,7 +1230,9 @@ Classes can easily be created for tables in your database.
 Assume you want to create a C<Query> and C<Row> class for a "Users" table:
 
   package My::Users;
-  our @ISA = qw(DBIx::DBO::Query);
+  use parent 'DBIx::DBO::Query';
+  
+  sub row_class { 'My::User' }
   
   sub new {
       my($class, $dbo) = @_;
@@ -1236,24 +1240,20 @@ Assume you want to create a C<Query> and C<Row> class for a "Users" table:
       # Create the Query for the "Users" table
       my $self = $class->SUPER::new($dbo, 'Users');
       
-      # We could even add some JOINs or other clauses here ...
+      # ... add JOINs, WHEREs or other clauses here ...
       
       return $self;
   }
-  
-  sub _row_class { 'My::User' } # Rows are blessed into this class
 
 
   package My::User;
-  our @ISA = qw(DBIx::DBO::Row);
+  use parent 'DBIx::DBO::Row';
   
-  sub new {
-      my($class, $dbo, $parent) = @_;
-      
-      $parent //= My::Users->new($dbo); # The Row will use the same table as it's parent
-      
-      $class->SUPER::new($dbo, $parent);
-  }
+  sub query_class { 'My::Users' }
+
+=head3 C<table_class>, C<row_class>
+
+The C<Table> and C<Row> objects created by this C<Query> will be blessed into the classes returned by these methods.
 
 =head1 SEE ALSO
 

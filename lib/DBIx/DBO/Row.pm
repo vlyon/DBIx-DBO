@@ -2,13 +2,15 @@ package DBIx::DBO::Row;
 
 use 5.014;
 use warnings;
+use DBIx::DBO;
+
 use Carp 'croak';
 use Scalar::Util qw(blessed weaken);
 use Storable ();
 
 use overload '@{}' => sub {${$_[0]}->{array} || []}, '%{}' => sub {${$_[0]}->{hash}}, fallback => 1;
 
-sub _query_class { ${$_[0]}->{DBO}->_query_class }
+sub query_class { ${$_[0]}->{DBO}->query_class }
 
 *_isa = \&DBIx::DBO::DBD::_isa;
 
@@ -59,7 +61,7 @@ sub _init {
     my $me = bless \{ DBO => $dbo, array => undef, hash => {} }, $class;
     my $parent = (@args == 1 and _isa($args[0], 'DBIx::DBO::Query'))
     ? $args[0]
-    : $me->_query_class->new($dbo, @args);
+    : $me->query_class->new($dbo, @args);
 
     if ($parent->isa('DBIx::DBO::Query')) {
         croak 'This query is from a different DBO connection' if $parent->{DBO} != $dbo;
@@ -426,13 +428,23 @@ Classes can easily be created for tables in your database.
 Assume you want to create a simple C<Row> class for a "Users" table:
 
   package My::User;
-  our @ISA = qw(DBIx::DBO::Row);
+  use parent 'DBIx::DBO::Row';
   
   sub new {
       my($class, $dbo) = @_;
       
-      $class->SUPER::new($dbo, 'Users'); # Create the Row for the "Users" table
+      return $class->SUPER::new($dbo, 'Users');
   }
+
+=head3 C<query_class>
+
+If you want this Row to belong to an existing Query class,
+just define the C<query_class> method to return the class name of the parent Query.
+
+  package My::User;
+  use parent 'DBIx::DBO::Row';
+  
+  sub query_class { 'My::Users' }
 
 =head1 SEE ALSO
 

@@ -20,10 +20,10 @@ use DBIx::DBO::Table;
 use DBIx::DBO::Query;
 use DBIx::DBO::Row;
 
-sub _dbd_class   { 'DBIx::DBO::DBD' }
-sub _table_class { 'DBIx::DBO::Table' }
-sub _query_class { 'DBIx::DBO::Query' }
-sub _row_class   { 'DBIx::DBO::Row' }
+sub dbd_class   { 'DBIx::DBO::DBD' }
+sub table_class { 'DBIx::DBO::Table' }
+sub query_class { 'DBIx::DBO::Query' }
+sub row_class   { 'DBIx::DBO::Row' }
 
 *_isa = \&DBIx::DBO::DBD::_isa;
 
@@ -147,7 +147,7 @@ sub new {
         $new->{dbd} //= $rdbh->{Driver}{Name};
     }
     croak "Can't create the DBO, unknown database driver" unless $new->{dbd};
-    $new->{dbd_class} = $me->_dbd_class->_require_dbd_class($new->{dbd});
+    $new->{dbd_class} = $me->dbd_class->_require_dbd_class($new->{dbd});
     $me->_init($new);
 }
 
@@ -257,7 +257,7 @@ Tables can be specified by their name or an arrayref of schema and table name or
 =cut
 
 sub table {
-    $_[0]->_table_class->new(@_);
+    $_[0]->table_class->new(@_);
 }
 
 =head3 C<query>
@@ -275,7 +275,7 @@ In list context, the C<Query> object and L<Table|DBIx::DBO::Table> objects will 
 =cut
 
 sub query {
-    $_[0]->_query_class->new(@_);
+    $_[0]->query_class->new(@_);
 }
 
 =head3 C<row>
@@ -287,7 +287,7 @@ Create and return a new L<Row|DBIx::DBO::Row> object.
 =cut
 
 sub row {
-    $_[0]->_row_class->new(@_);
+    $_[0]->row_class->new(@_);
 }
 
 =head3 C<selectrow_array>, C<selectrow_arrayref>, C<selectrow_hashref>, C<selectall_arrayref>
@@ -489,11 +489,11 @@ sub config {
     if (@_ > 2) {
         return ref $me
             ? $me->{dbd_class}->_set_config($me->{Config} //= {}, $opt, $_[2])
-            : $me->_dbd_class->_set_config(\%Config, $opt, $_[2]);
+            : $me->dbd_class->_set_config(\%Config, $opt, $_[2]);
     }
     return ref $me
         ? $me->{dbd_class}->_get_config($opt, $me->{Config} //= {}, \%Config)
-        : $me->_dbd_class->_get_config($opt, \%Config);
+        : $me->dbd_class->_get_config($opt, \%Config);
 }
 
 sub STORABLE_freeze {
@@ -570,16 +570,18 @@ C<DBIx::DBO> can be subclassed like any other object oriented module.
   our @ISA = qw(DBIx::DBO);
   ...
 
+=head3 C<table_class>, C<query_class>, C<row_class>
+
 The C<DBIx::DBO> object is used to create C<Table>, C<Query> and C<Row> objects.
-The classes these objects are blessed into are provided by C<_table_class>, C<_query_class> & C<_row_class> methods.
+The classes these objects are blessed into are provided by C<table_class>, C<query_class> & C<row_class> methods.
 So to subclass all the C<DBIx::DBO::*> objects, we need to provide our own class names via those methods.
 
   package MySubClass;
   our @ISA = qw(DBIx::DBO);
   
-  sub _table_class { 'MySubClass::Table' }
-  sub _query_class { 'MySubClass::Query' }
-  sub _row_class   { 'MySubClass::Row' }
+  sub table_class { 'MySubClass::Table' }
+  sub query_class { 'MySubClass::Query' }
+  sub row_class   { 'MySubClass::Row' }
   
   ...
 
@@ -590,11 +592,13 @@ So to subclass all the C<DBIx::DBO::*> objects, we need to provide our own class
 
 Now all new objects created will be blessed into these classes.
 
+=head3 C<dbd_class>
+
 This leaves only the C<DBIx::DBO::DBD> hidden class, which acts as a SQL engine.
 This class is also determined in the same way as other objects,
-so to subclass C<DBIx::DBO::DBD> add a C<_dbd_class> method to C<DBIx::DBO> with the new class name.
+so to subclass C<DBIx::DBO::DBD> add a C<dbd_class> method to C<DBIx::DBO> with the new class name.
 
-  sub _dbd_class { 'MySubClass::DBD' }
+  sub dbd_class { 'MySubClass::DBD' }
 
 Since databases differ slightly in their SQL, this class contains all the SQL specific calls for different DBDs.
 They are found in the class C<DBIx::DBO::DBD::xxx> where I<xxx> is the name of the driver for this DBI handle.
