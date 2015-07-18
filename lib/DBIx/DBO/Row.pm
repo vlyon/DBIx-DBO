@@ -8,7 +8,7 @@ use Storable ();
 
 use overload '@{}' => sub {${$_[0]}->{array} || []}, '%{}' => sub {${$_[0]}->{hash}}, fallback => 1;
 
-sub _table_class { ${$_[0]}->{DBO}->_table_class }
+sub _query_class { ${$_[0]}->{DBO}->_query_class }
 
 *_isa = \&DBIx::DBO::DBD::_isa;
 
@@ -42,7 +42,7 @@ DBIx::DBO::Row - An OO interface to SQL queries and results.  Encapsulates a fet
 
 Create and return a new C<Row> object.
 The object returned represents rows in the given table/query.
-Can take the same arguments as L<DBIx::DBO::Table/new> or a L<Query|DBIx::DBO::Query> object can be used.
+Can take the same arguments as L<DBIx::DBO::Query/new> or a L<Query|DBIx::DBO::Query> object can be used.
 
 =cut
 
@@ -54,11 +54,12 @@ sub new {
 }
 
 sub _init {
-    my($class, $dbo, $parent) = @_;
-    croak 'Missing parent for new Row' unless defined $parent;
+    my($class, $dbo, @args) = @_;
 
     my $me = bless \{ DBO => $dbo, array => undef, hash => {} }, $class;
-    $parent = $me->_table_class->new($dbo, $parent) unless blessed $parent;
+    my $parent = (@args == 1 and _isa($args[0], 'DBIx::DBO::Query'))
+    ? $args[0]
+    : $me->_query_class->new($dbo, @args);
 
     if ($parent->isa('DBIx::DBO::Query')) {
         croak 'This query is from a different DBO connection' if $parent->{DBO} != $dbo;
@@ -68,32 +69,10 @@ sub _init {
         # Add a weak ref onto the list of attached_rows to release freed rows
         push @{ $$me->{Parent}{attached_rows} }, $me;
         weaken $$me->{Parent}{attached_rows}[-1];
-    } elsif ($parent->isa('DBIx::DBO::Table')) {
-        croak 'This table is from a different DBO connection' if $parent->{DBO} != $dbo;
-        $$me->{build_data} = {
-            select => [],
-            from_sql => $parent->_as_table,
-        };
-        $$me->{Tables} = [ $parent ];
     } else {
         croak 'Invalid parent for new Row';
     }
     return wantarray ? ($me, $me->tables) : $me;
-}
-
-sub _copy_build_data {
-    my $me = $_[0];
-    # Store needed build_data
-    for my $f (qw(select From_Bind where order group)) {
-        $$me->{build_data}{$f} = $me->_copy($$me->{Parent}{build_data}{$f}) if exists $$me->{Parent}{build_data}{$f};
-    }
-}
-
-sub _copy {
-    my($me, $val) = @_;
-    return bless [$me, $val->[1]], 'DBIx::DBO::Column'
-        if _isa($val, 'DBIx::DBO::Column') and $val->[0] == $$me->{Parent};
-    ref $val eq 'ARRAY' ? [map $me->_copy($_), @$val] : ref $val eq 'HASH' ? {map $me->_copy($_), %$val} : $val;
 }
 
 sub _build_data {
@@ -287,20 +266,30 @@ sub _load {
 sub _detach {
     my $me = $_[0];
     if (exists $$me->{Parent}) {
-        $$me->{array} = [ @$me ];
-        $$me->{hash} = { %$me };
+        $$me->{array} &&= \@{ $$me->{array} };
+        $$me->{hash} = \%{ $$me->{hash} };
         for ($$me->{Parent}{Row}, @{ $$me->{Parent}{attached_rows} }) {
             undef $_ if defined $_ and $_ == $me;
         }
-        # Save config from Parent
+        # Store needed build_data
         $$me->{Tables} = [ @{$$me->{Parent}{Tables}} ];
         $$me->{build_data}{from_sql} = $$me->{DBO}{dbd_class}->_build_from($$me->{Parent});
-        $me->_copy_build_data;
+        for my $f (qw(select From_Bind where order group)) {
+            $$me->{build_data}{$f} = $me->_copy($$me->{Parent}{build_data}{$f}) if exists $$me->{Parent}{build_data}{$f};
+        }
+        # Save config from Parent
         if ($$me->{Parent}{Config} and %{$$me->{Parent}{Config}}) {
             $$me->{Config} = { %{$$me->{Parent}{Config}}, $$me->{Config} ? %{$$me->{Config}} : () };
         }
     }
     delete $$me->{Parent};
+}
+
+sub _copy {
+    my($me, $val) = @_;
+    return bless [$me, $val->[1]], 'DBIx::DBO::Column'
+        if _isa($val, 'DBIx::DBO::Column') and $val->[0] == $$me->{Parent};
+    ref $val eq 'ARRAY' ? [map $me->_copy($_), @$val] : ref $val eq 'HASH' ? {map $me->_copy($_), %$val} : $val;
 }
 
 =head3 C<update>

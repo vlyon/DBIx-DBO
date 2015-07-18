@@ -150,10 +150,10 @@ eval { DBIx::DBO::Row->new };
 like $@, qr/^Invalid DBO Object for new Row /, 'Row requires a DBO';
 
 eval { $r->new($dbo) };
-like $@, qr/^Missing parent for new Row /, 'Row requires a parent';
+like $@, qr/^No table specified in new Query /, 'Row requires a parent';
 
 eval { $dbo->row($r) };
-like $@, qr/^Invalid parent for new Row /, 'Row requires a valid parent';
+like $@, qr/^Invalid table: /, 'Row requires a valid parent';
 
 $dbo->disconnect;
 eval { $dbo->connect_readonly };
