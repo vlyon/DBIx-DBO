@@ -180,15 +180,24 @@ sub connect_ok {
     return try_to_connect($dbo_ref) || ($$dbo_ref = connect_dbo(@_));
 }
 
+my $table_data;
+my $quoted_table;
+sub is_table_data($$) {
+    my($dbo, $message) = @_;
+    my $rv = $dbo->selectall_arrayref("SELECT * FROM $quoted_table") or diag sql_err($dbo);
+    @$rv = sort { $a->[0] <=> $b->[0] } @$rv; # Sort by id
+    is_deeply $rv, $table_data, $message;
+}
+
 sub basic_methods {
     my $dbo = shift;
+    $quoted_table = $dbo->{dbd_class}->_qi($dbo, $test_sch, $test_tbl);
 
     note 'Testing with: CacheQuery => '.DBIx::DBO->config('CacheQuery');
 
     # Create a DBO from DBI handles
     isa_ok(DBIx::DBO->new($dbo->{dbh}, $dbo->{rdbh}), 'DBIx::DBO', 'Method DBIx::DBO->new, $dbo');
 
-    my $quoted_table = $dbo->{dbd_class}->_qi($dbo, $test_sch, $test_tbl);
     my @quoted_cols = map $dbo->{dbd_class}->_qi($dbo, $_), qw(type id name);
     my $t;
     my $create_table = "CREATE TABLE $quoted_table ($quoted_cols[1] ".
@@ -257,12 +266,13 @@ sub basic_methods {
     $rv = $dbo->selectrow_arrayref("SELECT * FROM $quoted_table") or diag sql_err($dbo);
     is_deeply $rv, [1,'John Doe'], 'Method DBIx::DBO->selectrow_arrayref';
 
-    $rv = $dbo->selectall_arrayref("SELECT * FROM $quoted_table") or diag sql_err($dbo);
-    is_deeply $rv, [[1,'John Doe'],[2,'Jane Smith']], 'Method DBIx::DBO->selectall_arrayref';
+    $table_data = [[1,'John Doe'],[2,'Jane Smith']];
+    is_table_data $dbo, 'Method DBIx::DBO->selectall_arrayref';
 
     # Insert via table object
     $rv = $t->insert(id => 3, name => 'Uncle Arnie') or diag sql_err($t);
     ok $rv, 'Method DBIx::DBO::Table->insert';
+    push @$table_data, [3,'Uncle Arnie'];
 
     is_deeply [$t->columns], [qw(id name)], 'Method DBIx::DBO::Table->columns';
 
@@ -270,23 +280,12 @@ sub basic_methods {
     my $c = $t->column('id');
     isa_ok $c, 'DBIx::DBO::Column', '$c';
 
-    # Fetch one value from the Table
-    is $t->fetch_value($t ** 'name', id => 3), 'Uncle Arnie', 'Method DBIx::DBO::Table->fetch_value';
-
-    # Fetch one value from the Table
-    is_deeply $t->fetch_hash(id => \3), {id=>3,name=>'Uncle Arnie'}, 'Method DBIx::DBO::Table->fetch_hash';
-
-    # Fetch one value from the Table
-    my $r = $t->fetch_row(id => 3, name => \'NOT NULL');
-    is $r->{name}, 'Uncle Arnie', 'Method DBIx::DBO::Table->fetch_row';
-
-    # Fetch a column arrayref from the Table
-    is_deeply $t->fetch_column($t ** 'name', id => 3), ['Uncle Arnie'], 'Method DBIx::DBO::Table->fetch_column';
-
     # Advanced insert using a column object
     $rv = $t->insert($c => {FUNC => '4'}, name => 'NotUsed', name => \"'James Bond'") or diag sql_err($t);
     ok $rv, 'Method DBIx::DBO::Table->insert (complex values)';
-    is $t->fetch_value('name', id => 4), 'James Bond', 'Method DBIx::DBO::Table->insert (remove duplicate cols)';
+    push @$table_data, [4,'James Bond'];
+
+    is_table_data $dbo, 'Method DBIx::DBO::Table->insert (remove duplicate cols)';
 
     # Delete via table object
     $rv = $t->delete(id => 3) or diag sql_err($t);
@@ -311,24 +310,30 @@ sub basic_methods {
             skip 'TRUNCATE TABLE is not supported', 1;
         }
         $t->truncate or diag sql_err($t);
-        is $t->fetch_value('id'), undef, 'Method DBIx::DBO::Table->truncate';
+        undef @$table_data;
+        is_table_data $dbo, 'Method DBIx::DBO::Table->truncate';
     }
+    @$table_data = sort { $a->[0] <=> $b->[0] } map [@$_{qw(id name)}], @$bulk_data;
 
     # Bulk insert
     $rv = $t->bulk_insert(rows => [map [@$_{qw(id name)}], @$bulk_data]) or diag sql_err($t);
     is $rv, 4, 'Method DBIx::DBO::Table->bulk_insert (ARRAY)';
+    is_table_data $dbo, 'Table contents are correct';
     $t->delete or diag sql_err($t);
 
     $rv = $t->bulk_insert(rows => \@$bulk_data) or diag sql_err($t);
     is $rv, 4, 'Method DBIx::DBO::Table->bulk_insert (HASH)';
+    is_table_data $dbo, 'Table contents are correct';
     $t->delete or diag sql_err($t);
 
     $rv = $t->bulk_insert(columns => [qw(name id)], rows => [map [@$_{qw(name id)}], @$bulk_data]) or diag sql_err($t);
     is $rv, 4, 'Method DBIx::DBO::Table->bulk_insert (ARRAY)';
+    is_table_data $dbo, 'Table contents are correct';
     $t->delete or diag sql_err($t);
 
     $rv = $t->bulk_insert(columns => [qw(name id)], rows => \@$bulk_data) or diag sql_err($t);
     is $rv, 4, 'Method DBIx::DBO::Table->bulk_insert (HASH)';
+    is_table_data $dbo, 'Table contents are correct';
 
     return $t;
 }
@@ -412,7 +417,7 @@ sub row_methods {
 sub query_methods {
     my $dbo = shift;
     my $t = shift;
-    my $quoted_table = $t->_as_table;
+    $quoted_table = $t->_as_table;
 
     # Create a query object
     my $q = $dbo->query($t);

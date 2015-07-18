@@ -6,8 +6,6 @@ use Carp 'croak';
 
 use overload '**' => \&column, fallback => 1;
 
-sub _row_class { $_[0]{DBO}->_row_class }
-
 *_isa = \&DBIx::DBO::DBD::_isa;
 
 =head1 NAME
@@ -22,12 +20,6 @@ DBIx::DBO::Table - An OO interface to SQL queries and results.  Encapsulates a t
   # Get a column reference
   my $column = $table ** 'employee_id';
   
-  # Quickly display my employee id
-  print $table->fetch_value('employee_id', name => 'Vernon');
-  
-  # Find the IDs of fired employees
-  my @fired = @{ $table->fetch_column('id', status => 'fired');
-  
   # Insert a new row into the table
   $table->insert(employee_id => 007, name => 'James Bond');
   
@@ -37,7 +29,7 @@ DBIx::DBO::Table - An OO interface to SQL queries and results.  Encapsulates a t
 =head1 DESCRIPTION
 
 C<Table> objects are mostly used for column references in a L<Query|DBIx::DBO::Query>.
-They can also be used for INSERTs, DELETEs and simple lookups (fetch_*).
+They can also be used for INSERTs and DELETEs.
 
 =head1 METHODS
 
@@ -125,92 +117,6 @@ sub column {
     $me->{Column}{$col} //= bless [$me, $col], 'DBIx::DBO::Column';
 }
 *_inner_col = \&column;
-
-=head3 C<row>
-
-Returns a new empty L<Row|DBIx::DBO::Row> object for this table.
-
-=cut
-
-sub row {
-    my $me = shift;
-    $me->_row_class->new($me->{DBO}, $me);
-}
-
-=head3 C<fetch_row>
-
-  $table->fetch_row(%where);
-
-Fetch the first matching row from the table returning it as a L<Row|DBIx::DBO::Row> object.
-
-The C<%where> is a hash of field/value pairs.
-The value can be a simple SCALAR or C<undef> for C<NULL>
-It can also be a SCALAR reference, which will be used without quoting, or an ARRAY reference for multiple C<IN> values.
-
-  $someone = $table->fetch_row(age => 21, join_date => \'CURDATE()', end_date => undef);
-  $a_child = $table->fetch_row(name => \'NOT NULL', age => [5 .. 15]);
-
-=cut
-
-sub fetch_row {
-    my $me = shift;
-    $me->row->load(@_);
-}
-
-=head3 C<fetch_value>
-
-  $table->fetch_value($column, %where);
-
-Fetch the first matching row from the table returning the value in one column.
-
-=cut
-
-sub fetch_value {
-    my($me, $col) = splice @_, 0, 2;
-    my @bind;
-    $col = $me->{DBO}{dbd_class}->_build_val($me, \@bind, $me->{DBO}{dbd_class}->_parse_col_val($me, $col));
-    my $sql = "SELECT $col FROM ".$me->_as_table;
-    my $clause;
-    $sql .= ' WHERE '.$clause if $clause = $me->{DBO}{dbd_class}->_build_quick_where($me, \@bind, @_);
-    my $ref = $me->{DBO}{dbd_class}->_selectrow_arrayref($me, $sql, undef, @bind);
-    return $ref && $ref->[0];
-}
-
-=head3 C<fetch_hash>
-
-  $table->fetch_hash(%where);
-
-Fetch the first matching row from the table returning it as a hashref.
-
-=cut
-
-sub fetch_hash {
-    my $me = shift;
-    my $sql = 'SELECT * FROM '.$me->_as_table;
-    my @bind;
-    my $clause;
-    $sql .= ' WHERE '.$clause if $clause = $me->{DBO}{dbd_class}->_build_quick_where($me, \@bind, @_);
-    $me->{DBO}{dbd_class}->_selectrow_hashref($me, $sql, undef, @bind);
-}
-
-=head3 C<fetch_column>
-
-  $table->fetch_column($column, %where);
-
-Fetch all matching rows from the table returning an arrayref of the values in one column.
-
-=cut
-
-sub fetch_column {
-    my($me, $col) = splice @_, 0, 2;
-    my @bind;
-    $col = $me->{DBO}{dbd_class}->_build_val($me, \@bind, $me->{DBO}{dbd_class}->_parse_col_val($me, $col));
-    my $sql = "SELECT $col FROM ".$me->_as_table;
-    my $clause;
-    $sql .= ' WHERE '.$clause if $clause = $me->{DBO}{dbd_class}->_build_quick_where($me, \@bind, @_);
-    $me->{DBO}{dbd_class}->_sql($me, $sql, @bind);
-    return $me->rdbh->selectcol_arrayref($sql, undef, @bind);
-}
 
 =head3 C<insert>
 

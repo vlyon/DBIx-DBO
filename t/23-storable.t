@@ -37,7 +37,7 @@ $q->show($t ** 'id', $t);
 freeze_thaw($q);
 is_deeply $thawed, $q, 'Same Query';
 
-my $r = $t->fetch_row(id => 1) or die sql_err($t);
+my $r = $dbo->row($t)->load(id => 1) or die sql_err($t);
 freeze_thaw($r);
 is_deeply $thawed, $r, 'Same Row';
 

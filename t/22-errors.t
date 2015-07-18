@@ -2,7 +2,7 @@ use 5.014;
 use warnings;
 
 use Test::DBO ExampleP => 'ExampleP';
-use Test::DBO Sponge => 'Sponge', tests => 47;
+use Test::DBO Sponge => 'Sponge', tests => 46;
 
 MySpongeDBI::db::setup([qw(id name age)], [123, 'vlyon', 77]);
 
@@ -154,10 +154,6 @@ like $@, qr/^Missing parent for new Row /, 'Row requires a parent';
 
 eval { $dbo->row($r) };
 like $@, qr/^Invalid parent for new Row /, 'Row requires a valid parent';
-
-$r = $t->fetch_row;
-eval { $r->value('WrongColumn') };
-like $@, qr/^No such column: "WrongColumn" /, 'Empty row';
 
 $dbo->disconnect;
 eval { $dbo->connect_readonly };
