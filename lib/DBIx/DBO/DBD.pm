@@ -242,9 +242,9 @@ sub _build_from {
     my @tables = $me->tables;
     my $from = $class->_build_table($me, $tables[0]);
     for (my $i = 1; $i < @tables; $i++) {
-        $from .= $h->{Join}[$i].$class->_build_table($me, $tables[$i]);
-        $from .= ' ON '.join(' AND ', $class->_build_where_chunk($me, $h->{From_Bind}, 'OR', $h->{Join_On}[$i]))
-            if $h->{Join_On}[$i];
+        $from .= $h->{join_types}[$i].$class->_build_table($me, $tables[$i]);
+        $from .= ' ON '.join(' AND ', $class->_build_where_chunk($me, $h->{From_Bind}, 'OR', $h->{"join$i"}))
+            if $h->{"join$i"};
     }
     return $from;
 }

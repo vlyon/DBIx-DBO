@@ -330,8 +330,7 @@ sub join_table {
         $type = ', ';
     }
     push @{$me->{Tables}}, $tbl;
-    push @{$me->{build_data}{Join}}, $type;
-    push @{$me->{build_data}{Join_On}}, undef;
+    push @{$me->{build_data}{join_types}}, $type;
     push @{$me->{Join_Bracket_Refs}}, [];
     push @{$me->{Join_Brackets}}, [];
     undef @{$me->{Columns}};
@@ -363,11 +362,11 @@ sub join_on {
     # Force a new search
     $me->_inactivate;
 
-    # Find the current Join_On reference
-    my $ref = $me->{build_data}{Join_On}[$i] ||= [];
+    # Find the current join reference
+    my $ref = $me->{build_data}{"join$i"} ||= [];
     $ref = $ref->[$_] for (@{$me->{Join_Bracket_Refs}[$i]});
 
-    $me->{build_data}{Join}[$i] = ' JOIN ' if $me->{build_data}{Join}[$i] eq ', ';
+    $me->{build_data}{join_types}[$i] = ' JOIN ' if $me->{build_data}{join_types}[$i] eq ', ';
     $me->_add_where($ref, $op, $col1, $col1_func, $col1_opt, $col2, $col2_func, $col2_opt, @_);
 }
 
@@ -386,7 +385,7 @@ sub open_join_on_bracket {
     my $me = shift;
     my $tbl = shift or croak 'Invalid table object for join on clause';
     my $i = $me->_table_idx($tbl) or croak 'No such table object in the join';
-    $me->_open_bracket($me->{Join_Brackets}[$i], $me->{Join_Bracket_Refs}[$i], $me->{build_data}{Join_On}[$i] ||= [], @_);
+    $me->_open_bracket($me->{Join_Brackets}[$i], $me->{Join_Bracket_Refs}[$i], $me->{build_data}{"join$i"} ||= [], @_);
 }
 
 sub close_join_on_bracket {
