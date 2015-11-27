@@ -146,14 +146,13 @@ sub _table_alias {
     # Don't use aliases, when there's only 1 table unless its a subquery
     return undef if $me->tables == 1 and _isa($tbl, 'DBIx::DBO::Table');
 
-    my $_from_alias = $me->{build_data}{_from_alias} //= {};
+    my $_from_alias = ($me->{build_data}{_super_query} // $me)->_build_data->{_from_alias} //= {};
     return $_from_alias->{$tbl} //= 't'.scalar(keys %$_from_alias);
 }
 
 sub _as_table {
-    my($me, $parent_build_data) = @_;
-    $parent_build_data->{_subqueries}{$me} = $me->sql;
-    local $me->{build_data}{_from_alias} = $parent_build_data->{_from_alias};
+    my($me, $super_query) = @_;
+    local $me->{build_data}{_super_query} = $super_query;
     return '('.$me->{DBO}{dbd_class}->_build_sql_select($me).')';
 }
 
@@ -191,7 +190,7 @@ sub _build_col_val_name {
         } elsif (ref $_ eq 'SCALAR') {
             $$_;
         } elsif (_isa($_, 'DBIx::DBO::Query')) {
-            $_->_as_table($me->{build_data});
+            $_->_as_table($me);
         }
     } @$fld;
     return $ary[0] unless defined $func;

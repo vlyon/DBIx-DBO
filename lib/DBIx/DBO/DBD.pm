@@ -209,7 +209,7 @@ sub _bind_params_delete {
 
 sub _build_table {
     my($class, $me, $t) = @_;
-    my $from = $t->_as_table($me->{build_data});
+    my $from = $t->_as_table($me);
     my $alias = $me->_table_alias($t);
     $alias = defined $alias ? ' '.$class->_qi($me, $alias) : '';
     return $from.$alias;
@@ -367,7 +367,7 @@ sub _build_val {
         } elsif (ref $_ eq 'SCALAR') {
             $$_;
         } elsif (_isa($_, 'DBIx::DBO::Query')) {
-            $_->_as_table($me->{build_data});
+            $_->_as_table($me);
         } else {
             croak 'Invalid field: '.$_;
         }

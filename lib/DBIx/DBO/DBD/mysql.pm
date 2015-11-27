@@ -61,13 +61,9 @@ sub _calc_found_rows {
 sub _build_sql_select {
     my($class, $me) = @_;
 
-    if (my $cfg = $me->config('CalcFoundRows')) {
-        $me->config('CalcFoundRows', 0); # Don't modify subqueries
-        my $sql = $class->SUPER::_build_sql_select($me) =~ s/^SELECT /SELECT SQL_CALC_FOUND_ROWS /r;
-        $me->config('CalcFoundRows', $cfg);
-        return $sql;
-    }
-    return $class->SUPER::_build_sql_select($me);
+    my $sql = $class->SUPER::_build_sql_select($me);
+    $sql =~ s/^SELECT /SELECT SQL_CALC_FOUND_ROWS / if $me->config('CalcFoundRows') and not $me->{build_data}{_super_query};
+    return $sql;
 }
 
 # MySQL doesn't allow the use of aliases in the WHERE clause
