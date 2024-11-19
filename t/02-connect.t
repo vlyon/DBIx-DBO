@@ -3,6 +3,7 @@ use warnings;
 
 my $dbo;
 use DBIx::DBO AutoReconnect => 1;
+use lib '.';
 use Test::DBO Sponge => 'Sponge', connect_ok => [\$dbo], tests => 7;
 
 is $dbo, $dbo->dbo, 'Method DBIx::DBO->dbo';

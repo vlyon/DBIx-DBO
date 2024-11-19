@@ -3,6 +3,7 @@ use warnings;
 
 # Create the DBO
 my $dbo;
+use lib '.';
 use Test::DBO DBM => 'DBM', tests => '+1', tempdir => 1, connect_ok => [\$dbo];
 
 # In DBM there is no Schema

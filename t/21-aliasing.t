@@ -1,6 +1,7 @@
 use 5.014;
 use warnings;
 
+use lib '.';
 use Test::DBO Sponge => 'Sponge', tests => 7;
 
 MySpongeDBI::db::setup([qw(id alias)], ['vlyon', 22]);

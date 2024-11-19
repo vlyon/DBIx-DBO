@@ -1,6 +1,7 @@
 use 5.014;
 use warnings;
 
+use lib '.';
 use Test::DBO ExampleP => 'ExampleP';
 use Test::DBO Sponge => 'Sponge', tests => 46;
 

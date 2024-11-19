@@ -1,6 +1,7 @@
 use 5.014;
 use warnings;
 
+use lib '.';
 use Test::DBO Sponge => 'Sponge', tests => 19;
 
 MySpongeDBI::db::setup([qw(sq_aa id name age id name age)], [1, 123, 'vlyon', 33, 123, 'vlyon', 33]);

@@ -2,6 +2,7 @@ use 5.014;
 use warnings;
 
 # Create the DBO (2 tests)
+use lib '.';
 use Test::DBO Sponge => 'Sponge', tests => 18;
 
 # DBO-only Subclass

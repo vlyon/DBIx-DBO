@@ -2,6 +2,7 @@ use 5.014;
 use warnings;
 
 my $dbo;
+use lib '.';
 use Test::DBO mysql => 'MySQL', try_connect => \$dbo;
 
 # Try to ensure a connection by guessing

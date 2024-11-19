@@ -2,6 +2,7 @@ use 5.014;
 use warnings;
 
 use Storable;
+use lib '.';
 use Test::DBO Sponge => 'Sponge', tests => 26;
 note 'Storable '.$Storable::VERSION;
 note 'Testing with: CacheQuery => '.DBIx::DBO->config('CacheQuery');

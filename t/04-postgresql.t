@@ -2,6 +2,7 @@ use 5.014;
 use warnings;
 
 my $dbo;
+use lib '.';
 use Test::DBO Pg => 'PostgreSQL', try_connect => \$dbo;
 
 my $drop_db;

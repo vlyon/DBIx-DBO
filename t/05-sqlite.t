@@ -2,6 +2,7 @@ use 5.014;
 use warnings;
 
 my $dbo;
+use lib '.';
 use Test::DBO SQLite => 'SQLite', tests => '+0', tempdir => 1, connect_ok => [\$dbo];
 
 # In SQLite there is no Schema

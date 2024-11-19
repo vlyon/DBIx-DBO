@@ -8,6 +8,7 @@ BEGIN {
 }
 
 my $dbo;
+use lib '.';
 use Test::DBO Oracle => 'Oracle', tests => '+0', connect_ok => [\$dbo];
 
 # Use the default Schema
