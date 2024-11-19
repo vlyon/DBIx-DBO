@@ -76,7 +76,7 @@ our $test_tbl = "DBO_${DBIx::DBO::VERSION}_test_tbl" =~ s/\W/_/gr;
 our @_cleanup_sql;
 our $case_sensitivity_sql = 'SELECT ? LIKE ?';
 our %can;
-our $test_count = 115;
+our $test_count = 117;
 
 sub import {
     (my $class, $dbd, $dbd_name, my %opt) = @_;
@@ -480,7 +480,8 @@ sub query_methods {
     is $q->fetch->{name}, 'John Doe', 'Method DBIx::DBO::Query->finish (fetch returns the first Row)';
 
     # Count the number of rows
-    1 while $q->fetch;
+    is_deeply [map ref $q->fetch, 1..5], [('DBIx::DBO::Row') x 5], 'Fetched 5 more Rows';
+    is $q->fetch, undef, 'Fetch exhausted (no more rows)';
     is $q->rows, 6, 'Row count is 6';
 
     # WHERE clause

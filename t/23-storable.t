@@ -47,7 +47,7 @@ $q->run;
 freeze_thaw($q, '(after run)');
 { # Reset the active query
     local(@$q{qw(attached_rows sth Row)});
-    local $q->{hash} unless exists $q->{cache};
+    local(@$q{qw(Active hash)}) = 0 unless exists $q->{cache};
     is_deeply $thawed, $q, 'Same Query (after run)';
 }
 
@@ -69,7 +69,7 @@ freeze_thaw($q, '(after fetch)');
 is ${$q->{Row}}->{Parent}, $q, 'Row has not detached';
 { # Reset the active query
     local(@$q{qw(attached_rows sth Row)});
-    local $q->{hash} unless exists $q->{cache};
+    local(@$q{qw(Active hash)}) = 0 unless exists $q->{cache};
     local $q->{cache}{idx} = 0 if exists $q->{cache};
     is_deeply $thawed, $q, 'Same Query (after fetch)';
     is_deeply $thawed->fetch, $q->fetch, 'Same Row from $q->fetch';
