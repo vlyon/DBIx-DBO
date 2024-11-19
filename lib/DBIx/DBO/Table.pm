@@ -268,7 +268,7 @@ sub rdbh { $_[0]{DBO}->rdbh }
 
 Get or set the C<Table> config settings.  When setting an option, the previous value is returned.  When getting an option's value, if the value is undefined, the L<DBIx::DBO|DBIx::DBO>'s value is returned.
 
-See L<DBIx::DBO/Available_config_options>.
+See L<DBIx::DBO/"Available config options">.
 
 =cut
 

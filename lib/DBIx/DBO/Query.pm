@@ -375,7 +375,7 @@ sub join_on {
   $query->join_on(...
   $query->close_join_on_bracket($table);
 
-Equivalent to L<open_bracket|/open_bracket__close_bracket>, but for the JOIN ON clause.
+Equivalent to L<open_bracket|/"open_bracket, close_bracket">, but for the JOIN ON clause.
 The first argument is the table being joined onto.
 
 =cut
@@ -438,11 +438,11 @@ A Query object, to be used as a subquery.
 
 =item *
 
-A hash reference: see L</Complex_expressions>
+A hash reference: see L</"Complex expressions">
 
 =back
 
-Multiple C<where> expressions are combined I<cleverly> using the preferred aggregator C<'AND'> (unless L<open_bracket|/open_bracket__close_bracket> was used to change this).  So that when you add where expressions to the query, they will be C<AND>ed together.  However some expressions that refer to the same column will automatically be C<OR>ed instead where this makes sense, currently: C<'='>, C<'IS NULL'>, C<'E<lt>=E<gt>'>, C<'IN'> and C<'BETWEEN'>.  Similarly, when the preferred aggregator is C<'OR'> the following operators will be C<AND>ed together: C<'!='>, C<'IS NOT NULL'>, C<'E<lt>E<gt>'>, C<'NOT IN'> and C<'NOT BETWEEN'>.
+Multiple C<where> expressions are combined I<cleverly> using the preferred aggregator C<'AND'> (unless L<open_bracket|/"open_bracket, close_bracket"> was used to change this).  So that when you add where expressions to the query, they will be C<AND>ed together.  However some expressions that refer to the same column will automatically be C<OR>ed instead where this makes sense, currently: C<'='>, C<'IS NULL'>, C<'E<lt>=E<gt>'>, C<'IN'> and C<'BETWEEN'>.  Similarly, when the preferred aggregator is C<'OR'> the following operators will be C<AND>ed together: C<'!='>, C<'IS NOT NULL'>, C<'E<lt>E<gt>'>, C<'NOT IN'> and C<'NOT BETWEEN'>.
 
   $query->where('id', '=', 5);
   $query->where('name', '=', 'Bob');
@@ -1140,7 +1140,7 @@ sub rdbh { $_[0]{DBO}->rdbh }
 
 Get or set this C<Query> object's config settings.  When setting an option, the previous value is returned.  When getting an option's value, if the value is undefined, the L<DBIx::DBO|DBIx::DBO>'s value is returned.
 
-See: L<DBIx::DBO/Available_config_options>.
+See: L<DBIx::DBO/"Available config options">.
 
 =cut
 
